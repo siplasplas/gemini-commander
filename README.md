@@ -28,4 +28,22 @@ Key licensing assumptions regarding the use of Qt in this project:
 
 **In summary:** Your contributions to this project are licensed under Apache 2.0. However, because the project uses Qt libraries under the LGPLv3, the work as a whole (especially in binary form) is also subject to the terms of the LGPLv3 concerning the Qt parts. Users have rights and obligations stemming from both licenses, applicable to the respective components of the project.
 
-(Remember to replace [Project Name, e.g., Gemini Commander] with your actual project name and ensure the filename mentioned for the LGPLv3 license, like LICENSE.LGPLv3, matches the actual file you create.)
+
+## Building
+
+To build the project, you need Meson, Ninja (or another Meson backend), a C++ compiler supporting C++20, and Qt5 (version 5.15 or later recommended) development libraries installed.
+
+```bash
+# Navigate to your project root (gemini-commander/)
+cd path/to/gemini-commander 
+
+# Configure the project using Meson (creates a 'builddir' directory)
+# and change into the build directory
+meson setup builddir && cd builddir
+
+# Compile the project using Ninja (or the configured backend)
+meson compile
+
+# Run the executable (from within the builddir)
+./gemini_commander 
+# On Windows, it might be: .\gemini_commander.exe
