@@ -1,13 +1,11 @@
 #include <QApplication>
-#include <QWidget>
+#include "MainWindow.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    QWidget mainWindow;
-    mainWindow.setWindowTitle("Qt Minimal");
-    mainWindow.resize(400, 300);
+    MainWindow mainWindow;
     mainWindow.show();
 
     return app.exec();
