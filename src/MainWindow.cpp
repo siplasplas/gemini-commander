@@ -2,17 +2,38 @@
 
 #include <QSplitter>
 #include <QLineEdit>
-#include <QFrame>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QTreeView>
+#include <QFileSystemModel>
+#include <QHeaderView>
+#include <QDir>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    setupUi();
+    setupModels(); // First configure models
+    setupUi();     // Next UI, which uses models
     setWindowTitle("Gemini Commander");
-    resize(800, 600);
+    resize(1024, 768);
 }
+
+void MainWindow::setupModels()
+{
+    leftModel = new QFileSystemModel(this);
+    rightModel = new QFileSystemModel(this);
+
+    QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
+    leftModel->setFilter(filters);
+    rightModel->setFilter(filters);
+
+    QString homePath = QDir::homePath();
+    leftModel->setRootPath(homePath); // Important!
+    rightModel->setRootPath(homePath); // Important!
+
+    leftModel->sort(0, Qt::DescendingOrder);
+}
+
 
 void MainWindow::setupUi()
 {
@@ -21,24 +42,47 @@ void MainWindow::setupUi()
 
     mainSplitter = new QSplitter(Qt::Horizontal, centralWidget);
 
-    leftPanel = new QFrame(mainSplitter);
-    leftPanel->setFrameShape(QFrame::StyledPanel);
-    leftPanel->setMinimumWidth(200);
+    leftTreeView = new QTreeView(mainSplitter);
+    rightTreeView = new QTreeView(mainSplitter);
 
-    rightPanel = new QFrame(mainSplitter);
-    rightPanel->setFrameShape(QFrame::StyledPanel);
-    rightPanel->setMinimumWidth(200);
+    leftTreeView->setModel(leftModel);
+    rightTreeView->setModel(rightModel);
 
-    mainSplitter->addWidget(leftPanel);
-    mainSplitter->addWidget(rightPanel);
+    leftTreeView->setRootIndex(leftModel->index(leftModel->rootPath()));
+    rightTreeView->setRootIndex(rightModel->index(rightModel->rootPath()));
+
+
+    leftTreeView->hideColumn(2);
+    rightTreeView->hideColumn(2);
+
+    leftTreeView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    leftTreeView->header()->setSectionResizeMode(1, QHeaderView::Interactive);
+    leftTreeView->header()->setSectionResizeMode(3, QHeaderView::Interactive);
+    leftTreeView->setColumnWidth(1, 100);
+    leftTreeView->setColumnWidth(3, 150);
+
+    rightTreeView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    rightTreeView->header()->setSectionResizeMode(1, QHeaderView::Interactive);
+    rightTreeView->header()->setSectionResizeMode(3, QHeaderView::Interactive);
+    rightTreeView->setColumnWidth(1, 100);
+    rightTreeView->setColumnWidth(3, 150);
+
+    leftTreeView->setSortingEnabled(true);
+    rightTreeView->setSortingEnabled(true);
+    leftTreeView->sortByColumn(0, Qt::AscendingOrder); // Default sprting
+
+    // ----------------------------------
+
+    mainSplitter->addWidget(leftTreeView);
+    mainSplitter->addWidget(rightTreeView);
     mainSplitter->setStretchFactor(0, 1);
     mainSplitter->setStretchFactor(1, 1);
+
 
     commandLineEdit = new QLineEdit(centralWidget);
 
     mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(commandLineEdit);
-
     mainLayout->setStretchFactor(mainSplitter, 1);
     mainLayout->setStretchFactor(commandLineEdit, 0);
 

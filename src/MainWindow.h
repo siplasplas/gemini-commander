@@ -6,7 +6,9 @@
 QT_BEGIN_NAMESPACE
 class QSplitter;
 class QLineEdit;
-class QFrame;
+// class QFrame; // Już niepotrzebne
+class QTreeView;        // Dodane
+class QFileSystemModel; // Dodane
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -19,11 +21,19 @@ public:
 
 private:
     void setupUi();
+    void setupModels(); // Nowa metoda pomocnicza
 
+    // Wskaźniki na główne elementy UI
     QSplitter *mainSplitter;
-    QFrame    *leftPanel;
-    QFrame    *rightPanel;
+    // QFrame    *leftPanel; // Zastąpione
+    // QFrame    *rightPanel; // Zastąpione
+    QTreeView *leftTreeView;  // Nowy widok
+    QTreeView *rightTreeView; // Nowy widok
     QLineEdit *commandLineEdit;
+
+    // Modele danych dla widoków
+    QFileSystemModel *leftModel;
+    QFileSystemModel *rightModel;
 };
 
 #endif // MAINWINDOW_H
