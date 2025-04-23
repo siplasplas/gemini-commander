@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "DirectoryFirstProxyModel.h"
 
 #include <QSplitter>
 #include <QLineEdit>
@@ -16,22 +17,29 @@ MainWindow::MainWindow(QWidget *parent)
     setupUi();     // Next UI, which uses models
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
+
+    leftTreeView->sortByColumn(0, Qt::AscendingOrder);
+    rightTreeView->sortByColumn(0, Qt::AscendingOrder);
 }
 
 void MainWindow::setupModels()
 {
-    leftModel = new QFileSystemModel(this);
-    rightModel = new QFileSystemModel(this);
+    leftSourceModel = new QFileSystemModel(this);
+    rightSourceModel = new QFileSystemModel(this);
 
     QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
-    leftModel->setFilter(filters);
-    rightModel->setFilter(filters);
+    leftSourceModel->setFilter(filters);
+    rightSourceModel->setFilter(filters);
 
     QString homePath = QDir::homePath();
-    leftModel->setRootPath(homePath); // Important!
-    rightModel->setRootPath(homePath); // Important!
+    leftSourceModel->setRootPath(homePath);
+    rightSourceModel->setRootPath(homePath);
 
-    leftModel->sort(0, Qt::DescendingOrder);
+    leftProxyModel = new DirectoryFirstProxyModel(this);
+    rightProxyModel = new DirectoryFirstProxyModel(this);
+
+    leftProxyModel->setSourceModel(leftSourceModel);
+    rightProxyModel->setSourceModel(rightSourceModel);
 }
 
 
@@ -45,16 +53,26 @@ void MainWindow::setupUi()
     leftTreeView = new QTreeView(mainSplitter);
     rightTreeView = new QTreeView(mainSplitter);
 
-    leftTreeView->setModel(leftModel);
-    rightTreeView->setModel(rightModel);
+    // === Configuration of Views ====.
+    // 1. Set the PROXY MODEL for each view
+    leftTreeView->setModel(leftProxyModel);
+    rightTreeView->setModel(rightProxyModel);
 
-    leftTreeView->setRootIndex(leftModel->index(leftModel->rootPath()));
-    rightTreeView->setRootIndex(rightModel->index(rightModel->rootPath()));
+    // 2. Set the root of the view by mapping the index from the source through the proxy
+    // This is VERY IMPORTANT!
+    leftTreeView->setRootIndex(leftProxyModel->mapFromSource(leftSourceModel->index(leftSourceModel->rootPath())));
+    rightTreeView->setRootIndex(rightProxyModel->mapFromSource(rightSourceModel->index(rightSourceModel->rootPath())));
 
 
-    leftTreeView->hideColumn(2);
+    // 3. Column configuration (indexes now refer to the proxy model, but are the same as in the source)
+    leftTreeView->hideColumn(2); // Ukryj kolumnę "Typ" (indeks 2)
     rightTreeView->hideColumn(2);
 
+    // Set the sorting in the view (this will allow the user to click on headings)
+    leftTreeView->setSortingEnabled(true);
+    rightTreeView->setSortingEnabled(true);
+
+    // Adjust the width of the columns (as before).
     leftTreeView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
     leftTreeView->header()->setSectionResizeMode(1, QHeaderView::Interactive);
     leftTreeView->header()->setSectionResizeMode(3, QHeaderView::Interactive);
@@ -67,17 +85,10 @@ void MainWindow::setupUi()
     rightTreeView->setColumnWidth(1, 100);
     rightTreeView->setColumnWidth(3, 150);
 
-    leftTreeView->setSortingEnabled(true);
-    rightTreeView->setSortingEnabled(true);
-    leftTreeView->sortByColumn(0, Qt::AscendingOrder); // Default sprting
-
-    // ----------------------------------
-
     mainSplitter->addWidget(leftTreeView);
     mainSplitter->addWidget(rightTreeView);
     mainSplitter->setStretchFactor(0, 1);
     mainSplitter->setStretchFactor(1, 1);
-
 
     commandLineEdit = new QLineEdit(centralWidget);
 

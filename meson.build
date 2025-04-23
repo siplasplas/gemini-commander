@@ -1,6 +1,5 @@
-# meson.build
 project('gemini-commander', 'cpp',
-        version : '0.1.0',
+        version : '1.0.0',
         default_options : ['warning_level=3', 'cpp_std=c++20'])
 
 # --- Qt5 Configuration Start ---
@@ -11,12 +10,16 @@ qt5_mod = import('qt5')
 
 project_sources = [
         'src/main.cpp',
-        'src/MainWindow.cpp'
+        'src/MainWindow.cpp',
+        'src/DirectoryFirstProxyModel.cpp'
 ]
 
-# Processing MOC for header files with Q_OBJECT
+# MOC processing
+moc_headers_to_process = ['src/MainWindow.h']
+moc_headers_to_process += 'src/DirectoryFirstProxyModel.h'
+
 project_moc_files = qt5_mod.preprocess(
-        moc_headers : ['src/MainWindow.h']
+        moc_headers : moc_headers_to_process
 )
 
 gemini_commander_exe = executable(
@@ -26,5 +29,3 @@ gemini_commander_exe = executable(
         dependencies : [qt5_dep],
         install : true
 )
-
-# Testing  - future implementation
