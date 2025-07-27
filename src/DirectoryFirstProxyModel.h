@@ -11,9 +11,12 @@ class DirectoryFirstProxyModel : public QSortFilterProxyModel
 public:
     explicit DirectoryFirstProxyModel(QObject *parent = nullptr);
 
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+
 protected:
     // Key method to override
     bool lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const override;
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
 };
 
 #endif // DIRECTORYFIRSTPROXYMODEL_H

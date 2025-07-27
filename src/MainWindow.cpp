@@ -24,7 +24,7 @@ void MainWindow::setupModels()
     leftSourceModel = new QFileSystemModel(this);
     rightSourceModel = new QFileSystemModel(this);
 
-    QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
+    QDir::Filters filters = QDir::AllDirs | QDir::Files;
     leftSourceModel->setFilter(filters);
     rightSourceModel->setFilter(filters);
 
