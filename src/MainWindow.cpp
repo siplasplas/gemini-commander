@@ -69,7 +69,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 return true; // Event handled
             }
         } else if (keyEvent->key() == Qt::Key_F4 && modifiers == Qt::NoModifier) {
-            auto *editorFrame = new EditorFrame(this);
+            if (!editorFrame)
+                editorFrame = new EditorFrame(this);
             editorFrame->show();
             return true;
         } else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {

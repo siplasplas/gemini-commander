@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QTableView>
 
+#include "editor/EditorFrame.h"
+
 class Panel;
 QT_BEGIN_NAMESPACE
 class QSplitter;
@@ -26,6 +28,7 @@ private:
     QVector<Panel*> panels;
     QSplitter *mainSplitter;
     QLineEdit *commandLineEdit;
+    EditorFrame *editorFrame = nullptr;
     int numberForWidget(QTableView* widget);
 };
 

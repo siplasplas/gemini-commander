@@ -4,13 +4,16 @@
 #include <QMainWindow>
 #include <QString>
 #include "mainheader.h"
+#include <QMainWindow>
+#include <QDialog>
+#include "mainheader.h"
+
 
 class QSplitter;
 class QTreeView;
 class MruTabWidget;
 class QAction;
 class QMenu;
-class QCloseEvent;
 class QStandardItemModel;
 class QVBoxLayout;
 
@@ -26,12 +29,11 @@ class Editor;
  *
  * Integrates editor tabs, project tree, build system and LSP integration
  */
-class EditorFrame : public QMainWindow {
+class EditorFrame : public QDialog {
     Q_OBJECT
 
 public:
     explicit EditorFrame(QWidget *parent = nullptr);
-    void closeEvent(QCloseEvent* event);
     void extendTabContextMenu(int tabIndex, QMenu* menu);
     ~EditorFrame();
 

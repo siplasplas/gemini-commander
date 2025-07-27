@@ -45,11 +45,9 @@ KTextEditor::MainWindow* getDummyKateMainWindow()
 
 
 EditorFrame::EditorFrame(QWidget* parent)
-    : QMainWindow(parent)
+    : QDialog(parent)
 {
-    // --- Central Widget with Vertical Layout ---
-    QWidget* centralWidget = new QWidget(this);
-    m_mainLayout = new QVBoxLayout(centralWidget);
+    m_mainLayout = new QVBoxLayout(this);
     m_mainLayout->setContentsMargins(0, 0, 0, 0);
     m_mainLayout->setSpacing(0);
 
@@ -58,7 +56,7 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainLayout->addWidget(m_mainHeader);
 
     // --- Main Splitter for content ---
-    m_mainSplitter = new QSplitter(Qt::Vertical, centralWidget);
+    m_mainSplitter = new QSplitter(Qt::Vertical, this);
 
     m_topSplitter = new QSplitter(Qt::Horizontal, m_mainSplitter);
 
@@ -99,20 +97,9 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainLayout->addWidget(m_mainSplitter);
 
     // --- Finish setup ---
-    setCentralWidget(centralWidget);
-
     setMinimumSize(600, 400);
 
     qApp->installEventFilter(this);
-}
-
-void EditorFrame::closeEvent(QCloseEvent *event)
-{
-    if (!m_editorTabWidget->closeAllTabs()) {
-        event->ignore();
-    } else {
-        event->accept();
-    }
 }
 
 void EditorFrame::extendTabContextMenu(int tabIndex, QMenu* menu) {
