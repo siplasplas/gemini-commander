@@ -1,3 +1,4 @@
+
 # gemini-commander
 Twin-panel file manager written in C++ with the Qt library.
 
@@ -31,18 +32,16 @@ Key licensing assumptions regarding the use of Qt in this project:
 
 ## Building
 
-To build the project, you need Meson, Ninja (or another Meson backend), a C++ compiler supporting C++20, and Qt5 (version 5.15 or later recommended) development libraries installed.
+To build the project, you need CMake, Ninja or Make, a C++ compiler supporting C++20, 
+and Qt6 development libraries installed.
 
 ```bash
 # Navigate to your project root (gemini-commander/)
 cd path/to/gemini-commander 
 
-# Configure the project using Meson (creates a 'builddir' directory)
-# and change into the build directory
-meson setup builddir && cd builddir
-
-# Compile the project using Ninja (or the configured backend)
-meson compile
+mkdir build && cd build
+cmake ..
+make
 
 # Run the executable (from within the builddir)
 ./gemini_commander 
