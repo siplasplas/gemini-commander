@@ -271,6 +271,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
+
         if (keyEvent->key() == Qt::Key_Tab) {
             if (obj == leftTableView) {
                 rightTableView->setFocus();
@@ -279,6 +281,47 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 leftTableView->setFocus();
                 return true; // Event handled
             }
+        } else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
+            commandLineEdit->setFocus();
+            commandLineEdit->selectAll();
+            return true; // Event handled
+        } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
+            // Ctrl + P: Set current directory to commandLineEdit
+            bool isLeft = (obj == leftTableView);
+            QString currentPath = isLeft ? leftCurrentPath : rightCurrentPath;
+            commandLineEdit->setText(commandLineEdit->text() + currentPath);
+            return true; // Event handled
+        } else if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
+            if (modifiers == Qt::ControlModifier) {
+                // Ctrl + Enter: Set selected item name to commandLineEdit
+                bool isLeft = (obj == leftTableView);
+                QTableView *view = isLeft ? leftTableView : rightTableView;
+                QStandardItemModel *model = isLeft ? leftModel : rightModel;
+                QModelIndex currentIndex = view->currentIndex();
+                if (currentIndex.isValid()) {
+                    QString name = model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
+                    commandLineEdit->setText(commandLineEdit->text() + name);
+                    return true; // Event handled
+                }
+            } else if (modifiers == (Qt::ControlModifier | Qt::ShiftModifier)) {
+                // Shift + Ctrl + Enter: Set full path of selected item to commandLineEdit
+                bool isLeft = (obj == leftTableView);
+                QTableView *view = isLeft ? leftTableView : rightTableView;
+                QStandardItemModel *model = isLeft ? leftModel : rightModel;
+                QString currentPath = isLeft ? leftCurrentPath : rightCurrentPath;
+                QModelIndex currentIndex = view->currentIndex();
+                if (currentIndex.isValid()) {
+                    QString name = model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
+                    if (name == "[..]") {
+                        name = "..";
+                    }
+                    QDir dir(currentPath);
+                    QString fullPath = dir.absoluteFilePath(name);
+                    commandLineEdit->setText(commandLineEdit->text() + fullPath);
+                    return true; // Event handled
+                }
+            }
+            // Plain Enter: Let default handling (activated signal) proceed
         }
     } else if (event->type() == QEvent::FocusIn) {
         if (obj == leftTableView || obj == rightTableView) {
