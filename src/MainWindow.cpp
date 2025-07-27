@@ -122,6 +122,8 @@ void MainWindow::setupUi()
     mainLayout->setStretchFactor(commandLineEdit, 0);
 
     setCentralWidget(centralWidget);
+    styleActive(leftTableView);
+    styleInactive(rightTableView);
 }
 
 void MainWindow::loadDirectory(QStandardItemModel *model, const QString &path, QTableView *view)
@@ -241,6 +243,30 @@ void MainWindow::onPanelActivated(const QModelIndex &index, bool isLeft)
     }
 }
 
+void MainWindow::styleActive(QWidget* widget) {
+    widget->setStyleSheet(
+        "QTableView:item {"
+        "background-color: white;"
+        "color: black;"
+        "}"
+        "QTableView:item:selected {"
+        "    background-color: blue;"
+        "    color: white;"
+        "}");
+}
+
+void MainWindow::styleInactive(QWidget* widget) {
+    widget->setStyleSheet(
+        "QTableView:item {"
+        "background-color: white;"
+        "color: black;"
+        "}"
+        "QTableView:item:selected {"
+        "    background-color: lightgray;"
+        "    color: white;"
+        "}");
+}
+
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() == QEvent::KeyPress) {
@@ -253,6 +279,14 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 leftTableView->setFocus();
                 return true; // Event handled
             }
+        }
+    } else if (event->type() == QEvent::FocusIn) {
+        if (obj == leftTableView || obj == rightTableView) {
+            styleActive(dynamic_cast<QWidget*>(obj));
+        }
+    } else if (event->type() == QEvent::FocusOut) {
+        if (obj == leftTableView || obj == rightTableView) {
+            styleInactive(dynamic_cast<QWidget*>(obj));
         }
     }
     return QMainWindow::eventFilter(obj, event);

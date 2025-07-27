@@ -22,8 +22,9 @@ public:
 
 private slots:
     void onPanelActivated(const QModelIndex &index, bool isLeft);
-
 private:
+    void styleActive(QWidget *widget);
+    void styleInactive(QWidget *widget);
     void setupUi();
     void setupModels();
     void loadDirectory(QStandardItemModel *model, const QString &path, QTableView *view);
