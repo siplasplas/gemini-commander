@@ -12,6 +12,7 @@
 #include <QFontMetrics>
 #include <algorithm> // For sorting
 #include <QItemSelectionModel>
+#include <QKeyEvent> // For key event handling
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -111,6 +112,10 @@ void MainWindow::setupUi()
     connect(rightTableView, &QTableView::activated, [this](const QModelIndex &index) {
         onPanelActivated(index, false);
     });
+
+    // Install event filters for Tab key handling
+    leftTableView->installEventFilter(this);
+    rightTableView->installEventFilter(this);
 
     mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(commandLineEdit);
@@ -235,4 +240,21 @@ void MainWindow::onPanelActivated(const QModelIndex &index, bool isLeft)
             }
         }
     }
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Tab) {
+            if (obj == leftTableView) {
+                rightTableView->setFocus();
+                return true; // Event handled
+            } else if (obj == rightTableView) {
+                leftTableView->setFocus();
+                return true; // Event handled
+            }
+        }
+    }
+    return QMainWindow::eventFilter(obj, event);
 }

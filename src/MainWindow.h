@@ -28,6 +28,8 @@ private:
     void setupModels();
     void loadDirectory(QStandardItemModel *model, const QString &path, QTableView *view);
 
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
     QSplitter *mainSplitter;
     QTableView *leftTableView;
     QTableView *rightTableView;
