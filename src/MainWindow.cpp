@@ -5,7 +5,7 @@
 #include <QLineEdit>
 #include <QVBoxLayout>
 #include <QWidget>
-#include <QTreeView>
+#include <QTableView>
 #include <QFileSystemModel>
 #include <QHeaderView>
 #include <QDir>
@@ -13,13 +13,10 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    setupModels(); // First configure models
-    setupUi();     // Next UI, which uses models
+    setupModels();
+    setupUi();
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
-
-    leftTreeView->sortByColumn(0, Qt::AscendingOrder);
-    rightTreeView->sortByColumn(0, Qt::AscendingOrder);
 }
 
 void MainWindow::setupModels()
@@ -50,47 +47,58 @@ void MainWindow::setupUi()
 
     mainSplitter = new QSplitter(Qt::Horizontal, centralWidget);
 
-    leftTreeView = new QTreeView(mainSplitter);
-    rightTreeView = new QTreeView(mainSplitter);
+    leftTableView = new QTableView(mainSplitter);
+    rightTableView = new QTableView(mainSplitter);
 
-    // === Configuration of Views ====.
-    // 1. Set the PROXY MODEL for each view
-    leftTreeView->setModel(leftProxyModel);
-    rightTreeView->setModel(rightProxyModel);
+    QTableView* views[] = {leftTableView, rightTableView};
+    DirectoryFirstProxyModel* proxyModels[] = {leftProxyModel, rightProxyModel};
+    QFileSystemModel* sourceModels[] = {leftSourceModel, rightSourceModel};
 
-    // 2. Set the root of the view by mapping the index from the source through the proxy
-    // This is VERY IMPORTANT!
-    leftTreeView->setRootIndex(leftProxyModel->mapFromSource(leftSourceModel->index(leftSourceModel->rootPath())));
-    rightTreeView->setRootIndex(rightProxyModel->mapFromSource(rightSourceModel->index(rightSourceModel->rootPath())));
+    for (int i = 0; i < 2; ++i)
+    {
+        QTableView* currentView = views[i];
+        DirectoryFirstProxyModel* currentProxy = proxyModels[i];
+        QFileSystemModel* currentSource = sourceModels[i];
 
+        currentView->setModel(currentProxy);
 
-    // 3. Column configuration (indexes now refer to the proxy model, but are the same as in the source)
-    leftTreeView->hideColumn(2); // Ukryj kolumnę "Typ" (indeks 2)
-    rightTreeView->hideColumn(2);
+        currentView->setRootIndex(currentProxy->mapFromSource(currentSource->index(currentSource->rootPath())));
 
-    // Set the sorting in the view (this will allow the user to click on headings)
-    leftTreeView->setSortingEnabled(true);
-    rightTreeView->setSortingEnabled(true);
+        currentView->hideColumn(2);
 
-    // Adjust the width of the columns (as before).
-    leftTreeView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    leftTreeView->header()->setSectionResizeMode(1, QHeaderView::Interactive);
-    leftTreeView->header()->setSectionResizeMode(3, QHeaderView::Interactive);
-    leftTreeView->setColumnWidth(1, 100);
-    leftTreeView->setColumnWidth(3, 150);
+        currentView->setSelectionBehavior(QAbstractItemView::SelectRows);
+        currentView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+        currentView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        currentView->setShowGrid(false);
+        currentView->verticalHeader()->hide();
+        currentView->setAlternatingRowColors(true);
 
-    rightTreeView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    rightTreeView->header()->setSectionResizeMode(1, QHeaderView::Interactive);
-    rightTreeView->header()->setSectionResizeMode(3, QHeaderView::Interactive);
-    rightTreeView->setColumnWidth(1, 100);
-    rightTreeView->setColumnWidth(3, 150);
+        // Set a fixed line height to make it more compact
+        QFontMetrics fm(currentView->font());
+        int rowHeight = fm.height();
+        currentView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+        currentView->verticalHeader()->setDefaultSectionSize(rowHeight);
 
-    mainSplitter->addWidget(leftTreeView);
-    mainSplitter->addWidget(rightTreeView);
+        currentView->setSortingEnabled(true);
+        currentView->sortByColumn(0, Qt::AscendingOrder);
+
+        currentView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        currentView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);
+        currentView->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Interactive);
+        currentView->setColumnWidth(1, 100);
+        currentView->setColumnWidth(3, 150);
+    }
+
+    mainSplitter->addWidget(leftTableView);
+    mainSplitter->addWidget(rightTableView);
     mainSplitter->setStretchFactor(0, 1);
     mainSplitter->setStretchFactor(1, 1);
 
     commandLineEdit = new QLineEdit(centralWidget);
+
+    connect(leftTableView, &QTableView::doubleClicked, this, &MainWindow::onLeftPanelDoubleClick);
+    connect(rightTableView, &QTableView::doubleClicked, this, &MainWindow::onRightPanelDoubleClick);
+
 
     mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(commandLineEdit);
@@ -98,4 +106,21 @@ void MainWindow::setupUi()
     mainLayout->setStretchFactor(commandLineEdit, 0);
 
     setCentralWidget(centralWidget);
+}
+
+void MainWindow::onLeftPanelDoubleClick(const QModelIndex &proxyIndex)
+{
+    QModelIndex sourceIndex = leftProxyModel->mapToSource(proxyIndex);
+
+    if (leftSourceModel->isDir(sourceIndex)) {
+        leftTableView->setRootIndex(proxyIndex);
+    }
+}
+
+void MainWindow::onRightPanelDoubleClick(const QModelIndex &proxyIndex)
+{
+    QModelIndex sourceIndex = rightProxyModel->mapToSource(proxyIndex);
+    if (rightSourceModel->isDir(sourceIndex)) {
+        rightTableView->setRootIndex(proxyIndex);
+    }
 }

@@ -2,11 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QModelIndex>
 
 QT_BEGIN_NAMESPACE
 class QSplitter;
 class QLineEdit;
-class QTreeView;
+class QTableView;
 class QFileSystemModel;
 class DirectoryFirstProxyModel;
 QT_END_NAMESPACE
@@ -19,13 +20,17 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override = default;
 
+private slots:
+    void onLeftPanelDoubleClick(const QModelIndex &index);
+    void onRightPanelDoubleClick(const QModelIndex &index);
+
 private:
     void setupUi();
     void setupModels();
 
     QSplitter *mainSplitter;
-    QTreeView *leftTreeView;
-    QTreeView *rightTreeView;
+    QTableView *leftTableView;
+    QTableView *rightTableView;
     QLineEdit *commandLineEdit;
 
     QFileSystemModel *leftSourceModel;
