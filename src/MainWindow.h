@@ -21,8 +21,7 @@ public:
     ~MainWindow() override = default;
 
 private slots:
-    void onLeftPanelActivated(const QModelIndex &index);
-    void onRightPanelActivated(const QModelIndex &index);
+    void onPanelActivated(const QModelIndex &index, bool isLeft);
 
 private:
     void setupUi();

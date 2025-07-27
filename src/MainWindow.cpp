@@ -104,8 +104,13 @@ void MainWindow::setupUi()
 
     commandLineEdit = new QLineEdit(centralWidget);
 
-    connect(leftTableView, &QTableView::activated, this, &MainWindow::onLeftPanelActivated);
-    connect(rightTableView, &QTableView::activated, this, &MainWindow::onRightPanelActivated);
+    // Connect using lambda to pass isLeft flag
+    connect(leftTableView, &QTableView::activated, [this](const QModelIndex &index) {
+        onPanelActivated(index, true);
+    });
+    connect(rightTableView, &QTableView::activated, [this](const QModelIndex &index) {
+        onPanelActivated(index, false);
+    });
 
     mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(commandLineEdit);
@@ -183,26 +188,30 @@ void MainWindow::loadDirectory(QStandardItemModel *model, const QString &path, Q
     view->setRootIndex(QModelIndex());
 }
 
-void MainWindow::onLeftPanelActivated(const QModelIndex &index)
+void MainWindow::onPanelActivated(const QModelIndex &index, bool isLeft)
 {
     if (!index.isValid()) return;
 
-    QString name = leftModel->data(index.sibling(index.row(), 0)).toString(); // Name column
+    QStandardItemModel *model = isLeft ? leftModel : rightModel;
+    QString &currentPath = isLeft ? leftCurrentPath : rightCurrentPath;
+    QTableView *view = isLeft ? leftTableView : rightTableView;
 
-    QDir dir(leftCurrentPath);
+    QString name = model->data(index.sibling(index.row(), 0)).toString(); // Name column
+
+    QDir dir(currentPath);
     QString selectedName;
 
     if (name == "[..]") {
         // Going up: Select the previous directory name after load
         selectedName = dir.dirName(); // Basename of current path
         dir.cdUp();
-        leftCurrentPath = dir.absolutePath();
+        currentPath = dir.absolutePath();
     } else {
         // Check if dir
         QFileInfo info(dir.absoluteFilePath(name));
         if (info.isDir()) {
             dir.cd(name);
-            leftCurrentPath = dir.absolutePath();
+            currentPath = dir.absolutePath();
             selectedName = "[..]"; // Select first item ([..]) when going down
         } else {
             // Handle file open if needed (currently do nothing)
@@ -211,62 +220,17 @@ void MainWindow::onLeftPanelActivated(const QModelIndex &index)
     }
 
     // Reload directory
-    loadDirectory(leftModel, leftCurrentPath, leftTableView);
+    loadDirectory(model, currentPath, view);
 
     // Select and set current index for the appropriate row
     if (!selectedName.isEmpty()) {
-        for (int row = 0; row < leftModel->rowCount(); ++row) {
-            QString rowName = leftModel->item(row, 0)->text();
+        for (int row = 0; row < model->rowCount(); ++row) {
+            QString rowName = model->item(row, 0)->text();
             if (rowName == selectedName) {
-                QModelIndex selectIndex = leftModel->index(row, 0);
-                leftTableView->setCurrentIndex(selectIndex); // Sets both selection and current for keyboard navigation
-                leftTableView->scrollTo(selectIndex); // Optional: Scroll to the selected item
-                leftTableView->setFocus(); // Ensure the view has focus for keyboard input
-                break;
-            }
-        }
-    }
-}
-
-void MainWindow::onRightPanelActivated(const QModelIndex &index)
-{
-    if (!index.isValid()) return;
-
-    QString name = rightModel->data(index.sibling(index.row(), 0)).toString(); // Name column
-
-    QDir dir(rightCurrentPath);
-    QString selectedName;
-
-    if (name == "[..]") {
-        // Going up: Select the previous directory name after load
-        selectedName = dir.dirName(); // Basename of current path
-        dir.cdUp();
-        rightCurrentPath = dir.absolutePath();
-    } else {
-        // Check if dir
-        QFileInfo info(dir.absoluteFilePath(name));
-        if (info.isDir()) {
-            dir.cd(name);
-            rightCurrentPath = dir.absolutePath();
-            selectedName = "[..]"; // Select first item ([..]) when going down
-        } else {
-            // Handle file open if needed (currently do nothing)
-            return;
-        }
-    }
-
-    // Reload directory
-    loadDirectory(rightModel, rightCurrentPath, rightTableView);
-
-    // Select and set current index for the appropriate row
-    if (!selectedName.isEmpty()) {
-        for (int row = 0; row < rightModel->rowCount(); ++row) {
-            QString rowName = rightModel->item(row, 0)->text();
-            if (rowName == selectedName) {
-                QModelIndex selectIndex = rightModel->index(row, 0);
-                rightTableView->setCurrentIndex(selectIndex); // Sets both selection and current for keyboard navigation
-                rightTableView->scrollTo(selectIndex); // Optional: Scroll to the selected item
-                rightTableView->setFocus(); // Ensure the view has focus for keyboard input
+                QModelIndex selectIndex = model->index(row, 0);
+                view->setCurrentIndex(selectIndex); // Sets both selection and current for keyboard navigation
+                view->scrollTo(selectIndex); // Optional: Scroll to the selected item
+                view->setFocus(); // Ensure the view has focus for keyboard input
                 break;
             }
         }
