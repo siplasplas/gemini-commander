@@ -2,14 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QModelIndex>
-#include <QString>
+#include <QTableView>
 
+class Panel;
 QT_BEGIN_NAMESPACE
 class QSplitter;
 class QLineEdit;
-class QTableView;
-class QStandardItemModel;
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -18,29 +16,17 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override = default;
+    ~MainWindow();
 
-private slots:
-    void onPanelActivated(const QModelIndex &index, bool isLeft);
 private:
-    void styleActive(QWidget *widget);
-    void styleInactive(QWidget *widget);
     void setupUi();
-    void setupModels();
-    void loadDirectory(QStandardItemModel *model, const QString &path, QTableView *view);
-
     bool eventFilter(QObject *obj, QEvent *event) override;
-
+    int nPanel = 0;
+    const int numPanels = 2;
+    QVector<Panel*> panels;
     QSplitter *mainSplitter;
-    QTableView *leftTableView;
-    QTableView *rightTableView;
     QLineEdit *commandLineEdit;
-
-    QStandardItemModel *leftModel;
-    QStandardItemModel *rightModel;
-
-    QString leftCurrentPath;
-    QString rightCurrentPath;
+    int numberForWidget(QTableView* widget);
 };
 
 #endif // MAINWINDOW_H

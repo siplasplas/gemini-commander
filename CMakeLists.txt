@@ -13,6 +13,8 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/MainWindow.cpp
+        src/Panel.cpp
+        src/Panel.h
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets)
