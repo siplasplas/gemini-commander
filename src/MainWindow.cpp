@@ -1,44 +1,45 @@
 #include "MainWindow.h"
-#include "DirectoryFirstProxyModel.h"
 
 #include <QSplitter>
 #include <QLineEdit>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QTableView>
-#include <QFileSystemModel>
 #include <QHeaderView>
 #include <QDir>
+#include <QFileInfo>
+#include <QStandardItemModel>
+#include <QFontMetrics>
+#include <algorithm> // For sorting
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setupModels();
     setupUi();
+
+    // Initial load after views are created and models are set
+    loadDirectory(leftModel, leftCurrentPath, leftTableView);
+    loadDirectory(rightModel, rightCurrentPath, rightTableView);
+
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
 }
 
 void MainWindow::setupModels()
 {
-    leftSourceModel = new QFileSystemModel(this);
-    rightSourceModel = new QFileSystemModel(this);
+    leftModel = new QStandardItemModel(this);
+    rightModel = new QStandardItemModel(this);
 
-    QDir::Filters filters = QDir::AllDirs | QDir::Files;
-    leftSourceModel->setFilter(filters);
-    rightSourceModel->setFilter(filters);
+    // Set column headers (Name, Size, Type, Modified)
+    QStringList headers = {"Name", "Size", "Type", "Modified"};
+    leftModel->setHorizontalHeaderLabels(headers);
+    rightModel->setHorizontalHeaderLabels(headers);
 
     QString homePath = QDir::homePath();
-    leftSourceModel->setRootPath(homePath);
-    rightSourceModel->setRootPath(homePath);
-
-    leftProxyModel = new DirectoryFirstProxyModel(this);
-    rightProxyModel = new DirectoryFirstProxyModel(this);
-
-    leftProxyModel->setSourceModel(leftSourceModel);
-    rightProxyModel->setSourceModel(rightSourceModel);
+    leftCurrentPath = homePath;
+    rightCurrentPath = homePath;
 }
-
 
 void MainWindow::setupUi()
 {
@@ -51,20 +52,16 @@ void MainWindow::setupUi()
     rightTableView = new QTableView(mainSplitter);
 
     QTableView* views[] = {leftTableView, rightTableView};
-    DirectoryFirstProxyModel* proxyModels[] = {leftProxyModel, rightProxyModel};
-    QFileSystemModel* sourceModels[] = {leftSourceModel, rightSourceModel};
+    QStandardItemModel* models[] = {leftModel, rightModel};
 
     for (int i = 0; i < 2; ++i)
     {
         QTableView* currentView = views[i];
-        DirectoryFirstProxyModel* currentProxy = proxyModels[i];
-        QFileSystemModel* currentSource = sourceModels[i];
+        QStandardItemModel* currentModel = models[i];
 
-        currentView->setModel(currentProxy);
+        currentView->setModel(currentModel);
 
-        currentView->setRootIndex(currentProxy->mapFromSource(currentSource->index(currentSource->rootPath())));
-
-        currentView->hideColumn(2);
+        currentView->hideColumn(2); // Hide "Type" column if not needed
 
         currentView->setSelectionBehavior(QAbstractItemView::SelectRows);
         currentView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -79,8 +76,8 @@ void MainWindow::setupUi()
         currentView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         currentView->verticalHeader()->setDefaultSectionSize(rowHeight);
 
-        currentView->setSortingEnabled(true);
-        currentView->sortByColumn(0, Qt::AscendingOrder);
+        // Note: Sorting is handled manually in loadDirectory, so disable view sorting
+        currentView->setSortingEnabled(false);
 
         currentView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
         currentView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);
@@ -99,7 +96,6 @@ void MainWindow::setupUi()
     connect(leftTableView, &QTableView::doubleClicked, this, &MainWindow::onLeftPanelDoubleClick);
     connect(rightTableView, &QTableView::doubleClicked, this, &MainWindow::onRightPanelDoubleClick);
 
-
     mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(commandLineEdit);
     mainLayout->setStretchFactor(mainSplitter, 1);
@@ -108,19 +104,126 @@ void MainWindow::setupUi()
     setCentralWidget(centralWidget);
 }
 
-void MainWindow::onLeftPanelDoubleClick(const QModelIndex &proxyIndex)
+void MainWindow::loadDirectory(QStandardItemModel *model, const QString &path, QTableView *view)
 {
-    QModelIndex sourceIndex = leftProxyModel->mapToSource(proxyIndex);
+    model->removeRows(0, model->rowCount()); // Clear existing items
 
-    if (leftSourceModel->isDir(sourceIndex)) {
-        leftTableView->setRootIndex(proxyIndex);
+    QDir dir(path);
+    if (!dir.exists()) {
+        return; // Handle error if needed
     }
+
+    // Filters: All dirs and files, no "." and ".."
+    QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
+    QFileInfoList entries = dir.entryInfoList(filters, QDir::Name | QDir::IgnoreCase);
+
+    // Separate dirs and files for "directories first" sorting
+    QList<QFileInfo> dirs;
+    QList<QFileInfo> files;
+    for (const QFileInfo &info : entries) {
+        if (info.fileName() == ".") continue; // Explicitly skip "."
+        if (info.isDir()) {
+            dirs.append(info);
+        } else {
+            files.append(info);
+        }
+    }
+
+    // Sort dirs and files alphabetically (case-insensitive already from QDir)
+    std::sort(dirs.begin(), dirs.end(), [](const QFileInfo &a, const QFileInfo &b) {
+        return a.fileName().toLower() < b.fileName().toLower();
+    });
+    std::sort(files.begin(), files.end(), [](const QFileInfo &a, const QFileInfo &b) {
+        return a.fileName().toLower() < b.fileName().toLower();
+    });
+
+    // Add "[..]" if not root
+    bool isRoot = dir.isRoot();
+    if (!isRoot) {
+        QList<QStandardItem*> row;
+        row.append(new QStandardItem("[..]"));
+        row.append(new QStandardItem("")); // Size empty for dir
+        row.append(new QStandardItem("Directory")); // Type
+        row.append(new QStandardItem("")); // Modified empty
+        model->appendRow(row);
+    }
+
+    // Add dirs
+    for (const QFileInfo &info : dirs) {
+        QList<QStandardItem*> row;
+        row.append(new QStandardItem(info.fileName()));
+        row.append(new QStandardItem("")); // Size empty for dir
+        row.append(new QStandardItem("Directory"));
+        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+        model->appendRow(row);
+    }
+
+    // Add files
+    for (const QFileInfo &info : files) {
+        QList<QStandardItem*> row;
+        row.append(new QStandardItem(info.fileName()));
+        row.append(new QStandardItem(QString::number(info.size())));
+        row.append(new QStandardItem("File"));
+        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+        model->appendRow(row);
+    }
+
+    // Set root index to show the entire model
+    view->setRootIndex(QModelIndex());
 }
 
-void MainWindow::onRightPanelDoubleClick(const QModelIndex &proxyIndex)
+void MainWindow::onLeftPanelDoubleClick(const QModelIndex &index)
 {
-    QModelIndex sourceIndex = rightProxyModel->mapToSource(proxyIndex);
-    if (rightSourceModel->isDir(sourceIndex)) {
-        rightTableView->setRootIndex(proxyIndex);
+    if (!index.isValid()) return;
+
+    QString name = leftModel->data(index.sibling(index.row(), 0)).toString(); // Name column
+
+    QDir dir(leftCurrentPath);
+
+    if (name == "[..]") {
+        // Go to parent
+        dir.cdUp();
+        leftCurrentPath = dir.absolutePath();
+    } else {
+        // Check if dir
+        QFileInfo info(dir.absoluteFilePath(name));
+        if (info.isDir()) {
+            dir.cd(name);
+            leftCurrentPath = dir.absolutePath();
+        } else {
+            // Handle file open if needed (currently do nothing)
+            return;
+        }
     }
+
+    // Reload directory
+    loadDirectory(leftModel, leftCurrentPath, leftTableView);
+}
+
+void MainWindow::onRightPanelDoubleClick(const QModelIndex &index)
+{
+    if (!index.isValid()) return;
+
+    QString name = rightModel->data(index.sibling(index.row(), 0)).toString(); // Name column
+
+    QDir dir(rightCurrentPath);
+
+    if (name == "[..]") {
+        // Go to parent
+        dir.cdUp();
+        rightCurrentPath = dir.absolutePath();
+    } else {
+        // Check if dir
+        QFileInfo info(dir.absoluteFilePath(name));
+        if (info.isDir()) {
+            dir.cd(name);
+            rightCurrentPath = dir.absolutePath();
+        } else {
+            // Handle file open if needed (currently do nothing)
+            return;
+        }
+    }
+
+    // Reload directory
+    loadDirectory(rightModel, rightCurrentPath, rightTableView);
 }

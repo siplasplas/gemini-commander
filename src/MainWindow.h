@@ -3,13 +3,13 @@
 
 #include <QMainWindow>
 #include <QModelIndex>
+#include <QString>
 
 QT_BEGIN_NAMESPACE
 class QSplitter;
 class QLineEdit;
 class QTableView;
-class QFileSystemModel;
-class DirectoryFirstProxyModel;
+class QStandardItemModel;
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -27,16 +27,18 @@ private slots:
 private:
     void setupUi();
     void setupModels();
+    void loadDirectory(QStandardItemModel *model, const QString &path, QTableView *view);
 
     QSplitter *mainSplitter;
     QTableView *leftTableView;
     QTableView *rightTableView;
     QLineEdit *commandLineEdit;
 
-    QFileSystemModel *leftSourceModel;
-    QFileSystemModel *rightSourceModel;
-    DirectoryFirstProxyModel *leftProxyModel;
-    DirectoryFirstProxyModel *rightProxyModel;
+    QStandardItemModel *leftModel;
+    QStandardItemModel *rightModel;
+
+    QString leftCurrentPath;
+    QString rightCurrentPath;
 };
 
 #endif // MAINWINDOW_H
