@@ -80,7 +80,6 @@ void MainWindow::setupUi()
         currentView->setEditTriggers(QAbstractItemView::NoEditTriggers);
         currentView->setShowGrid(false);
         currentView->verticalHeader()->hide();
-        currentView->setAlternatingRowColors(true);
 
         // Set a fixed line height to make it more compact
         QFontMetrics fm(currentView->font());
