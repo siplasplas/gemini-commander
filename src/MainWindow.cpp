@@ -93,8 +93,8 @@ void MainWindow::setupUi()
 
     commandLineEdit = new QLineEdit(centralWidget);
 
-    connect(leftTableView, &QTableView::doubleClicked, this, &MainWindow::onLeftPanelDoubleClick);
-    connect(rightTableView, &QTableView::doubleClicked, this, &MainWindow::onRightPanelDoubleClick);
+    connect(leftTableView, &QTableView::activated, this, &MainWindow::onLeftPanelActivated);
+    connect(rightTableView, &QTableView::activated, this, &MainWindow::onRightPanelActivated);
 
     mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(commandLineEdit);
@@ -172,7 +172,7 @@ void MainWindow::loadDirectory(QStandardItemModel *model, const QString &path, Q
     view->setRootIndex(QModelIndex());
 }
 
-void MainWindow::onLeftPanelDoubleClick(const QModelIndex &index)
+void MainWindow::onLeftPanelActivated(const QModelIndex &index)
 {
     if (!index.isValid()) return;
 
@@ -200,7 +200,7 @@ void MainWindow::onLeftPanelDoubleClick(const QModelIndex &index)
     loadDirectory(leftModel, leftCurrentPath, leftTableView);
 }
 
-void MainWindow::onRightPanelDoubleClick(const QModelIndex &index)
+void MainWindow::onRightPanelActivated(const QModelIndex &index)
 {
     if (!index.isValid()) return;
 

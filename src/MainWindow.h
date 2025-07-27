@@ -21,8 +21,8 @@ public:
     ~MainWindow() override = default;
 
 private slots:
-    void onLeftPanelDoubleClick(const QModelIndex &index);
-    void onRightPanelDoubleClick(const QModelIndex &index);
+    void onLeftPanelActivated(const QModelIndex &index);
+    void onRightPanelActivated(const QModelIndex &index);
 
 private:
     void setupUi();
