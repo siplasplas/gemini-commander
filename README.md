@@ -29,6 +29,37 @@ Key licensing assumptions regarding the use of Qt in this project:
 
 **In summary:** Your contributions to this project are licensed under Apache 2.0. However, because the project uses Qt libraries under the LGPLv3, the work as a whole (especially in binary form) is also subject to the terms of the LGPLv3 concerning the Qt parts. Users have rights and obligations stemming from both licenses, applicable to the respective components of the project.
 
+## Prerequisites
+On Ubuntu/Debian-based systems (e.g., Ubuntu, Linux Mint, Pop!_OS):
+```
+sudo apt update
+sudo apt install extra-cmake-modules
+```
+
+On Fedora/RHEL-based systems:
+```
+sudo dnf install extra-cmake-modules
+```
+
+On Arch-based systems (e.g., Arch Linux, Manjaro):
+```
+sudo pacman -Syu extra-cmake-modules
+```
+
+On openSUSE:
+```
+sudo zypper install extra-cmake-modules
+```
+
+On macOS (using Homebrew):
+```
+brew install extra-cmake-modules
+```
+
+On Windows (using MSYS2 or Chocolatey; note that KDE development on Windows may require additional setup):
+```
+pacman -S mingw-w64-x86_64-extra-cmake-modules  # For MSYS2
+```
 
 ## Building
 
