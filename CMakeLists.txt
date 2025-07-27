@@ -2,19 +2,48 @@ cmake_minimum_required(VERSION 3.16)
 
 project(gemini-commander VERSION 1.0 LANGUAGES CXX)
 
+option(USE_QT5 "Use Qt5 and KF5 instead of Qt6 and KF6" OFF)
+
+if(USE_QT5)
+    set(QT_MAJOR_VERSION 5)
+    set(KF_MAJOR_VERSION 5)
+    set(QT_MIN_VERSION "5.15.0")
+    set(KF_MIN_VERSION "5.78.0")
+    set(ECM_MIN_VERSION "5.78.0")
+else()
+    set(QT_MAJOR_VERSION 6)
+    set(KF_MAJOR_VERSION 6)
+    set(QT_MIN_VERSION "6.0.0")
+    set(KF_MIN_VERSION "6.0.0")
+    set(ECM_MIN_VERSION "6.0.0")
+endif()
+
+find_package(ECM ${ECM_MIN_VERSION} REQUIRED NO_MODULE)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${ECM_MODULE_PATH})
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets)
+find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS CoreAddons I18n WidgetsAddons WindowSystem KIO)
 
 add_executable(${PROJECT_NAME}
-    src/main.cpp
-    src/MainWindow.cpp
+        src/main.cpp
+        src/MainWindow.cpp
         src/Panel.cpp
         src/Panel.h
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        Qt${QT_MAJOR_VERSION}::Widgets
+        KF${KF_MAJOR_VERSION}::CoreAddons
+        KF${KF_MAJOR_VERSION}::I18n
+        KF${KF_MAJOR_VERSION}::WidgetsAddons
+        KF${KF_MAJOR_VERSION}::WindowSystem
+        KF${KF_MAJOR_VERSION}::KIOCore
+        KF${KF_MAJOR_VERSION}::KIOFileWidgets
+        KF${KF_MAJOR_VERSION}::KIOWidgets
+)
