@@ -42,6 +42,7 @@ void MainWindow::setupUi()
     // Install event filters for Tab key handling
     for (int i = 0; i < panels.size(); ++i)
         panels[i]->tableView->installEventFilter(this);
+    commandLineEdit->installEventFilter(this);
 
     mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(commandLineEdit);
@@ -70,7 +71,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             commandLineEdit->setFocus();
             commandLineEdit->selectAll();
             return true; // Event handled
-        } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
+        }
+        else if (obj==commandLineEdit && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) && modifiers == Qt::NoModifier) {
+            panels[nPanel]->tableView->setFocus();
+            return true; // Event handled
+        }
+        else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
             // Ctrl + P: Set current directory to commandLineEdit
             QString currentPath = panels[nPanel]->currentPath;
             commandLineEdit->setText(commandLineEdit->text() + currentPath);
