@@ -6,9 +6,10 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QDir>
-#include <QKeyEvent> // For key event handling
+#include <QKeyEvent>
 #include <QStandardItemModel>
 #include <QTableView>
+#include "editor/EditorFrame.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -67,6 +68,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panels[next]->tableView->setFocus();
                 return true; // Event handled
             }
+        } else if (keyEvent->key() == Qt::Key_F4 && modifiers == Qt::NoModifier) {
+            auto *editorFrame = new EditorFrame(this);
+            editorFrame->show();
+            return true;
         } else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
             commandLineEdit->setFocus();
             commandLineEdit->selectAll();
