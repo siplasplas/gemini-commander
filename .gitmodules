@@ -1,0 +1,3 @@
+[submodule "external/textviewers"]
+	path = external/textviewers
+	url = https://github.com/ideorg/textviewers.git
