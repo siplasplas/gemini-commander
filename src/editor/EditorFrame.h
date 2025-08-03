@@ -48,6 +48,7 @@ public:
 
 private slots:
     void onOpenFileTriggered();
+    void onViewFileTriggered();
     void onTreeItemExpanded(const QModelIndex& index);
     void onCloseCurrentTabTriggered();
     void onAboutTriggered();
@@ -69,6 +70,7 @@ private:
     QToolBar *m_mainToolBar;
     // Menu Actions
     QAction *m_openFileAction;
+    QAction *m_viewFileAction;
     QAction *m_closeAction;
     QAction *m_exitAction;
     QAction *m_buildAction;
@@ -76,6 +78,7 @@ private:
     QAction *m_aboutAction;
 
     void openFileInEditor(const QString& filePath);
+    void viewFileInEditor(const QString& filePath);
     int findTabByPath(const QString& filePath);
     QString generateUniqueTabTitle(const QString& filePath);
     void onProjectTreeKeyPressed(QKeyEvent* event);

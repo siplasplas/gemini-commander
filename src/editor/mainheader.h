@@ -33,7 +33,7 @@ public:
      * @param runProject Action for running projects
      * @param aboutApp Action for about dialog
      */
-    void setupMenus(QAction* openFile, QAction* closeFile,
+    void setupMenus(QAction* openFile, QAction* viewFile, QAction* closeFile,
                     QAction* exitApp, QAction* buildProject, QAction* runProject, QAction* aboutApp);
 
     /**

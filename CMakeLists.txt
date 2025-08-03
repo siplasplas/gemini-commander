@@ -48,9 +48,23 @@ add_executable(${PROJECT_NAME}
         src/widgets/Ev.cpp
         src/editor/BaseViewer.cpp
         src/editor/BaseViewer.h
+        src/editor/Viewer.cpp
+        src/editor/Viewer.h
+        external/textviewers/wid/TextViewer.cpp
+        external/textviewers/wid/PaintArea.cpp
+        external/textviewers/logic/AbstractView.cpp
+        external/textviewers/logic/Wrap.cpp
+        external/textviewers/logic/LineView.cpp
+        external/textviewers/logic/ByteView.cpp
+        external/textviewers/logic/LineDeque.cpp
+        external/textviewers/logic/ByteDeque.cpp
+        external/textviewers/logic/ByteDocument.cpp
+        external/textviewers/logic/ChangeableDocument.cpp
+        external/textviewers/logic/LineIndexedDocument.cpp
+        external/textviewers/misc/selection.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir})
+target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}  ${CMAKE_SOURCE_DIR}/external/textviewers)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_MAJOR_VERSION}::Widgets
