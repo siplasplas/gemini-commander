@@ -90,7 +90,7 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainSplitter->setSizes({600, 150});
 
     createActions();
-    m_mainHeader->setupMenus(m_openFileAction, m_openProjectAction, m_closeAction, m_closeProjectAction,
+    m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
                          m_exitAction, m_buildAction, m_runAction, m_aboutAction);
     m_mainHeader->setupToolBar(m_buildAction, m_runAction);
 
@@ -146,15 +146,9 @@ void EditorFrame::createActions()
     m_openFileAction->setShortcut(QKeySequence::Open);
     connect(m_openFileAction, &QAction::triggered, this, &EditorFrame::onOpenFileTriggered);
 
-    m_openProjectAction = new QAction(tr("Open &Project..."), this);
-    connect(m_openProjectAction, &QAction::triggered, this, &EditorFrame::onOpenProjectTriggered);
-
     m_closeAction = new QAction(tr("&Close"), this);
     m_closeAction->setShortcut(QKeySequence::Close);
     connect(m_closeAction, &QAction::triggered, this, &EditorFrame::onCloseCurrentTabTriggered);
-
-    m_closeProjectAction = new QAction(tr("Close Pro&ject"), this);
-    connect(m_closeProjectAction, &QAction::triggered, this, &EditorFrame::onCloseProjectTriggered);
 
     m_exitAction = new QAction(tr("E&xit"), this);
     m_exitAction->setShortcut(QKeySequence::Quit);
@@ -266,72 +260,6 @@ void EditorFrame::onOpenFileTriggered()
         openFileInEditor(fileName);
 }
 
-// --- Open Project (no changes) ---
-void EditorFrame::onOpenProjectTriggered()
-{
-    QString dir = QFileDialog::getExistingDirectory(
-        this,
-        tr("Open Project"),
-        QString(),
-        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseNativeDialog
-    );
-
-    if (dir.isEmpty())
-        return;
-
-    // Clean old model
-    m_projectTree->setModel(nullptr);
-    delete m_projectModel;
-
-    m_projectModel = new QStandardItemModel(this);
-    m_projectTree->setModel(m_projectModel);
-    m_projectTree->setHeaderHidden(true);
-    connect(m_projectTree, &QTreeView::expanded, this, &EditorFrame::onTreeItemExpanded);
-
-    m_projectRootPath = dir;
-
-    // Create root item
-    QFileInfo dirInfo(dir);
-    QString dirName = dirInfo.fileName(); // e.q. "project"
-    if (dirName.isEmpty())  // If directory is roote '/', fileName will empty
-        dirName = dir;      // Then leave a full path
-
-    QStandardItem* rootItem = new QStandardItem(dirName);
-    rootItem->setEditable(false);
-    rootItem->setToolTip(dir); // Set the full path as a tooltip
-    rootItem->setData(dir, Qt::UserRole + 1); // Own data: full path
-
-    rootItem->setEditable(false);
-    rootItem->setData(dir, Qt::UserRole + 1);
-    m_projectModel->appendRow(rootItem);
-
-    // Load immediate children (first level)
-    QDir rootDir(dir);
-    QFileInfoList entries = rootDir.entryInfoList(
-        QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files,
-        QDir::Name
-    );
-
-    for (const QFileInfo& entry : entries)
-    {
-        QStandardItem* child = new QStandardItem(entry.fileName());
-        child->setEditable(false);
-        child->setData(entry.absoluteFilePath(), Qt::UserRole + 1);
-
-        if (entry.isDir())
-        {
-            // Placeholder for expand arrow
-            child->appendRow(new QStandardItem());
-        }
-
-        rootItem->appendRow(child);
-    }
-
-    // Expand root
-    QModelIndex rootIndex = m_projectModel->index(0, 0);
-    m_projectTree->expand(rootIndex);
-}
-
 void EditorFrame::onTreeItemExpanded(const QModelIndex& index)
 {
     QStandardItem* item = m_projectModel->itemFromIndex(index);
@@ -370,12 +298,6 @@ void EditorFrame::onTreeItemExpanded(const QModelIndex& index)
 void EditorFrame::onCloseCurrentTabTriggered()
 {
     m_editorTabWidget->closeTab(m_editorTabWidget-> currentIndex());
-}
-
-void EditorFrame::onCloseProjectTriggered()
-{
-    qDebug() << "Close project triggered";
-    m_editorTabWidget->closeAllTabs();
 }
 
 void EditorFrame::onAboutTriggered()

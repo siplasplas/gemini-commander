@@ -27,15 +27,13 @@ public:
     /**
      * @brief Populates menu structure
      * @param openFile Action for opening files
-     * @param openProject Action for opening projects
      * @param closeFile Action for closing files
-     * @param closeProject Action for closing projects
      * @param exitApp Action for exiting application
      * @param buildProject Action for building projects
      * @param runProject Action for running projects
      * @param aboutApp Action for about dialog
      */
-    void setupMenus(QAction* openFile, QAction* openProject, QAction* closeFile, QAction* closeProject,
+    void setupMenus(QAction* openFile, QAction* closeFile,
                     QAction* exitApp, QAction* buildProject, QAction* runProject, QAction* aboutApp);
 
     /**

@@ -48,10 +48,8 @@ public:
 
 private slots:
     void onOpenFileTriggered();
-    void onOpenProjectTriggered();
     void onTreeItemExpanded(const QModelIndex& index);
     void onCloseCurrentTabTriggered();
-    void onCloseProjectTriggered();
     void onAboutTriggered();
 
 private:
@@ -71,9 +69,7 @@ private:
     QToolBar *m_mainToolBar;
     // Menu Actions
     QAction *m_openFileAction;
-    QAction *m_openProjectAction;
     QAction *m_closeAction;
-    QAction *m_closeProjectAction;
     QAction *m_exitAction;
     QAction *m_buildAction;
     QAction *m_runAction;
