@@ -15,7 +15,7 @@
  * @note Creates view and sets up editor layout automatically
  */
 Editor::Editor(KTextEditor::Document *doc, QWidget *parent) :
-    QWidget(parent),
+    BaseViewer(parent),
     m_document(doc),
     m_view(nullptr)
 {
@@ -58,17 +58,6 @@ Editor::Editor(KTextEditor::Document *doc, QWidget *parent) :
 }
 
 /**
- * @brief Destroys editor instance
- * @note Logs destruction and relies on Qt's parent-child cleanup
- */
-Editor::~Editor() {
-    // The m_view widget will be deleted by Qt's parent/child mechanism
-    // as it's parented to 'this' (the Editor QWidget).
-    // The m_document is managed by KTextEditor::Editor singleton, do not delete here.
-    qDebug() << "Editor destructor for:" << m_filePath;
-}
-
-/**
  * @brief Provides access to managed document
  * @return KTextEditor document pointer
  */
@@ -84,13 +73,6 @@ KTextEditor::View* Editor::view() const {
     return m_view;
 }
 
-/**
- * @brief Returns document filesystem path
- * @return Full file path as QString
- */
-QString Editor::filePath() const {
-    return m_filePath;
-}
 
 /**
  * @brief Extracts filename from path

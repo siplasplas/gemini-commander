@@ -46,6 +46,8 @@ add_executable(${PROJECT_NAME}
         src/editor/mainheader.cpp
         src/widgets/mrutabwidget.cpp
         src/widgets/Ev.cpp
+        src/editor/BaseViewer.cpp
+        src/editor/BaseViewer.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir})

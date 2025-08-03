@@ -9,15 +9,16 @@
 #include <KTextEditor/MainWindow>   // Often needed for full integration/context
 #include <KTextEditor/Application>
 
+#include "BaseViewer.h"
+
 /**
  * @class Editor
  * @brief Widget wrapper for KTextEditor components
  *
  * Manages text editing sessions with document/view architecture
  */
-class Editor : public QWidget {
+class Editor : public BaseViewer {
     Q_OBJECT
-
 public:
     /**
      * @brief Constructs editor with KTextEditor document
@@ -25,12 +26,6 @@ public:
      * @param parent Parent widget
      */
     explicit Editor(KTextEditor::Document *doc, QWidget *parent = nullptr);
-
-    /**
-     * @brief Destroys editor instance
-     * @note Automatically cleans up view through Qt's parent-child system
-     */
-    ~Editor();
 
     /**
      * @brief Gets managed document
@@ -45,22 +40,16 @@ public:
     KTextEditor::View* view() const;
 
     /**
-     * @brief Gets full file path
-     * @return Document path as QString
-     */
-    QString filePath() const;
-
-    /**
      * @brief Gets filename without path
      * @return Base filename or "Untitled" for new documents
      */
-    QString baseFileName() const;
+    [[nodiscard]] QString baseFileName() const override;
 
     /**
      * @brief Checks document modification state
      * @return true if document has unsaved changes
      */
-    bool isModified() const;
+    [[nodiscard]] bool isModified() const override;
 
     /**
      * @brief Saves document to disk
@@ -70,7 +59,6 @@ public:
     bool saveFile();
 
 private:
-    QString m_filePath;                 ///< Full document filesystem path
     KTextEditor::Document *m_document; ///< Managed text document
     KTextEditor::View *m_view;         ///< Document visualization component
 };
