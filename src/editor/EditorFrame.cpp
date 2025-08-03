@@ -109,26 +109,26 @@ void EditorFrame::extendTabContextMenu(int tabIndex, QMenu* menu) {
         for (int i = m_editorTabWidget->count() - 1; i >= 0; --i)
         {
             QWidget* w = m_editorTabWidget->widget(i);
-            Editor* editor = qobject_cast<Editor*>(w);
-            if (editor && !editor->isModified())
+            auto* base_viewer = qobject_cast<BaseViewer*>(w);
+            if (base_viewer && !base_viewer->isModified())
             {
                 m_editorTabWidget->closeTab(i);
             }
         }
         });
     QWidget* tabContent = m_editorTabWidget->widget(tabIndex);
-    if (Editor* editor = qobject_cast<Editor*>(tabContent)) {
+    if (auto base_viewer = qobject_cast<BaseViewer*>(tabContent)) {
         QAction* copyPath = menu->addAction("Copy FileName");
-        connect(copyPath, &QAction::triggered, [editor]() {
+        connect(copyPath, &QAction::triggered, [base_viewer]() {
             QClipboard *clipboard = QGuiApplication::clipboard();
-            clipboard->setText(editor->baseFileName());
+            clipboard->setText(base_viewer->baseFileName());
         });
     }
-    if (Editor* editor = qobject_cast<Editor*>(tabContent)) {
+    if (auto base_viewer = qobject_cast<BaseViewer*>(tabContent)) {
         QAction* copyPath = menu->addAction("Copy Path");
-        connect(copyPath, &QAction::triggered, [editor]() {
+        connect(copyPath, &QAction::triggered, [base_viewer]() {
             QClipboard *clipboard = QGuiApplication::clipboard();
-            clipboard->setText(editor->filePath());
+            clipboard->setText(base_viewer->filePath());
         });
     }
 }
@@ -412,6 +412,8 @@ bool EditorFrame::cleanupBeforeTabClose(int index)
 {
     QWidget* widget = m_editorTabWidget->widget(index);
     Editor* editor = qobject_cast<Editor*>(widget); // Cast to our Editor view
+    if (!editor)
+        return true;
     bool success = true;
 
     if (editor && editor->document())
@@ -470,8 +472,8 @@ void EditorFrame::tabAboutToClose(int index, bool &allow_close)
     if (!allow_close)
         return;
     QWidget* w = m_editorTabWidget->widget(index);
-    Editor* editor = qobject_cast<Editor*>(w);
-    if (editor && editor->isModified())
+    auto base_viewer = qobject_cast<BaseViewer*>(w);
+    if (base_viewer && base_viewer->isModified())
     {
         QMessageBox::StandardButton reply = QMessageBox::question(
                     this,
@@ -488,13 +490,11 @@ void EditorFrame::tabAboutToClose(int index, bool &allow_close)
 // findTabByPath (MODIFIED to check Editor's document URL)
 int EditorFrame::findTabByPath(const QString& filePath)
 {
-    QUrl fileUrl = QUrl::fromLocalFile(filePath); // Compare URLs for consistency
     for (int i = 0; i < m_editorTabWidget->count(); ++i)
     {
         QWidget* widget = m_editorTabWidget->widget(i);
-        Editor* editor = qobject_cast<Editor*>(widget);
-        // Check if cast successful, document exists, and URL matches
-        if (editor && editor->document() && editor->document()->url() == fileUrl)
+        auto editor = qobject_cast<BaseViewer*>(widget);
+        if (editor && editor->filePath() == filePath)
         {
             return i;
         }
@@ -516,12 +516,12 @@ QString EditorFrame::generateUniqueTabTitle(const QString& filePath)
         for (int i = 0; i < m_editorTabWidget->count(); ++i)
         {
             QWidget* widget = m_editorTabWidget->widget(i);
-            Editor* editor = qobject_cast<Editor*>(widget);
+            auto base_viewer = qobject_cast<BaseViewer*>(widget);
             // Check editor, document, and if the current tab text matches the candidate title
-            if (editor && editor->document() && m_editorTabWidget->tabText(i) == uniqueTitle)
+            if (base_viewer && m_editorTabWidget->tabText(i) == uniqueTitle)
             {
                 // Title matches, check if it's for a DIFFERENT file path
-                if (editor->document()->url() != QUrl::fromLocalFile(filePath))
+                if (base_viewer->filePath() != filePath)
                 {
                     titleIsUnique = false;
                     uniqueTitle = QString("%1 (%2)").arg(baseName).arg(counter++);

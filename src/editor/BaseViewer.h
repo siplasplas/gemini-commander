@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class BaseViewer : public QWidget {
+    Q_OBJECT
 public:
     BaseViewer(QWidget *parent = nullptr);
     ~BaseViewer() override;
