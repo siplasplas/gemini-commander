@@ -109,12 +109,30 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             commandLineEdit->setFocus();
             commandLineEdit->selectAll();
             return true; // Event handled
-        }
-        else if (obj==commandLineEdit && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) && modifiers == Qt::NoModifier) {
+        } else if (obj==commandLineEdit && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) && modifiers == Qt::NoModifier) {
             panels[nPanel]->tableView->setFocus();
             return true; // Event handled
         }
-        else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
+        else if (keyEvent->key() == Qt::Key_Home && modifiers == Qt::NoModifier) {
+            QTableView* view = panels[nPanel]->tableView;
+            int rows = view->model()->rowCount();
+            if (rows > 0) {
+                QModelIndex idx = view->model()->index(0, 0);
+                view->setCurrentIndex(idx);
+                view->scrollTo(idx, QAbstractItemView::PositionAtTop);
+            }
+            return true;
+
+        } else if (keyEvent->key() == Qt::Key_End && modifiers == Qt::NoModifier) {
+            QTableView* view = panels[nPanel]->tableView;
+            int rows = view->model()->rowCount();
+            if (rows > 0) {
+                QModelIndex idx = view->model()->index(rows - 1, 0);
+                view->setCurrentIndex(idx);
+                view->scrollTo(idx, QAbstractItemView::PositionAtBottom);
+            }
+            return true;
+        } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
             // Ctrl + P: Set current directory to commandLineEdit
             QString currentPath = panels[nPanel]->currentPath;
             commandLineEdit->setText(commandLineEdit->text() + currentPath);
