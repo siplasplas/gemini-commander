@@ -196,6 +196,45 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 view->scrollTo(idx, QAbstractItemView::PositionAtBottom);
             }
             return true;
+        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageUp) {
+            Panel* panel = panels[nPanel];
+            QDir dir(panel->currentPath);
+
+            // If we are in the root directory – do nothing
+            if (dir.isRoot()) {
+                return true;
+            }
+
+            // Remember the name of the current directory (as in onPanelActivated)
+            QString selectedName = dir.dirName();
+
+            // Go up one directory
+            dir.cdUp();
+            panel->currentPath = dir.absolutePath();
+
+            // Reload panel content
+            panel->loadDirectory();
+
+            // Find the row with the stored name in the new list
+            for (int row = 0; row < panel->model->rowCount(); ++row) {
+                QString rowName;
+                if (row > 0 || panel->currentPath == "/") {
+                    rowName = panel->model->item(row, COLUMN_NAME)->text();
+                    QString ext = panel->model->item(row, COLUMN_EXT)->text();
+                    if (!ext.isEmpty())
+                        rowName += "." + ext;
+                }
+
+                if (rowName == selectedName) {
+                    QModelIndex selectIndex = panel->model->index(row, COLUMN_NAME);
+                    panel->tableView->setCurrentIndex(selectIndex);
+                    panel->tableView->scrollTo(selectIndex);
+                    panel->tableView->setFocus();
+                    break;
+                }
+            }
+
+            return true;
         } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
             // Ctrl + P: Set current directory to commandLineEdit
             QString currentPath = panels[nPanel]->currentPath;

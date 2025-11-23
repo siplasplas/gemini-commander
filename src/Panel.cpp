@@ -194,7 +194,6 @@ void Panel::onPanelActivated(const QModelIndex &index) {
             break;
         }
     }
-
 }
 
 Panel::Panel(QSplitter *splitter) {
