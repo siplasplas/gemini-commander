@@ -314,7 +314,6 @@ void FilePanel::initSearchEdit()
             this, &FilePanel::onSearchTextChanged);
 }
 
-
 void FilePanel::resizeEvent(QResizeEvent* event)
 {
     QTableView::resizeEvent(event);
@@ -322,18 +321,28 @@ void FilePanel::resizeEvent(QResizeEvent* event)
     if (!searchEdit)
         return;
 
-    const int h = 24; // height of search bar
     const int margin = 4;
+    int h = 0;
 
-    QRect r = viewport()->geometry();
-    QRect editRect(r.left() + margin,
-                   r.bottom() - h - margin,
-                   r.width() - 2 * margin,
-                   h);
-    searchEdit->setGeometry(editRect);
-    searchEdit->raise();
+    if (searchEdit->isVisible()) {
+        // reserve space for the search bar at the bottom
+        h = searchEdit->sizeHint().height() + 2 * margin;
+    }
+
+    // Tell QTableView that the bottom 'h' pixels are not for the viewport
+    setViewportMargins(0, 0, 0, h);
+
+    // Place the searchEdit in the reserved bottom area (outside the viewport)
+    QRect r = rect(); // full widget rect, not viewport()
+    if (h > 0) {
+        QRect editRect(r.left() + margin,
+                       r.bottom() - h + margin,
+                       r.width() - 2 * margin,
+                       h - 2 * margin);
+        searchEdit->setGeometry(editRect);
+        searchEdit->raise();
+    }
 }
-
 
 QString FilePanel::normalizeForSearch(const QString& s) const
 {
@@ -474,6 +483,13 @@ void FilePanel::onSearchTextChanged(const QString& text)
     }
 }
 
+void FilePanel::updateSearchGeometry()
+{
+    // możesz tu wywołać fragment z resizeEvent albo po prostu:
+    QResizeEvent ev(size(), size());
+    resizeEvent(&ev);
+}
+
 void FilePanel::keyPressEvent(QKeyEvent* event) {
     // Ctrl+S: explicit search start, empty pattern
     if (event->key() == Qt::Key_S &&
@@ -484,6 +500,7 @@ void FilePanel::keyPressEvent(QKeyEvent* event) {
         if (searchEdit) {
             searchEdit->show();
             searchEdit->raise();
+            updateSearchGeometry();
             searchEdit->setFocus();
 
             searchEdit->blockSignals(true);
@@ -508,6 +525,7 @@ void FilePanel::keyPressEvent(QKeyEvent* event) {
                 if (!searchEdit->isVisible())
                     searchEdit->show();
                 searchEdit->raise();
+                updateSearchGeometry();
 
                 // If searchEdit does not have focus yet, we start a new pattern
                 if (!searchEdit->hasFocus()) {

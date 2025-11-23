@@ -50,7 +50,7 @@ private slots:
     void onHeaderSectionClicked(int logicalIndex);
     void onSearchTextChanged(const QString& text);
 
-private:
+  private:
     void styleActive();
     void styleInactive();
 
@@ -59,6 +59,7 @@ private:
     QString lastSearchText;
 
     void initSearchEdit();
+    void updateSearchGeometry();
     QString normalizeForSearch(const QString& s) const;
     bool findAndSelectPattern(const QString& pattern,
                               bool forward,
