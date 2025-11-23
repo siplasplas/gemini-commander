@@ -329,30 +329,23 @@ void FilePanel::resizeEvent(QResizeEvent* event)
 {
     QTableView::resizeEvent(event);
 
-    if (!searchEdit)
+    if (!searchEdit || !searchEdit->isVisible())
         return;
 
     const int margin = 4;
-    int h = 0;
+    const int h = searchEdit->sizeHint().height();
 
-    if (searchEdit->isVisible()) {
-        // reserve space for the search bar at the bottom
-        h = searchEdit->sizeHint().height() + 2 * margin;
-    }
+    // Use full widget rect, not viewport geometry, so we do not overlap header layout
+    QRect r = rect();
 
-    // Tell QTableView that the bottom 'h' pixels are not for the viewport
-    setViewportMargins(0, 0, 0, h);
+    // Place search bar at the bottom, above the widget's bottom edge
+    QRect editRect(r.left() + margin,
+                   r.bottom() - h - margin,
+                   r.width() - 2 * margin,
+                   h);
 
-    // Place the searchEdit in the reserved bottom area (outside the viewport)
-    QRect r = rect(); // full widget rect, not viewport()
-    if (h > 0) {
-        QRect editRect(r.left() + margin,
-                       r.bottom() - h + margin,
-                       r.width() - 2 * margin,
-                       h - 2 * margin);
-        searchEdit->setGeometry(editRect);
-        searchEdit->raise();
-    }
+    searchEdit->setGeometry(editRect);
+    searchEdit->raise();
 }
 
 QString FilePanel::normalizeForSearch(const QString& s) const
