@@ -201,12 +201,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F4) {
             FilePanel* panel =  currentFilePanel();
-            if (panel->sortColumn == COLUMN_TYPE) {
+            if (panel->sortColumn == COLUMN_EXT) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
                         : Qt::AscendingOrder;
             } else {
-                panel->sortColumn = COLUMN_TYPE;
+                panel->sortColumn = COLUMN_EXT;
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);

@@ -127,7 +127,7 @@ void FilePaneWidget::updateStatusLabel()
 
     for (const QModelIndex& idx : rows) {
         int row = idx.row();
-        const QString type = model->item(row, COLUMN_TYPE)->text();
+        const QString type = model->item(row, COLUMN_EXT)->text();
         const QString sizeStr = model->item(row, COLUMN_SIZE)->text();
 
         if (type == "<DIR>" || type == "Directory") {

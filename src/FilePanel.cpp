@@ -61,7 +61,7 @@ void FilePanel::sortEntries() {
               case COLUMN_NAME:
                 return cmpNames(asc);
 
-              case COLUMN_TYPE:
+              case COLUMN_EXT:
                 if (aDir && bDir) {
                   return cmpNames(asc);
                 } else if (!aDir && !bDir) {
@@ -117,10 +117,10 @@ void FilePanel::addFirstEntry(bool isRoot) {
     row.append(upItem);
 
     // COLUMN_TYPE (empty)
-    row.append(new QStandardItem("<DIR>"));
+    row.append(new QStandardItem(""));
 
     // COLUMN_SIZE
-    row.append(new QStandardItem(""));
+    row.append(new QStandardItem("<DIR>"));
 
     // COLUMN_DATE
     QFileInfo info(".");
@@ -162,7 +162,10 @@ void FilePanel::addEntries()
         row.append(nameItem);
 
         row.append(new QStandardItem(ext));
-        row.append(new QStandardItem(QString::number(info.size())));
+        if (info.isDir())
+            row.append(new QStandardItem("<DIR>"));
+        else
+            row.append(new QStandardItem(QString::number(info.size())));
         row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
 
         model->appendRow(row);
@@ -270,7 +273,7 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
 FilePanel::FilePanel(QWidget* parent)
     : QTableView(parent) {
     model = new QStandardItemModel(nullptr);
-    QStringList headers = {"id","Name", "Type", "Size", "Date"};
+    QStringList headers = {"id","Name", "Ext", "Size", "Date"};
     model->setHorizontalHeaderLabels(headers);
     currentPath = QDir::homePath();
     setModel(model);
@@ -302,7 +305,7 @@ FilePanel::FilePanel(QWidget* parent)
 
     // Optional: initial sizes
     setColumnWidth(COLUMN_NAME, 200);
-    setColumnWidth(COLUMN_TYPE, 80);
+    setColumnWidth(COLUMN_EXT, 80);
     setColumnWidth(COLUMN_SIZE, 100);
     setColumnWidth(COLUMN_DATE, 150);
 
