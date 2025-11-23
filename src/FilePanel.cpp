@@ -15,157 +15,170 @@
 #include <QStandardItemModel>
 #include <QUrl>
 
+void FilePanel::sortEntries() {
+  // --------------------------
+  // Sorting (TC-like)
+  // --------------------------
+  std::sort(entries.begin(), entries.end(),
+            [this](const QFileInfo &a, const QFileInfo &b) {
+              const bool aDir = a.isDir();
+              const bool bDir = b.isDir();
+
+              // Directories always on top
+              if (aDir != bDir)
+                return aDir && !bDir;
+
+              auto lessCI = [](const QString &x, const QString &y) {
+                return x.compare(y, Qt::CaseInsensitive) < 0;
+              };
+              auto greaterCI = [](const QString &x, const QString &y) {
+                return x.compare(y, Qt::CaseInsensitive) > 0;
+              };
+
+              const bool asc = (sortOrder == Qt::AscendingOrder);
+
+              auto cmpNames = [&](bool ascLocal) {
+                const QString na = a.fileName();
+                const QString nb = b.fileName();
+                return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
+              };
+
+              switch (sortColumn) {
+
+              case COLUMN_NAME:
+                return cmpNames(asc);
+
+              case COLUMN_EXT:
+                if (aDir && bDir) {
+                  return cmpNames(asc);
+                } else if (!aDir && !bDir) {
+                  const QString ea = a.suffix();
+                  const QString eb = b.suffix();
+                  int c = ea.compare(eb, Qt::CaseInsensitive);
+                  if (c != 0)
+                    return asc ? (c < 0) : (c > 0);
+                  return cmpNames(asc);
+                } else {
+                  return cmpNames(asc);
+                }
+
+              case COLUMN_SIZE:
+                if (aDir && bDir) {
+                  return cmpNames(asc);
+                } else if (!aDir && !bDir) {
+                  if (a.size() != b.size())
+                    return asc ? (a.size() < b.size()) : (a.size() > b.size());
+                  return cmpNames(asc);
+                } else {
+                  return cmpNames(asc);
+                }
+
+              case COLUMN_DATE: {
+                QDateTime da = a.lastModified();
+                QDateTime db = b.lastModified();
+                if (da != db)
+                  return asc ? (da < db) : (da > db);
+                return cmpNames(asc);
+              }
+
+              default:
+                return cmpNames(asc);
+              }
+            });
+}
+void FilePanel::addFirstEntry(bool isRoot) {
+  // --------------------------
+  // Add ".." entry
+  // --------------------------
+  if (!isRoot) {
+    QList<QStandardItem *> row;
+
+    // COLUMN_ID
+    row.append(new QStandardItem(""));
+
+    // COLUMN_NAME (base)
+    auto *nameItem = new QStandardItem("[..]");
+    nameItem->setData(QString(""), Qt::UserRole); // full_name = "" for [..]
+    row.append(nameItem);
+
+    // COLUMN_EXT (empty)
+    row.append(new QStandardItem("<DIR>"));
+
+    // COLUMN_SIZE
+    row.append(new QStandardItem(""));
+
+    // COLUMN_DATE
+    QFileInfo info(".");
+    row.append(
+        new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+
+    model->appendRow(row);
+  }
+}
+
+void FilePanel::addEntries() {
+  // --------------------------
+  // Add files and directories
+  // --------------------------
+  for (const QFileInfo &info : entries) {
+
+    const QString base = info.completeBaseName();
+    const QString ext = info.isDir() ? QString() : info.suffix();
+    QString fullName = base;
+    if (!ext.isEmpty())
+      fullName += "." + ext;
+
+    QList<QStandardItem *> row;
+
+    // COLUMN_ID
+    row.append(new QStandardItem("id"));
+
+    // COLUMN_NAME
+    auto *nameItem = new QStandardItem(base);
+    nameItem->setData(fullName, Qt::UserRole);
+    row.append(nameItem);
+
+    // COLUMN_EXT
+    if (info.isDir()) {
+      row.append(new QStandardItem(""));
+    } else {
+      row.append(new QStandardItem(ext));
+    }
+
+    // COLUMN_SIZE
+    row.append(new QStandardItem(QString::number(info.size())));
+
+    // COLUMN_DATE
+    row.append(
+        new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+
+    model->appendRow(row);
+  }
+}
+
+void FilePanel::addAllEntries() {
+    QString selectedName;
+    auto rows = selectionModel()->selectedRows();
+    if (!rows.isEmpty())
+        selectedName = getRowName(rows.first().row());
+    sortEntries();
+    model->removeRows(0, model->rowCount());
+    addFirstEntry(dir->isRoot());
+    addEntries();
+    setRootIndex(QModelIndex());
+    selectEntryByName(selectedName);
+}
+
 void FilePanel::loadDirectory()
 {
-    model->removeRows(0, model->rowCount());
-
-    QDir dir(currentPath);
-    if (!dir.exists()) {
+    dir = new QDir(currentPath);
+    if (!dir->exists()) {
         return;
     }
 
     QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
-    QFileInfoList entries = dir.entryInfoList(filters, QDir::NoSort);
-
-    // --------------------------
-    // Sorting (TC-like)
-    // --------------------------
-    std::sort(entries.begin(), entries.end(),
-              [this](const QFileInfo &a, const QFileInfo &b) {
-                  const bool aDir = a.isDir();
-                  const bool bDir = b.isDir();
-
-                  // Directories always on top
-                  if (aDir != bDir)
-                      return aDir && !bDir;
-
-                  auto lessCI = [](const QString &x, const QString &y) {
-                      return x.compare(y, Qt::CaseInsensitive) < 0;
-                  };
-                  auto greaterCI = [](const QString &x, const QString &y) {
-                      return x.compare(y, Qt::CaseInsensitive) > 0;
-                  };
-
-                  const bool asc = (sortOrder == Qt::AscendingOrder);
-
-                  auto cmpNames = [&](bool ascLocal) {
-                      const QString na = a.fileName();
-                      const QString nb = b.fileName();
-                      return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
-                  };
-
-                  switch (sortColumn) {
-
-                  case COLUMN_NAME:
-                      return cmpNames(asc);
-
-                  case COLUMN_EXT:
-                      if (aDir && bDir) {
-                          return cmpNames(asc);
-                      } else if (!aDir && !bDir) {
-                          const QString ea = a.suffix();
-                          const QString eb = b.suffix();
-                          int c = ea.compare(eb, Qt::CaseInsensitive);
-                          if (c != 0)
-                              return asc ? (c < 0) : (c > 0);
-                          return cmpNames(asc);
-                      } else {
-                          return cmpNames(asc);
-                      }
-
-                  case COLUMN_SIZE:
-                      if (aDir && bDir) {
-                          return cmpNames(asc);
-                      } else if (!aDir && !bDir) {
-                          if (a.size() != b.size())
-                              return asc ? (a.size() < b.size())
-                                         : (a.size() > b.size());
-                          return cmpNames(asc);
-                      } else {
-                          return cmpNames(asc);
-                      }
-
-                  case COLUMN_DATE: {
-                      QDateTime da = a.lastModified();
-                      QDateTime db = b.lastModified();
-                      if (da != db)
-                          return asc ? (da < db) : (da > db);
-                      return cmpNames(asc);
-                  }
-
-                  default:
-                      return cmpNames(asc);
-                  }
-              });
-
-    // --------------------------
-    // Add ".." entry
-    // --------------------------
-    bool isRoot = dir.isRoot();
-    if (!isRoot) {
-        QList<QStandardItem*> row;
-
-        // COLUMN_ID
-        row.append(new QStandardItem(""));
-
-        // COLUMN_NAME (base)
-        auto* nameItem = new QStandardItem("[..]");
-        nameItem->setData(QString(""), Qt::UserRole);   // full_name = "" for [..]
-        row.append(nameItem);
-
-        // COLUMN_EXT (empty)
-        row.append(new QStandardItem("<DIR>"));
-
-        // COLUMN_SIZE
-        row.append(new QStandardItem(""));
-
-        // COLUMN_DATE
-        QFileInfo info(".");
-        row.append(new QStandardItem(
-            info.lastModified().toString("yyyy-MM-dd hh:mm")));
-
-        model->appendRow(row);
-    }
-
-    // --------------------------
-    // Add files and directories
-    // --------------------------
-    for (const QFileInfo &info : entries) {
-
-        const QString base = info.completeBaseName();
-        const QString ext = info.isDir() ? QString() : info.suffix();
-        QString fullName = base;
-        if (!ext.isEmpty())
-            fullName += "." + ext;
-
-        QList<QStandardItem*> row;
-
-        // COLUMN_ID
-        row.append(new QStandardItem("id"));
-
-        // COLUMN_NAME
-        auto* nameItem = new QStandardItem(base);
-        nameItem->setData(fullName, Qt::UserRole);
-        row.append(nameItem);
-
-        // COLUMN_EXT
-        if (info.isDir()) {
-            row.append(new QStandardItem(""));
-        } else {
-            row.append(new QStandardItem(ext));
-        }
-
-        // COLUMN_SIZE
-        row.append(new QStandardItem(QString::number(info.size())));
-
-        // COLUMN_DATE
-        row.append(new QStandardItem(
-            info.lastModified().toString("yyyy-MM-dd hh:mm")));
-
-        model->appendRow(row);
-    }
-
-    setRootIndex(QModelIndex());
+    entries = dir->entryInfoList(filters, QDir::NoSort);
+    addAllEntries();
 }
 
 QString FilePanel::getRowName(int row) const {
@@ -174,7 +187,7 @@ QString FilePanel::getRowName(int row) const {
     return model->item(row, COLUMN_NAME)->data(Qt::UserRole).toString();
 }
 
-bool FilePanel::selectEntryByName(const QString& fullName)
+void FilePanel::selectEntryByName(const QString& fullName)
 {
     // For "[..]" / going up we expect empty fullName
     if (fullName.isEmpty()) {
@@ -184,9 +197,7 @@ bool FilePanel::selectEntryByName(const QString& fullName)
             setCurrentIndex(idx);
             scrollTo(idx);
             setFocus();
-            return true;
         }
-        return false;
     }
 
     QModelIndex start = model->index(0, COLUMN_NAME);
@@ -199,13 +210,12 @@ bool FilePanel::selectEntryByName(const QString& fullName)
     );
 
     if (matches.isEmpty())
-        return false;
+        return;
 
     QModelIndex selectIndex = matches.first();
     setCurrentIndex(selectIndex);
     scrollTo(selectIndex);
     setFocus();
-    return true;
 }
 
 
@@ -213,20 +223,20 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
     if (!index.isValid()) return;
 
     QString name = getRowName(index.row());
-    QDir dir(currentPath);
+    dir = new QDir(currentPath);
     QString selectedName;
 
     if (name == "") {
         // Going up: Select the previous directory name after load
-        selectedName = dir.dirName(); // Basename of current path
-        dir.cdUp();
-        currentPath = dir.absolutePath();
+        selectedName = dir->dirName(); // Basename of current path
+        dir->cdUp();
+        currentPath = dir->absolutePath();
     } else {
         // Check if dir
-        QFileInfo info(dir.absoluteFilePath(name));
+        QFileInfo info(dir->absoluteFilePath(name));
         if (info.isDir()) {
-            dir.cd(name);
-            currentPath = dir.absolutePath();
+            dir->cd(name);
+            currentPath = dir->absolutePath();
             selectedName = ""; // Select first item ([..]) when going down
         } else {
             // Handle file open if needed (currently do nothing)
@@ -236,7 +246,7 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
 
     // Reload directory
     loadDirectory();
-    bool b = selectEntryByName(selectedName);
+    selectEntryByName(selectedName);
 }
 
 FilePanel::FilePanel(QSplitter *splitter) {
@@ -290,6 +300,7 @@ FilePanel::FilePanel(QSplitter *splitter) {
 }
 
 FilePanel::~FilePanel() {
+    delete dir;
     delete model;
 }
 
@@ -608,7 +619,6 @@ void FilePanel::styleInactive() {
         "}");
 }
 
-
 void FilePanel::onHeaderSectionClicked(int logicalIndex)
 {
     if (sortColumn == logicalIndex) {
@@ -622,6 +632,7 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex)
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     // Przeładuj katalog z nowym sortowaniem
     loadDirectory();
+    // Ensure first visible item is shown
 }
 
 void FilePanel::startDrag(Qt::DropActions supportedActions)
@@ -646,8 +657,8 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
         if (name.isEmpty())
             continue; // skip parent entry "[..]" / empty name
 
-        QDir dir(currentPath);
-        QString fullPath = dir.absoluteFilePath(name);
+        dir = new QDir(currentPath);
+        QString fullPath = dir->absoluteFilePath(name);
         urls.append(QUrl::fromLocalFile(fullPath));
     }
 

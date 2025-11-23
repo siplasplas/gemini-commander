@@ -115,7 +115,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->loadDirectory();
+            panel->addAllEntries();
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F4) {
@@ -129,7 +129,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->loadDirectory();
+            panel->addAllEntries();
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F6) {
@@ -143,7 +143,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->loadDirectory();
+            panel->addAllEntries();
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F5) {
@@ -157,7 +157,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->loadDirectory();
+            panel->addAllEntries();
             return true;
 
         } else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
@@ -205,7 +205,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             // Reload panel content
             panel->loadDirectory();
-            bool b = panel->selectEntryByName(selectedName);
+            panel->selectEntryByName(selectedName);
 
             return true;
         } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {

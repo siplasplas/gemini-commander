@@ -5,6 +5,7 @@
 #include <QSplitter>
 #include <QString>
 #include <QTableView>
+#include <qfileinfo.h>
 
 QT_BEGIN_NAMESPACE
 class QTableView;
@@ -37,7 +38,8 @@ public:
     void loadDirectory();
 
     QString getRowName(int row) const;
-    bool selectEntryByName(const QString& fullName);
+    void selectEntryByName(const QString& fullName);
+    void addAllEntries();
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
@@ -50,14 +52,18 @@ private slots:
     void onHeaderSectionClicked(int logicalIndex);
     void onSearchTextChanged(const QString& text);
 
-  private:
+private:
     void styleActive();
     void styleInactive();
 
     // Search UI and logic
     QLineEdit* searchEdit = nullptr;
     QString lastSearchText;
-
+    QFileInfoList entries;
+    QDir *dir = nullptr;
+    void sortEntries();
+    void addFirstEntry(bool isRoot);
+    void addEntries();
     void initSearchEdit();
     void updateSearchGeometry();
     QString normalizeForSearch(const QString& s) const;
