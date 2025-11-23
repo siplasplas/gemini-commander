@@ -19,7 +19,7 @@ enum Columns {
         COLUMN_DATE = 4,
 };
 
-class Panel: public QObject
+class FilePanel: public QObject
 {
     Q_OBJECT
     void styleActive(QWidget *widget);
@@ -35,8 +35,8 @@ public:
     int sortColumn = COLUMN_NAME;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
 
-    explicit Panel(QSplitter *splitter);
-    ~Panel() override;
+    explicit FilePanel(QSplitter *splitter);
+    ~FilePanel() override;
     void active(bool active);
     void loadDirectory();
     QString getRowName(int row) const;

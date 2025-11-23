@@ -6,7 +6,7 @@
 
 #include "editor/EditorFrame.h"
 
-class Panel;
+class FilePanel;
 QT_BEGIN_NAMESPACE
 class QSplitter;
 class QLineEdit;
@@ -25,7 +25,7 @@ private:
     bool eventFilter(QObject *obj, QEvent *event) override;
     int nPanel = 0;
     const int numPanels = 2;
-    QVector<Panel*> panels;
+    QVector<FilePanel*> panels;
     QSplitter *mainSplitter;
     QLineEdit *commandLineEdit;
     EditorFrame *editorFrame = nullptr;

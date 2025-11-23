@@ -37,8 +37,8 @@ find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEdi
 add_executable(${PROJECT_NAME}
         src/main.cpp
         src/MainWindow.cpp
-        src/Panel.cpp
-        src/Panel.h
+        src/FilePanel.cpp
+        src/FilePanel.h
         src/editor/editor.cpp
         src/editor/editor.h
         src/editor/EditorFrame.cpp

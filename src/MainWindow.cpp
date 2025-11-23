@@ -1,16 +1,16 @@
 #include "MainWindow.h"
-#include "Panel.h"
+#include "FilePanel.h"
 
-#include <QSplitter>
-#include <QLineEdit>
-#include <QVBoxLayout>
-#include <QWidget>
+#include "editor/EditorFrame.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QKeyEvent>
+#include <QLineEdit>
+#include <QSplitter>
 #include <QStandardItemModel>
 #include <QTableView>
-#include "editor/EditorFrame.h"
+#include <QVBoxLayout>
+#include <QWidget>
 
 #include <QHeaderView>
 
@@ -39,7 +39,7 @@ void MainWindow::setupUi()
     mainSplitter = new QSplitter(Qt::Horizontal, centralWidget);
 
     for (int i=0; i<numPanels; i++)
-        panels.push_back(new Panel(mainSplitter));
+        panels.push_back(new FilePanel(mainSplitter));
 
     commandLineEdit = new QLineEdit(centralWidget);
 
@@ -105,7 +105,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
-            Panel* panel = panels[nPanel];
+            FilePanel* panel = panels[nPanel];
             if (panel->sortColumn == COLUMN_NAME) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
@@ -119,7 +119,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F4) {
-            Panel* panel = panels[nPanel];
+            FilePanel* panel = panels[nPanel];
             if (panel->sortColumn == COLUMN_EXT) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
@@ -133,7 +133,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F6) {
-            Panel* panel = panels[nPanel];
+            FilePanel* panel = panels[nPanel];
             if (panel->sortColumn == COLUMN_SIZE) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
@@ -147,7 +147,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F5) {
-            Panel* panel = panels[nPanel];
+            FilePanel* panel = panels[nPanel];
             if (panel->sortColumn == COLUMN_DATE) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
@@ -188,7 +188,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageUp) {
-            Panel* panel = panels[nPanel];
+            FilePanel* panel = panels[nPanel];
             QDir dir(panel->currentPath);
 
             // If we are in the root directory – do nothing

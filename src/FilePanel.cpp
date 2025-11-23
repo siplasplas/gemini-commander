@@ -1,20 +1,20 @@
 #include <algorithm>
 
-#include "Panel.h"
+#include "FilePanel.h"
 #include <QDir>
 #include <QFileInfo>
+#include <QHeaderView>
 #include <QStandardItemModel>
 #include <QTableView>
-#include <QHeaderView>
 
-void Panel::active(bool active) {
+void FilePanel::active(bool active) {
     if (active)
         styleActive(tableView);
     else
         styleInactive(tableView);
 }
 
-void Panel::loadDirectory()
+void FilePanel::loadDirectory()
 {
     model->removeRows(0, model->rowCount()); // Clear existing items
 
@@ -142,7 +142,7 @@ void Panel::loadDirectory()
     tableView->setRootIndex(QModelIndex());
 }
 
-QString Panel::getRowName(int row) const {
+QString FilePanel::getRowName(int row) const {
     QString rowName;
     if (row > 0 || currentPath == "/") {
         rowName = model->item(row, COLUMN_NAME)->text();
@@ -152,7 +152,7 @@ QString Panel::getRowName(int row) const {
     }
     return rowName;
 }
-bool Panel::selectEntryByName(const QString& fullName) const
+bool FilePanel::selectEntryByName(const QString& fullName) const
 {
     for (int row = 0; row < model->rowCount(); ++row) {
         QString rowName;
@@ -170,7 +170,7 @@ bool Panel::selectEntryByName(const QString& fullName) const
     return false;
 }
 
-void Panel::onPanelActivated(const QModelIndex &index) {
+void FilePanel::onPanelActivated(const QModelIndex &index) {
     if (!index.isValid()) return;
 
     QString name = getRowName(index.row());
@@ -200,7 +200,7 @@ void Panel::onPanelActivated(const QModelIndex &index) {
     bool b = selectEntryByName(selectedName);
 }
 
-Panel::Panel(QSplitter *splitter) {
+FilePanel::FilePanel(QSplitter *splitter) {
     tableView = new QTableView(splitter);
     model = new QStandardItemModel(nullptr);
     QStringList headers = {"id","Name", "Type", "Size", "Date"};
@@ -236,7 +236,7 @@ Panel::Panel(QSplitter *splitter) {
 
 
     connect(header, &QHeaderView::sectionClicked,
-            this, &Panel::onHeaderSectionClicked);
+            this, &FilePanel::onHeaderSectionClicked);
 
     splitter->addWidget(tableView);
 
@@ -245,12 +245,12 @@ Panel::Panel(QSplitter *splitter) {
     });
 }
 
-Panel::~Panel() {
+FilePanel::~FilePanel() {
     delete tableView;
     delete model;
 }
 
-void Panel::styleActive(QWidget* widget) {
+void FilePanel::styleActive(QWidget* widget) {
     widget->setStyleSheet(
         "QTableView:item {"
         "background-color: white;"
@@ -262,7 +262,7 @@ void Panel::styleActive(QWidget* widget) {
         "}");
 }
 
-void Panel::styleInactive(QWidget* widget) {
+void FilePanel::styleInactive(QWidget* widget) {
     widget->setStyleSheet(
         "QTableView:item {"
         "background-color: white;"
@@ -275,7 +275,7 @@ void Panel::styleInactive(QWidget* widget) {
 }
 
 
-void Panel::onHeaderSectionClicked(int logicalIndex)
+void FilePanel::onHeaderSectionClicked(int logicalIndex)
 {
     if (sortColumn == logicalIndex) {
         sortOrder = (sortOrder == Qt::AscendingOrder)
