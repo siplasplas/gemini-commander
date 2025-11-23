@@ -44,6 +44,10 @@ public:
     void openFileInEditor(const QString& filePath);
     void openFileInViewer(const QString &fileName);
 
+protected:
+    bool tryCloseAll();
+    void closeEvent(QCloseEvent *event) override;
+
 private slots:
     void onOpenFileTriggered();
     void onViewFileTriggered();

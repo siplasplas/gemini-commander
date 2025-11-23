@@ -180,6 +180,7 @@ void EditorFrame::openFileInViewer(const QString& fileName)
             m_editorTabWidget->removeTab(idx);
             viewer->deleteLater();
         }
+        close();
     });
 
     // Add tab normally
@@ -191,6 +192,7 @@ void EditorFrame::openFileInViewer(const QString& fileName)
     m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
     viewer->setFocus();
 }
+
 /**
  * @brief Opens file in editor tab
  * @param filePath Full path to file
@@ -584,4 +586,17 @@ void EditorFrame::onProjectTreeActivated(const QModelIndex& index)
         // Otwieranie pliku jak w File->Open File
         openFileInEditor(path);
     }
+}
+
+void EditorFrame::closeEvent(QCloseEvent* event)
+{
+    if (tryCloseAll()) {
+        event->accept();
+    } else {
+        event->ignore();
+    }
+}
+
+bool EditorFrame::tryCloseAll() {
+    return true;
 }
