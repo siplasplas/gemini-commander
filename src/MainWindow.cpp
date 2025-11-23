@@ -12,6 +12,8 @@
 #include <QTableView>
 #include "editor/EditorFrame.h"
 
+#include <QHeaderView>
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -105,6 +107,48 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             editorFrame->activateWindow();
 
             return true;
+        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
+            Panel* panel = panels[nPanel];
+            if (panel->sortColumn == 0) {
+                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
+                        ? Qt::DescendingOrder
+                        : Qt::AscendingOrder;
+            } else {
+                panel->sortColumn = 0;
+                panel->sortOrder = Qt::AscendingOrder;
+            }
+            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->loadDirectory();
+            return true;
+
+        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F6) {
+            Panel* panel = panels[nPanel];
+            if (panel->sortColumn == 1) {
+                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
+                        ? Qt::DescendingOrder
+                        : Qt::AscendingOrder;
+            } else {
+                panel->sortColumn = 1;
+                panel->sortOrder = Qt::AscendingOrder;
+            }
+            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->loadDirectory();
+            return true;
+
+        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F5) {
+            Panel* panel = panels[nPanel];
+            if (panel->sortColumn == 3) {
+                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
+                        ? Qt::DescendingOrder
+                        : Qt::AscendingOrder;
+            } else {
+                panel->sortColumn = 3;
+                panel->sortOrder = Qt::AscendingOrder;
+            }
+            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->loadDirectory();
+            return true;
+
         } else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
             commandLineEdit->setFocus();
             commandLineEdit->selectAll();
