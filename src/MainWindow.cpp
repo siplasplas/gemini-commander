@@ -18,6 +18,13 @@
 #include <QHeaderView>
 #include <QTimer>
 #include <QActionGroup>
+#include <QMenuBar>
+#include <QMenu>
+#include <QToolBar>
+#include <QAction>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -75,6 +82,29 @@ void MainWindow::setupUi()
     mainLayout->setStretchFactor(commandLineEdit, 0);
 
     setCentralWidget(centralWidget);
+
+    QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
+    QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+
+    // Na razie tylko proste akcje, można rozwinąć później
+    QAction* quitAction = new QAction(tr("Quit"), this);
+    quitAction->setShortcut(QKeySequence::Quit);
+    connect(quitAction, &QAction::triggered, this, &QWidget::close);
+    fileMenu->addAction(quitAction);
+
+    // --- TOOLBAR ---
+    m_mainToolBar = addToolBar(tr("Main toolbar"));
+    m_mainToolBar->setMovable(true);
+
+    m_openTerminalAction = new QAction(tr("Terminal"), this);
+    // Ikonka później: m_openTerminalAction->setIcon(QIcon(":/icons/terminal.svg"));
+    connect(m_openTerminalAction, &QAction::triggered,
+            this, &MainWindow::onOpenTerminal);
+
+    m_mainToolBar->addAction(m_openTerminalAction);
+
+
     m_activeSide = LeftSide;
     if (auto* left = filePanelForSide(LeftSide))
         left->active(true);
@@ -609,3 +639,61 @@ void MainWindow::goToPreviousTab(QTabWidget* tabWidget) {
         tabWidget->setCurrentIndex(tabWidget->count() - 1);
     }
 }
+
+void MainWindow::onOpenTerminal()
+{
+    // Ustal katalog roboczy – z aktywnego panelu, a jak nie ma, to HOME
+    QString workDir;
+    if (auto* pane = currentPane()) {
+        workDir = pane->currentPath();
+    }
+    if (workDir.isEmpty()) {
+        workDir = QDir::homePath();
+    }
+
+    // Lista preferowanych terminali
+    const QStringList candidates = {
+        QStringLiteral("gnome-terminal"),
+        QStringLiteral("konsole"),
+        QStringLiteral("xfce4-terminal"),
+        QStringLiteral("xterm")
+    };
+
+    QString termCmd;
+    for (const QString& c : candidates) {
+        if (!QStandardPaths::findExecutable(c).isEmpty()) {
+            termCmd = c;
+            break;
+        }
+    }
+
+    if (termCmd.isEmpty()) {
+        QMessageBox::warning(this,
+                             tr("Terminal"),
+                             tr("No terminal emulator found (tried gnome-terminal, konsole, xfce4-terminal, xterm)."));
+        return;
+    }
+
+    QStringList args;
+    // Specjalne argumenty dla niektórych terminali
+    if (termCmd == QLatin1String("gnome-terminal")) {
+        args << QStringLiteral("--working-directory=%1").arg(workDir);
+    } else if (termCmd == QLatin1String("konsole")) {
+        args << QStringLiteral("--workdir") << workDir;
+    } else if (termCmd == QLatin1String("xfce4-terminal")) {
+        args << QStringLiteral("--working-directory=%1").arg(workDir);
+    }
+    // dla xterm i innych – użyjemy tylko workingDirectory w QProcess
+
+    auto* proc = new QProcess(this);
+    proc->setWorkingDirectory(workDir);
+    proc->start(termCmd, args);
+
+    if (!proc->waitForStarted(1000)) {
+        QMessageBox::warning(this,
+                             tr("Terminal"),
+                             tr("Failed to start terminal: %1").arg(termCmd));
+        proc->deleteLater();
+    }
+}
+

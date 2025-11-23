@@ -56,6 +56,11 @@ private:
     // Dostęp do panelu po stronie (left/right)
     FilePaneWidget* paneForSide(int side) const;
     FilePanel* filePanelForSide(int side) const;
+
+    QToolBar* m_mainToolBar = nullptr;
+    QAction* m_openTerminalAction = nullptr;
+private slots:
+    void onOpenTerminal();
 };
 
 #endif // MAINWINDOW_H
