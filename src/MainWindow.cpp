@@ -45,6 +45,17 @@ void MainWindow::setupUi()
 
     m_leftTabs = new QTabWidget(splitter);
     m_rightTabs = new QTabWidget(splitter);
+    auto tuneTabBar = [](QTabWidget* tabs) {
+        QTabBar* bar = tabs->tabBar();
+        QFontMetrics fm(bar->font());
+        int h = fm.height() + 4; // smaller than default
+        bar->setStyleSheet(QStringLiteral(
+            "QTabBar::tab { "
+            "  height: %1px; "
+            "}").arg(h));
+    };
+    tuneTabBar(m_leftTabs);
+    tuneTabBar(m_rightTabs);
 
     splitter->addWidget(m_leftTabs);
     splitter->addWidget(m_rightTabs);

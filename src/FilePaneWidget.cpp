@@ -12,6 +12,9 @@ FilePaneWidget::FilePaneWidget(QWidget* parent)
 
     m_pathEdit = new QLineEdit(this);
     m_pathEdit->setReadOnly(true);
+    QFontMetrics fm(m_pathEdit->font());
+    int h = fm.height() + 4;
+    m_pathEdit->setFixedHeight(h);
 
     m_filePanel = new FilePanel(nullptr); // jeśli FilePanel wymaga QSplitter, trzeba lekko przerobić ctor
     // U Ciebie FilePanel dziedziczy z QTableView i przyjmował QSplitter*.
