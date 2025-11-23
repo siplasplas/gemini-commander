@@ -45,6 +45,7 @@ public:
 
     void tabAboutToClose(int index, bool &allow_close);
     void openFileInEditor(const QString& filePath);
+    void openFileInViewer(const QString &fileName);
 
 private slots:
     void onOpenFileTriggered();

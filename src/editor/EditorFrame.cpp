@@ -167,6 +167,12 @@ void EditorFrame::createActions()
     connect(m_aboutAction, &QAction::triggered, this, &EditorFrame::onAboutTriggered);
 }
 
+void EditorFrame::openFileInViewer(const QString& fileName) {
+    auto viewer = new Viewer(fileName, m_editorTabWidget);
+    int newIndex = m_editorTabWidget->addTab(viewer, "tabTitle");
+    int removedCount = m_editorTabWidget->enforceTabLimit();
+    m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
+}
 /**
  * @brief Opens file in editor tab
  * @param filePath Full path to file

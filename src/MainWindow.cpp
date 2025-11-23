@@ -69,7 +69,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panels[next]->tableView->setFocus();
                 return true; // Event handled
             }
-        } else if (keyEvent->key() == Qt::Key_F4 && modifiers == Qt::NoModifier) {
+        } else if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
             QModelIndex currentIndex = panels[nPanel]->tableView->currentIndex();
             if (!currentIndex.isValid()) {
                 return true;
@@ -95,7 +95,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             if (!editorFrame)
                 editorFrame = new EditorFrame(this);
 
-            editorFrame->openFileInEditor(fullPath);
+            if (keyEvent->key() == Qt::Key_F3)
+                editorFrame->openFileInViewer(fullPath);
+            else
+                editorFrame->openFileInEditor(fullPath);
 
             editorFrame->show();
             editorFrame->raise();
