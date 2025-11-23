@@ -142,18 +142,22 @@ void Panel::loadDirectory()
     tableView->setRootIndex(QModelIndex());
 }
 
+QString Panel::getRowName(int row) const {
+    QString rowName;
+    if (row > 0 || currentPath == "/") {
+        rowName = model->item(row, COLUMN_NAME)->text();
+        QString ext = model->item(row, COLUMN_EXT)->text();
+        if (!ext.isEmpty())
+            rowName += "." + ext;
+    }
+    return rowName;
+}
 bool Panel::selectEntryByName(const QString& fullName) const
 {
     for (int row = 0; row < model->rowCount(); ++row) {
         QString rowName;
 
-        // For root we treat all rows the same; for non-root row 0 is the parent entry
-        if (row > 0 || currentPath == "/") {
-            rowName = model->item(row, COLUMN_NAME)->text();
-            QString ext = model->item(row, COLUMN_EXT)->text();
-            if (!ext.isEmpty())
-                rowName += "." + ext;
-        }
+        rowName = getRowName(row);
 
         if (rowName == fullName) {
             QModelIndex selectIndex = model->index(row, COLUMN_NAME);
@@ -169,14 +173,7 @@ bool Panel::selectEntryByName(const QString& fullName) const
 void Panel::onPanelActivated(const QModelIndex &index) {
     if (!index.isValid()) return;
 
-    QString name;
-    if (index.row() > 0 ||currentPath=="/") {
-        name = model->data(index.sibling(index.row(), COLUMN_NAME)).toString(); // Name column
-        QString ext = model->data(index.sibling(index.row(), COLUMN_EXT)).toString();
-        if (!ext.isEmpty())
-            name += "." + ext;
-    }
-
+    QString name = getRowName(index.row());
     QDir dir(currentPath);
     QString selectedName;
 

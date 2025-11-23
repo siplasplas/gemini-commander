@@ -77,17 +77,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 return true;
             }
 
-            QString baseName = panels[nPanel]->model->data(
-                currentIndex.sibling(currentIndex.row(), COLUMN_NAME)
-            ).toString();
-            QString ext = panels[nPanel]->model->data(
-                currentIndex.sibling(currentIndex.row(), COLUMN_EXT)
-            ).toString();
-            QString name = baseName;
-            if (!ext.isEmpty()) {
-                name = baseName + "." + ext;
-            }
-            if (name == "[..]") {
+            QString name = panels[nPanel]->getRowName(currentIndex.row());
+            if (name == "") {
                 return true;
             }
 
