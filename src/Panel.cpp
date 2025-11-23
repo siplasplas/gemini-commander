@@ -142,6 +142,30 @@ void Panel::loadDirectory()
     tableView->setRootIndex(QModelIndex());
 }
 
+bool Panel::selectEntryByName(const QString& fullName) const
+{
+    for (int row = 0; row < model->rowCount(); ++row) {
+        QString rowName;
+
+        // For root we treat all rows the same; for non-root row 0 is the parent entry
+        if (row > 0 || currentPath == "/") {
+            rowName = model->item(row, COLUMN_NAME)->text();
+            QString ext = model->item(row, COLUMN_EXT)->text();
+            if (!ext.isEmpty())
+                rowName += "." + ext;
+        }
+
+        if (rowName == fullName) {
+            QModelIndex selectIndex = model->index(row, COLUMN_NAME);
+            tableView->setCurrentIndex(selectIndex); // Sets selection and current index
+            tableView->scrollTo(selectIndex);        // Ensure row is visible
+            tableView->setFocus();                   // Keep keyboard focus on panel
+            return true;
+        }
+    }
+    return false;
+}
+
 void Panel::onPanelActivated(const QModelIndex &index) {
     if (!index.isValid()) return;
 
@@ -176,24 +200,7 @@ void Panel::onPanelActivated(const QModelIndex &index) {
 
     // Reload directory
     loadDirectory();
-
-    // Select and set current index for the appropriate row
-    for (int row = 0; row < model->rowCount(); ++row) {
-        QString rowName;
-        if (row>0 || currentPath=="/") {
-            rowName = model->item(row, COLUMN_NAME)->text();
-            QString ext = model->item(row, COLUMN_EXT)->text();
-            if (!ext.isEmpty())
-                rowName += "." + ext;
-        }
-        if (rowName == selectedName) {
-            QModelIndex selectIndex = model->index(row, COLUMN_NAME);
-            tableView->setCurrentIndex(selectIndex); // Sets both selection and current for keyboard navigation
-            tableView->scrollTo(selectIndex); // Optional: Scroll to the selected item
-            tableView->setFocus(); // Ensure the view has focus for keyboard input
-            break;
-        }
-    }
+    bool b = selectEntryByName(selectedName);
 }
 
 Panel::Panel(QSplitter *splitter) {

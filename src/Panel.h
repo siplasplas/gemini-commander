@@ -39,6 +39,8 @@ public:
     ~Panel() override;
     void active(bool active);
     void loadDirectory();
+    // Select row by full file name (base + extension)
+    bool selectEntryByName(const QString& fullName) const;
 };
 
 #endif //PANEL_H

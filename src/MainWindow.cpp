@@ -214,25 +214,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             // Reload panel content
             panel->loadDirectory();
-
-            // Find the row with the stored name in the new list
-            for (int row = 0; row < panel->model->rowCount(); ++row) {
-                QString rowName;
-                if (row > 0 || panel->currentPath == "/") {
-                    rowName = panel->model->item(row, COLUMN_NAME)->text();
-                    QString ext = panel->model->item(row, COLUMN_EXT)->text();
-                    if (!ext.isEmpty())
-                        rowName += "." + ext;
-                }
-
-                if (rowName == selectedName) {
-                    QModelIndex selectIndex = panel->model->index(row, COLUMN_NAME);
-                    panel->tableView->setCurrentIndex(selectIndex);
-                    panel->tableView->scrollTo(selectIndex);
-                    panel->tableView->setFocus();
-                    break;
-                }
-            }
+            bool b = panel->selectEntryByName(selectedName);
 
             return true;
         } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
