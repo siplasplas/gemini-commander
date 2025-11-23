@@ -5,6 +5,10 @@
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QStandardItemModel>
+#include <QDrag>
+#include <QMimeData>
+#include <QUrl>
+#include <QDir>
 
 void FilePanel::active(bool active) {
     if (active)
@@ -239,6 +243,8 @@ FilePanel::FilePanel(QSplitter *splitter) {
     connect(this, &QTableView::activated, [this](const QModelIndex &index) {
         onPanelActivated(index);
     });
+    setDragEnabled(true);
+    setDragDropMode(QAbstractItemView::DragOnly);
 }
 
 FilePanel::~FilePanel() {
@@ -283,4 +289,41 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex)
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     // Przeładuj katalog z nowym sortowaniem
     loadDirectory();
+}
+
+void FilePanel::startDrag(Qt::DropActions supportedActions)
+{
+    QModelIndexList selectedRows = selectionModel()->selectedRows(COLUMN_NAME);
+    if (selectedRows.isEmpty())
+        return;
+
+    QList<QUrl> urls;
+    urls.reserve(selectedRows.size());
+
+    for (const QModelIndex& idx : selectedRows) {
+        int row = idx.row();
+        QString name = getRowName(row);
+        if (name.isEmpty())
+            continue; // skip parent entry "[..]" / empty name
+
+        QDir dir(currentPath);
+        QString fullPath = dir.absoluteFilePath(name);
+        urls.append(QUrl::fromLocalFile(fullPath));
+    }
+
+    if (urls.isEmpty())
+        return;
+
+    QMimeData* mimeData = new QMimeData();
+    mimeData->setUrls(urls); // text/uri-list
+
+    QDrag* drag = new QDrag(this);
+    drag->setMimeData(mimeData);
+
+    // Prefer copy; use supportedActions mask from Qt
+    Qt::DropActions actions = supportedActions;
+    if (!(actions & Qt::CopyAction))
+        actions |= Qt::CopyAction;
+
+    drag->exec(actions, Qt::CopyAction);
 }

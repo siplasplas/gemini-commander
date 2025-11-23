@@ -28,6 +28,8 @@ class FilePanel : public QTableView
 private slots:
     void onPanelActivated(const QModelIndex &index);
     void onHeaderSectionClicked(int logicalIndex);
+protected:
+    void startDrag(Qt::DropActions supportedActions) override;
 public:
     QStandardItemModel *model;
     QString currentPath;
