@@ -5,13 +5,12 @@
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QStandardItemModel>
-#include <QTableView>
 
 void FilePanel::active(bool active) {
     if (active)
-        styleActive(tableView);
+        styleActive(this);
     else
-        styleInactive(tableView);
+        styleInactive(this);
 }
 
 void FilePanel::loadDirectory()
@@ -139,7 +138,7 @@ void FilePanel::loadDirectory()
         model->appendRow(row);
     }
 
-    tableView->setRootIndex(QModelIndex());
+    setRootIndex(QModelIndex());
 }
 
 QString FilePanel::getRowName(int row) const {
@@ -152,18 +151,16 @@ QString FilePanel::getRowName(int row) const {
     }
     return rowName;
 }
-bool FilePanel::selectEntryByName(const QString& fullName) const
+
+bool FilePanel::selectEntryByName(const QString& fullName)
 {
     for (int row = 0; row < model->rowCount(); ++row) {
-        QString rowName;
-
-        rowName = getRowName(row);
-
+        QString rowName = getRowName(row);
         if (rowName == fullName) {
             QModelIndex selectIndex = model->index(row, COLUMN_NAME);
-            tableView->setCurrentIndex(selectIndex); // Sets selection and current index
-            tableView->scrollTo(selectIndex);        // Ensure row is visible
-            tableView->setFocus();                   // Keep keyboard focus on panel
+            setCurrentIndex(selectIndex);
+            scrollTo(selectIndex);
+            setFocus();
             return true;
         }
     }
@@ -201,35 +198,34 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
 }
 
 FilePanel::FilePanel(QSplitter *splitter) {
-    tableView = new QTableView(splitter);
     model = new QStandardItemModel(nullptr);
     QStringList headers = {"id","Name", "Type", "Size", "Date"};
     model->setHorizontalHeaderLabels(headers);
     currentPath = QDir::homePath();
-    tableView->setModel(model);
+    setModel(model);
 
-    tableView->hideColumn(COLUMN_ID);
-    tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
-    tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    tableView->setShowGrid(false);
-    tableView->verticalHeader()->hide();
+    hideColumn(COLUMN_ID);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setEditTriggers(QAbstractItemView::NoEditTriggers);
+    setShowGrid(false);
+    verticalHeader()->hide();
     
-    QFontMetrics fm(tableView->font());
+    QFontMetrics fm(font());
     int rowHeight = fm.height();
-    tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-    tableView->verticalHeader()->setDefaultSectionSize(rowHeight);
+    verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    verticalHeader()->setDefaultSectionSize(rowHeight);
 
     // Note: Sorting is handled manually in loadDirectory, so disable view sorting
-    tableView->setSortingEnabled(false);
+    setSortingEnabled(false);
 
-    tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);
-    tableView->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Interactive);
-    tableView->setColumnWidth(1, 100);
-    tableView->setColumnWidth(3, 150);
+    horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);
+    horizontalHeader()->setSectionResizeMode(3, QHeaderView::Interactive);
+    setColumnWidth(1, 100);
+    setColumnWidth(3, 150);
 
-    QHeaderView* header = tableView->horizontalHeader();
+    QHeaderView* header = horizontalHeader();
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);
     header->setHighlightSections(false);
@@ -238,15 +234,14 @@ FilePanel::FilePanel(QSplitter *splitter) {
     connect(header, &QHeaderView::sectionClicked,
             this, &FilePanel::onHeaderSectionClicked);
 
-    splitter->addWidget(tableView);
+    splitter->addWidget(this);
 
-    connect(tableView, &QTableView::activated, [this](const QModelIndex &index) {
+    connect(this, &QTableView::activated, [this](const QModelIndex &index) {
         onPanelActivated(index);
     });
 }
 
 FilePanel::~FilePanel() {
-    delete tableView;
     delete model;
 }
 
@@ -285,7 +280,7 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex)
         sortColumn = logicalIndex;
         sortOrder = Qt::AscendingOrder;
     }
-    tableView->horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     // Przeładuj katalog z nowym sortowaniem
     loadDirectory();
 }

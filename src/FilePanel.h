@@ -4,6 +4,7 @@
 #include <QModelIndex>
 #include <QSplitter>
 #include <QString>
+#include <QTableView>
 
 QT_BEGIN_NAMESPACE
 class QTableView;
@@ -19,7 +20,7 @@ enum Columns {
         COLUMN_DATE = 4,
 };
 
-class FilePanel: public QObject
+class FilePanel : public QTableView
 {
     Q_OBJECT
     void styleActive(QWidget *widget);
@@ -28,7 +29,6 @@ private slots:
     void onPanelActivated(const QModelIndex &index);
     void onHeaderSectionClicked(int logicalIndex);
 public:
-    QTableView *tableView;
     QStandardItemModel *model;
     QString currentPath;
 
@@ -41,7 +41,7 @@ public:
     void loadDirectory();
     QString getRowName(int row) const;
     // Select row by full file name (base + extension)
-    bool selectEntryByName(const QString& fullName) const;
+    bool selectEntryByName(const QString& fullName);
 };
 
 #endif //PANEL_H

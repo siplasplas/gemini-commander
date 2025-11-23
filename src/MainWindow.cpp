@@ -45,7 +45,7 @@ void MainWindow::setupUi()
 
     // Install event filters for Tab key handling
     for (int i = 0; i < panels.size(); ++i)
-        panels[i]->tableView->installEventFilter(this);
+        panels[i]->installEventFilter(this);
     commandLineEdit->installEventFilter(this);
 
     mainLayout->addWidget(mainSplitter);
@@ -68,11 +68,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             if (view) {
                 int n = numberForWidget(view);
                 int next = (n+1) % panels.size();
-                panels[next]->tableView->setFocus();
+                panels[next]->setFocus();
                 return true; // Event handled
             }
         } else if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
-            QModelIndex currentIndex = panels[nPanel]->tableView->currentIndex();
+            QModelIndex currentIndex = panels[nPanel]->currentIndex();
             if (!currentIndex.isValid()) {
                 return true;
             }
@@ -114,7 +114,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortColumn = COLUMN_NAME;
                 panel->sortOrder = Qt::AscendingOrder;
             }
-            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
             panel->loadDirectory();
             return true;
 
@@ -128,7 +128,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortColumn = COLUMN_EXT;
                 panel->sortOrder = Qt::AscendingOrder;
             }
-            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
             panel->loadDirectory();
             return true;
 
@@ -142,7 +142,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortColumn = COLUMN_SIZE;
                 panel->sortOrder = Qt::AscendingOrder;
             }
-            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
             panel->loadDirectory();
             return true;
 
@@ -156,7 +156,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->sortColumn = COLUMN_DATE;
                 panel->sortOrder = Qt::AscendingOrder;
             }
-            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
             panel->loadDirectory();
             return true;
 
@@ -165,11 +165,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             commandLineEdit->selectAll();
             return true; // Event handled
         } else if (obj==commandLineEdit && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) && modifiers == Qt::NoModifier) {
-            panels[nPanel]->tableView->setFocus();
+            panels[nPanel]->setFocus();
             return true; // Event handled
         }
         else if (keyEvent->key() == Qt::Key_Home && modifiers == Qt::NoModifier) {
-            QTableView* view = panels[nPanel]->tableView;
+            QTableView* view = panels[nPanel];
             int rows = view->model()->rowCount();
             if (rows > 0) {
                 QModelIndex idx = view->model()->index(0, COLUMN_NAME);
@@ -179,7 +179,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
 
         } else if (keyEvent->key() == Qt::Key_End && modifiers == Qt::NoModifier) {
-            QTableView* view = panels[nPanel]->tableView;
+            QTableView* view = panels[nPanel];
             int rows = view->model()->rowCount();
             if (rows > 0) {
                 QModelIndex idx = view->model()->index(rows - 1, COLUMN_NAME);
@@ -216,7 +216,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         } else if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
             if (modifiers == Qt::ControlModifier) {
                 // Ctrl + Enter: Set selected item name to commandLineEdit
-                QModelIndex currentIndex = panels[nPanel]->tableView->currentIndex();
+                QModelIndex currentIndex = panels[nPanel]->currentIndex();
                 if (currentIndex.isValid()) {
                     QString name = panels[nPanel]->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
                     commandLineEdit->setText(commandLineEdit->text() + name);
@@ -224,7 +224,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 }
             } else if (modifiers == (Qt::ControlModifier | Qt::ShiftModifier)) {
                 // Shift + Ctrl + Enter: Set full path of selected item to commandLineEdit
-                QModelIndex currentIndex = panels[nPanel]->tableView->currentIndex();
+                QModelIndex currentIndex = panels[nPanel]->currentIndex();
                 if (currentIndex.isValid()) {
                     QString name = panels[nPanel]->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
                     if (name == "[..]") {
@@ -255,7 +255,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
 int MainWindow::numberForWidget(QTableView *widget) {
     for (int i=0; i<panels.size(); ++i)
-        if (panels[i]->tableView == widget)
+        if (panels[i] == widget)
             return i;
     return -1;
 }
