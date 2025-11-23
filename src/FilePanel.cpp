@@ -292,13 +292,23 @@ FilePanel::FilePanel(QSplitter *splitter) {
     // Note: Sorting is handled manually in loadDirectory, so disable view sorting
     setSortingEnabled(false);
 
-    horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);
-    horizontalHeader()->setSectionResizeMode(3, QHeaderView::Interactive);
-    setColumnWidth(1, 100);
-    setColumnWidth(3, 150);
-
     QHeaderView* header = horizontalHeader();
+    header->setSectionsClickable(true);
+    header->setSortIndicatorShown(true);
+    header->setHighlightSections(false);
+
+    // Allow user-resizing for all columns
+    header->setSectionResizeMode(QHeaderView::Interactive);
+    // Make the last visible column stretch to fill remaining space
+    header->setStretchLastSection(true);
+
+    // Optional: initial sizes
+    setColumnWidth(COLUMN_NAME, 200);
+    setColumnWidth(COLUMN_EXT, 80);
+    setColumnWidth(COLUMN_SIZE, 100);
+    setColumnWidth(COLUMN_DATE, 150);
+
+
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);
     header->setHighlightSections(false);
