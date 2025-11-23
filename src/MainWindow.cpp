@@ -77,10 +77,16 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 return true;
             }
 
-            QString name = panels[nPanel]->model->data(
+            QString baseName = panels[nPanel]->model->data(
                 currentIndex.sibling(currentIndex.row(), COLUMN_NAME)
             ).toString();
-
+            QString ext = panels[nPanel]->model->data(
+                currentIndex.sibling(currentIndex.row(), COLUMN_EXT)
+            ).toString();
+            QString name = baseName;
+            if (!ext.isEmpty()) {
+                name = baseName + "." + ext;
+            }
             if (name == "[..]") {
                 return true;
             }
@@ -123,12 +129,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F4) {
             Panel* panel = panels[nPanel];
-            if (panel->sortColumn == COLUMN_TYPE) {
+            if (panel->sortColumn == COLUMN_EXT) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
                         : Qt::AscendingOrder;
             } else {
-                panel->sortColumn = COLUMN_TYPE;
+                panel->sortColumn = COLUMN_EXT;
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);

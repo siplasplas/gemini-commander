@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "Panel.h"
 #include <QDir>
 #include <QFileInfo>
@@ -21,56 +23,119 @@ void Panel::loadDirectory()
         return;
     }
 
-    // Determine sort flags
-    QDir::SortFlags sortFlags = QDir::DirsFirst | QDir::IgnoreCase;
-
-    switch (sortColumn) {
-    case COLUMN_NAME:
-        sortFlags |= QDir::Name;
-        break;
-    case COLUMN_SIZE:
-        sortFlags |= QDir::Size;
-        break;
-    case COLUMN_DATE:
-        sortFlags |= QDir::Time;
-        break;
-    default:
-        sortFlags |= QDir::Name;
-        break;
-    }
-
-    if (sortOrder == Qt::DescendingOrder) {
-        sortFlags |= QDir::Reversed;
-    }
-
     QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
-    QFileInfoList entries = dir.entryInfoList(filters, sortFlags);
+    // Bez sortowania QDir – sortujemy ręcznie
+    QFileInfoList entries = dir.entryInfoList(filters, QDir::NoSort);
 
-    // Add "[..]" if not root
+    // Sortowanie w stylu Total Commandera
+    std::sort(entries.begin(), entries.end(),
+              [this](const QFileInfo &a, const QFileInfo &b) {
+                  const bool aDir = a.isDir();
+                  const bool bDir = b.isDir();
+
+                  // 1) katalogi zawsze na górze, niezależnie od sortOrder
+                  if (aDir != bDir) {
+                      return aDir && !bDir; // directory < file
+                  }
+
+                  auto lessCI = [](const QString &x, const QString &y) {
+                      return x.compare(y, Qt::CaseInsensitive) < 0;
+                  };
+                  auto greaterCI = [](const QString &x, const QString &y) {
+                      return x.compare(y, Qt::CaseInsensitive) > 0;
+                  };
+
+                  const bool asc = (sortOrder == Qt::AscendingOrder);
+
+                  auto cmpNames = [&](bool ascLocal) {
+                      const QString na = a.fileName();
+                      const QString nb = b.fileName();
+                      return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
+                  };
+
+                  switch (sortColumn) {
+                  case COLUMN_NAME:
+                      // Sortowanie po nazwie (pełnej), katalogi i pliki osobno, ale tą samą zasadą
+                      return cmpNames(asc);
+
+                  case COLUMN_EXT:
+                      // Sortowanie po rozszerzeniu (tylko pliki),
+                      // katalogi między sobą nadal po nazwie
+                      if (aDir && bDir) {
+                          return cmpNames(asc);
+                      } else if (!aDir && !bDir) {
+                          const QString ea = a.suffix();
+                          const QString eb = b.suffix();
+                          const int cmp = ea.compare(eb, Qt::CaseInsensitive);
+                          if (cmp != 0) {
+                              return asc ? (cmp < 0) : (cmp > 0);
+                          }
+                          // dogrywka: po nazwie
+                          return cmpNames(asc);
+                      } else {
+                          // nie powinniśmy tu trafić (dirs już rozdzielone wyżej)
+                          return cmpNames(asc);
+                      }
+
+                  case COLUMN_SIZE:
+                      // Jak TC: katalogi między sobą po nazwie,
+                      // pliki po rozmiarze, a przy remisie po nazwie
+                      if (aDir && bDir) {
+                          return cmpNames(asc);
+                      } else if (!aDir && !bDir) {
+                          if (a.size() != b.size()) {
+                              return asc ? (a.size() < b.size())
+                                         : (a.size() > b.size());
+                          }
+                          return cmpNames(asc);
+                      } else {
+                          // nie powinniśmy tu trafić (dirs już rozdzielone wyżej)
+                          return cmpNames(asc);
+                      }
+
+                  case COLUMN_DATE: {
+                      // Sortowanie po dacie modyfikacji, katalogi też po dacie
+                      const QDateTime da = a.lastModified();
+                      const QDateTime db = b.lastModified();
+                      if (da != db) {
+                          return asc ? (da < db) : (da > db);
+                      }
+                      return cmpNames(asc);
+                  }
+
+                  default:
+                      // Domyślnie po nazwie
+                      return cmpNames(asc);
+                  }
+              });
+
+    // [..] jako pierwszy wiersz (ręcznie, jak w TC)
     bool isRoot = dir.isRoot();
     if (!isRoot) {
         QList<QStandardItem*> row;
-        row.append(new QStandardItem(""));
-        row.append(new QStandardItem("[..]"));
-        row.append(new QStandardItem(""));
-        row.append(new QStandardItem("<DIR>"));
+        row.append(new QStandardItem(""));                 // COLUMN_ID
+        row.append(new QStandardItem("[..]"));             // COLUMN_NAME
+        row.append(new QStandardItem("<DIR>"));            // COLUMN_TYPE
+        row.append(new QStandardItem(""));                 // COLUMN_SIZE
         QFileInfo info(".");
-        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+        row.append(new QStandardItem(
+            info.lastModified().toString("yyyy-MM-dd hh:mm"))); // COLUMN_DATE
         model->appendRow(row);
     }
 
-    // Add all sorted entries
+    // Dodajemy posortowane wpisy
     for (const QFileInfo &info : entries) {
         QList<QStandardItem*> row;
-        row.append(new QStandardItem("id"));
-        row.append(new QStandardItem(info.completeBaseName()));
+        row.append(new QStandardItem("id"));                    // COLUMN_ID
+        row.append(new QStandardItem(info.completeBaseName())); // COLUMN_NAME
         if (info.isDir()) {
-            row.append(new QStandardItem(""));
+            row.append(new QStandardItem(""));                  // COLUMN_TYPE (katalog – puste)
         } else {
-            row.append(new QStandardItem(info.suffix()));
+            row.append(new QStandardItem(info.suffix()));       // COLUMN_TYPE = rozszerzenie
         }
-        row.append(new QStandardItem(QString::number(info.size())));
-        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+        row.append(new QStandardItem(QString::number(info.size()))); // COLUMN_SIZE
+        row.append(new QStandardItem(
+            info.lastModified().toString("yyyy-MM-dd hh:mm"))); // COLUMN_DATE
         model->appendRow(row);
     }
 

@@ -14,7 +14,7 @@ QT_END_NAMESPACE
 enum Columns {
         COLUMN_ID = 0,
         COLUMN_NAME = 1,
-        COLUMN_TYPE = 2,
+        COLUMN_EXT = 2,
         COLUMN_SIZE = 3,
         COLUMN_DATE = 4,
 };
