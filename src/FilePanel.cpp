@@ -108,9 +108,11 @@ void FilePanel::addFirstEntry(bool isRoot) {
     row.append(new QStandardItem(""));
 
     // COLUMN_NAME (base)
-    auto *nameItem = new QStandardItem("[..]");
-    nameItem->setData(QString(""), Qt::UserRole); // full_name = "" for [..]
-    row.append(nameItem);
+    auto *upItem = new QStandardItem("[..]");
+    upItem->setData(QString(""), Qt::UserRole); // full_name = "" for [..]
+    QIcon upIcon = style()->standardIcon(QStyle::SP_FileDialogToParent);
+    upItem->setIcon(upIcon);
+    row.append(upItem);
 
     // COLUMN_TYPE (empty)
     row.append(new QStandardItem("<DIR>"));
@@ -127,54 +129,42 @@ void FilePanel::addFirstEntry(bool isRoot) {
   }
 }
 
-void FilePanel::addEntries() {
-  // --------------------------
-  // Add files and directories
-  // --------------------------
-  for (const QFileInfo &info : entries) {
-      QString base, ext;
-      if (info.isDir()) {
-          base = info.fileName();
-      } else {
-          base = info.completeBaseName();
-          ext =  info.suffix();
-          //special case for hidden
-          if (base.isEmpty()) {
-              base = "." + ext;
-              ext.clear();
-          }
-      }
+void FilePanel::addEntries()
+{
+    for (const QFileInfo &info : entries) {
 
-    QString fullName = base;
-    if (!ext.isEmpty())
-      fullName += "." + ext;
+        QString base, ext;
 
-    QList<QStandardItem *> row;
+        if (info.isDir()) {
+            base = info.fileName();
+        } else {
+            base = info.completeBaseName();
+            ext  = info.suffix();
 
-    // COLUMN_ID
-    row.append(new QStandardItem("id"));
+            // hidden: ".git" type case
+            if (base.isEmpty()) {
+                base = "." + ext;
+                ext.clear();
+            }
+        }
+        QString fullName = base;
+        if (!ext.isEmpty())
+            fullName += "." + ext;
 
-    // COLUMN_NAME
-    auto *nameItem = new QStandardItem(base);
-    nameItem->setData(fullName, Qt::UserRole);
-    row.append(nameItem);
+        QList<QStandardItem*> row;
+        row.append(new QStandardItem("id"));
 
-    // COLUMN_TYPE
-    if (info.isDir()) {
-      row.append(new QStandardItem(""));
-    } else {
-      row.append(new QStandardItem(ext));
+        auto* nameItem = new QStandardItem(base);
+        nameItem->setData(fullName, Qt::UserRole);
+        nameItem->setIcon(iconForExtension(ext, info.isDir()));
+        row.append(nameItem);
+
+        row.append(new QStandardItem(ext));
+        row.append(new QStandardItem(QString::number(info.size())));
+        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+
+        model->appendRow(row);
     }
-
-    // COLUMN_SIZE
-    row.append(new QStandardItem(QString::number(info.size())));
-
-    // COLUMN_DATE
-    row.append(
-        new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
-
-    model->appendRow(row);
-  }
 }
 
 void FilePanel::addAllEntries() {
@@ -751,4 +741,62 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
         actions |= Qt::CopyAction;
 
     drag->exec(actions, Qt::CopyAction);
+}
+
+QIcon FilePanel::iconForEntry(const QFileInfo& info)
+{
+    static QFileIconProvider provider;
+
+    // Katalog – klasyczna ikonka folderu
+    if (info.isDir()) {
+        return provider.icon(QFileIconProvider::Folder);
+    }
+
+    // Plik – spróbuj po MIME (na podstawie rozszerzenia, bez czytania zawartości)
+    QMimeDatabase db;
+    QMimeType mt = db.mimeTypeForFile(info, QMimeDatabase::MatchExtension);
+    if (mt.isValid()) {
+        QIcon ico = QIcon::fromTheme(mt.iconName());
+        if (!ico.isNull())
+            return ico;
+    }
+
+    // Fallback: domyślna ikonka pliku z systemu / stylu
+    return provider.icon(QFileIconProvider::File);
+}
+
+QIcon FilePanel::iconForExtension(const QString& ext, bool isDir)
+{
+    static QFileIconProvider provider;
+    static QMimeDatabase db;
+    static QHash<QString, QIcon> cache;
+
+    if (isDir) {
+        return provider.icon(QFileIconProvider::Folder);
+    }
+
+    QString key = ext.toLower();
+
+    // cache hit
+    if (cache.contains(key)) {
+        return cache[key];
+    }
+
+    // MIME-based icon
+    QIcon icon;
+
+    if (!key.isEmpty()) {
+        QMimeType mt = db.mimeTypeForFile("." + key, QMimeDatabase::MatchExtension);
+        if (mt.isValid()) {
+            icon = QIcon::fromTheme(mt.iconName());
+        }
+    }
+
+    // fallback
+    if (icon.isNull()) {
+        icon = provider.icon(QFileIconProvider::File);
+    }
+
+    cache.insert(key, icon);
+    return icon;
 }

@@ -1,11 +1,11 @@
 #ifndef PANEL_H
 #define PANEL_H
 
-#include <QModelIndex>
-#include <QSplitter>
-#include <QString>
 #include <QTableView>
 #include <qfileinfo.h>
+#include <QFileIconProvider>
+#include <QMimeDatabase>
+#include <QStyle>
 
 QT_BEGIN_NAMESPACE
 class QTableView;
@@ -57,7 +57,10 @@ signals:
     void directoryChanged(const QString& path);
 
 private:
-    void styleActive();
+   static QIcon iconForEntry(const QFileInfo& info);
+   QIcon iconForExtension(const QString &ext, bool isDir);
+
+void styleActive();
     void styleInactive();
 
     bool mixedHidden = true;//filenames with dot, are between others
