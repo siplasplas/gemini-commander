@@ -25,13 +25,13 @@ void Panel::loadDirectory()
     QDir::SortFlags sortFlags = QDir::DirsFirst | QDir::IgnoreCase;
 
     switch (sortColumn) {
-    case 0: // name
+    case COLUMN_NAME:
         sortFlags |= QDir::Name;
         break;
-    case 1: // size
+    case COLUMN_SIZE:
         sortFlags |= QDir::Size;
         break;
-    case 3: // time
+    case COLUMN_DATE:
         sortFlags |= QDir::Time;
         break;
     default:
@@ -50,26 +50,26 @@ void Panel::loadDirectory()
     bool isRoot = dir.isRoot();
     if (!isRoot) {
         QList<QStandardItem*> row;
+        row.append(new QStandardItem(""));
         row.append(new QStandardItem("[..]"));
         row.append(new QStandardItem(""));
-        row.append(new QStandardItem("Directory"));
-        row.append(new QStandardItem(""));
+        row.append(new QStandardItem("<DIR>"));
+        QFileInfo info(".");
+        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
         model->appendRow(row);
     }
 
     // Add all sorted entries
     for (const QFileInfo &info : entries) {
         QList<QStandardItem*> row;
+        row.append(new QStandardItem("id"));
         row.append(new QStandardItem(info.fileName()));
-
         if (info.isDir()) {
-            row.append(new QStandardItem(""));
             row.append(new QStandardItem("Directory"));
         } else {
-            row.append(new QStandardItem(QString::number(info.size())));
             row.append(new QStandardItem("File"));
         }
-
+        row.append(new QStandardItem(QString::number(info.size())));
         row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
         model->appendRow(row);
     }
@@ -124,12 +124,12 @@ void Panel::onPanelActivated(const QModelIndex &index) {
 Panel::Panel(QSplitter *splitter) {
     tableView = new QTableView(splitter);
     model = new QStandardItemModel(nullptr);
-    QStringList headers = {"Name", "Size", "Type", "Modified"};
+    QStringList headers = {"id","Name", "Type", "Size", "Date"};
     model->setHorizontalHeaderLabels(headers);
     currentPath = QDir::homePath();
     tableView->setModel(model);
-    tableView->hideColumn(2); // Hide "Type" column if not needed
 
+    tableView->hideColumn(COLUMN_ID);
     tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -198,7 +198,6 @@ void Panel::styleInactive(QWidget* widget) {
 
 void Panel::onHeaderSectionClicked(int logicalIndex)
 {
-    // Columns: 0 = Name, 1 = Size, 2 = Date
     if (sortColumn == logicalIndex) {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                     ? Qt::DescendingOrder

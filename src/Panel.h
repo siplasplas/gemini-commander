@@ -10,6 +10,15 @@ class QTableView;
 class QStandardItemModel;
 QT_END_NAMESPACE
 
+
+enum Columns {
+        COLUMN_ID = 0,
+        COLUMN_NAME = 1,
+        COLUMN_TYPE = 2,
+        COLUMN_SIZE = 3,
+        COLUMN_DATE = 4,
+};
+
 class Panel: public QObject
 {
     Q_OBJECT
@@ -23,7 +32,7 @@ public:
     QStandardItemModel *model;
     QString currentPath;
 
-    int sortColumn = 0;
+    int sortColumn = COLUMN_NAME;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
 
     explicit Panel(QSplitter *splitter);
@@ -31,7 +40,5 @@ public:
     void active(bool active);
     void loadDirectory();
 };
-
-
 
 #endif //PANEL_H

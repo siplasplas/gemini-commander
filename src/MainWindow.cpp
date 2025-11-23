@@ -78,7 +78,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
 
             QString name = panels[nPanel]->model->data(
-                currentIndex.sibling(currentIndex.row(), 0)
+                currentIndex.sibling(currentIndex.row(), COLUMN_NAME)
             ).toString();
 
             if (name == "[..]") {
@@ -109,12 +109,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
             Panel* panel = panels[nPanel];
-            if (panel->sortColumn == 0) {
+            if (panel->sortColumn == COLUMN_NAME) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
                         : Qt::AscendingOrder;
             } else {
-                panel->sortColumn = 0;
+                panel->sortColumn = COLUMN_NAME;
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
@@ -123,12 +123,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F6) {
             Panel* panel = panels[nPanel];
-            if (panel->sortColumn == 1) {
+            if (panel->sortColumn == COLUMN_SIZE) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
                         : Qt::AscendingOrder;
             } else {
-                panel->sortColumn = 1;
+                panel->sortColumn = COLUMN_SIZE;
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
@@ -137,12 +137,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F5) {
             Panel* panel = panels[nPanel];
-            if (panel->sortColumn == 3) {
+            if (panel->sortColumn == COLUMN_DATE) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
                         : Qt::AscendingOrder;
             } else {
-                panel->sortColumn = 3;
+                panel->sortColumn = COLUMN_DATE;
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
