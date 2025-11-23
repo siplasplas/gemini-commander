@@ -33,6 +33,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets)
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
+find_package(ICU REQUIRED COMPONENTS uc i18n)
 
 add_executable(${PROJECT_NAME}
         src/main.cpp
@@ -77,4 +78,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         KF${KF_MAJOR_VERSION}::KIOFileWidgets
         KF${KF_MAJOR_VERSION}::KIOWidgets
         KF${KF_MAJOR_VERSION}::Parts
+        ICU::uc ICU::i18n
  )

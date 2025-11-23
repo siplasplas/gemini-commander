@@ -61,6 +61,41 @@ On Windows (using MSYS2 or Chocolatey; note that KDE development on Windows may 
 pacman -S mingw-w64-x86_64-extra-cmake-modules  # For MSYS2
 ```
 
+
+## Unicode search with ICU
+
+This project uses ICU (International Components for Unicode) to provide:
+
+- full Unicode case folding (case-insensitive comparisons),
+- diacritic-insensitive matching (accent stripping),
+- better cross-language behavior than simple ASCII-only normalization.
+
+### Installing ICU on Debian/Ubuntu
+
+Use the system packages:
+
+    sudo apt-get update
+    sudo apt-get install libicu-dev
+
+This installs ICU headers and libraries (uc, i18n, etc.).
+
+### CMake integration
+
+In your `CMakeLists.txt`, add:
+
+    find_package(ICU REQUIRED COMPONENTS uc i18n)
+
+    target_link_libraries(your_target
+        PRIVATE
+            ICU::uc
+            ICU::i18n
+    )
+
+Make sure `your_target` is replaced with the actual target name of your application (e.g. `filemanager`, `gui`, etc.).
+
+After that, ICU headers like `<unicode/unistr.h>` and `<unicode/translit.h>` will be available to your C++ code, and the linker will pick up the corresponding libraries automatically.
+
+
 ## Building
 
 To build the project, you need CMake, Ninja or Make, a C++ compiler supporting C++20, 

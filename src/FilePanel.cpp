@@ -1,3 +1,6 @@
+#include <unicode/unistr.h>
+#include <unicode/translit.h>
+#include <unicode/utypes.h>
 #include <algorithm>
 
 #include "FilePanel.h"
@@ -343,31 +346,42 @@ QString FilePanel::normalizeForSearch(const QString& s) const
     if (tmp.size() > 1 && tmp[0] == u'.')
         tmp.remove(0, 1);
 
-    // Case-insensitive: use case folding
-    tmp = tmp.toCaseFolded();
+    // QString (UTF-16) -> ICU UnicodeString (UTF-16)
+    icu::UnicodeString ustr(
+        reinterpret_cast<const UChar*>(tmp.utf16()),
+        tmp.length()
+    );
 
-    // Basic diacritics folding for Polish (you can extend this mapping)
-    auto mapChar = [](QChar c) -> QChar {
-        switch (c.unicode()) {
-        case u'ą': case u'Ą': return u'a';
-        case u'ć': case u'Ć': return u'c';
-        case u'ę': case u'Ę': return u'e';
-        case u'ł': case u'Ł': return u'l';
-        case u'ń': case u'Ń': return u'n';
-        case u'ó': case u'Ó': return u'o';
-        case u'ś': case u'Ś': return u's';
-        case u'ź': case u'Ź': return u'z';
-        case u'ż': case u'Ż': return u'z';
-        default:
-            return c;
+    // Unicode case folding (full Unicode, not only ASCII)
+    ustr.foldCase();
+
+    // Create transliterator once (static) to strip diacritics:
+    // "NFD; [:Nonspacing Mark:] Remove; NFC"
+    static icu::Transliterator* accentStripper = nullptr;
+    static bool translitInitTried = false;
+
+    if (!translitInitTried) {
+        translitInitTried = true;
+        UErrorCode status = U_ZERO_ERROR;
+        accentStripper = icu::Transliterator::createInstance(
+            "NFD; [:Nonspacing Mark:] Remove; NFC",
+            UTRANS_FORWARD,
+            status
+        );
+        if (U_FAILURE(status)) {
+            accentStripper = nullptr; // fallback: no accent stripping
         }
-    };
-
-    for (int i = 0; i < tmp.size(); ++i) {
-        tmp[i] = mapChar(tmp[i]);
     }
 
-    return tmp;
+    if (accentStripper) {
+        accentStripper->transliterate(ustr);
+    }
+
+    // ICU UnicodeString -> UTF-8 -> QString
+    std::string utf8;
+    ustr.toUTF8String(utf8);
+
+    return QString::fromUtf8(utf8.data(), static_cast<int>(utf8.size()));
 }
 
 bool FilePanel::findAndSelectPattern(const QString& pattern,
