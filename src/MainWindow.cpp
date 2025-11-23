@@ -181,7 +181,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             QTableView* view = panels[nPanel]->tableView;
             int rows = view->model()->rowCount();
             if (rows > 0) {
-                QModelIndex idx = view->model()->index(0, 0);
+                QModelIndex idx = view->model()->index(0, COLUMN_NAME);
                 view->setCurrentIndex(idx);
                 view->scrollTo(idx, QAbstractItemView::PositionAtTop);
             }
@@ -191,7 +191,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             QTableView* view = panels[nPanel]->tableView;
             int rows = view->model()->rowCount();
             if (rows > 0) {
-                QModelIndex idx = view->model()->index(rows - 1, 0);
+                QModelIndex idx = view->model()->index(rows - 1, COLUMN_NAME);
                 view->setCurrentIndex(idx);
                 view->scrollTo(idx, QAbstractItemView::PositionAtBottom);
             }
