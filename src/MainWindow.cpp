@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QDir>
+#include <QFileInfo>
 #include <QKeyEvent>
 #include <QStandardItemModel>
 #include <QTableView>
@@ -69,9 +70,37 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 return true; // Event handled
             }
         } else if (keyEvent->key() == Qt::Key_F4 && modifiers == Qt::NoModifier) {
+            QModelIndex currentIndex = panels[nPanel]->tableView->currentIndex();
+            if (!currentIndex.isValid()) {
+                return true;
+            }
+
+            QString name = panels[nPanel]->model->data(
+                currentIndex.sibling(currentIndex.row(), 0)
+            ).toString();
+
+            if (name == "[..]") {
+                return true;
+            }
+
+            QDir dir(panels[nPanel]->currentPath);
+            QString fullPath = dir.absoluteFilePath(name);
+
+            QFileInfo info(fullPath);
+            if (!info.isFile()) {
+                // selected is directory - nothing
+                return true;
+            }
+
             if (!editorFrame)
                 editorFrame = new EditorFrame(this);
+
+            editorFrame->openFileInEditor(fullPath);
+
             editorFrame->show();
+            editorFrame->raise();
+            editorFrame->activateWindow();
+
             return true;
         } else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
             commandLineEdit->setFocus();

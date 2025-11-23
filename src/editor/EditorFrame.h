@@ -44,7 +44,7 @@ public:
     bool cleanupBeforeTabClose(int index);
 
     void tabAboutToClose(int index, bool &allow_close);
-
+    void openFileInEditor(const QString& filePath);
 
 private slots:
     void onOpenFileTriggered();
@@ -77,7 +77,6 @@ private:
     QAction *m_runAction;
     QAction *m_aboutAction;
 
-    void openFileInEditor(const QString& filePath);
     void viewFileInEditor(const QString& filePath);
     int findTabByPath(const QString& filePath);
     QString generateUniqueTabTitle(const QString& filePath);
