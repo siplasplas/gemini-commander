@@ -68,6 +68,8 @@ add_executable(${PROJECT_NAME}
         external/textviewers/misc/selection.cpp
         src/Config.cpp
         src/Config.h
+        src/FilePaneWidget.cpp
+        src/FilePaneWidget.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}

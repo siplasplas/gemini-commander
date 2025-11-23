@@ -59,7 +59,7 @@ void FilePanel::sortEntries() {
               case COLUMN_NAME:
                 return cmpNames(asc);
 
-              case COLUMN_EXT:
+              case COLUMN_TYPE:
                 if (aDir && bDir) {
                   return cmpNames(asc);
                 } else if (!aDir && !bDir) {
@@ -112,7 +112,7 @@ void FilePanel::addFirstEntry(bool isRoot) {
     nameItem->setData(QString(""), Qt::UserRole); // full_name = "" for [..]
     row.append(nameItem);
 
-    // COLUMN_EXT (empty)
+    // COLUMN_TYPE (empty)
     row.append(new QStandardItem("<DIR>"));
 
     // COLUMN_SIZE
@@ -159,7 +159,7 @@ void FilePanel::addEntries() {
     nameItem->setData(fullName, Qt::UserRole);
     row.append(nameItem);
 
-    // COLUMN_EXT
+    // COLUMN_TYPE
     if (info.isDir()) {
       row.append(new QStandardItem(""));
     } else {
@@ -200,6 +200,7 @@ void FilePanel::loadDirectory()
     QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden;
     entries = dir->entryInfoList(filters, QDir::NoSort);
     addAllEntries();
+    emit directoryChanged(currentPath);
 }
 
 QString FilePanel::getRowName(int row) const {
@@ -270,7 +271,8 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
     selectEntryByName(selectedName);
 }
 
-FilePanel::FilePanel(QSplitter *splitter) {
+FilePanel::FilePanel(QWidget* parent)
+    : QTableView(parent) {
     model = new QStandardItemModel(nullptr);
     QStringList headers = {"id","Name", "Type", "Size", "Date"};
     model->setHorizontalHeaderLabels(headers);
@@ -304,7 +306,7 @@ FilePanel::FilePanel(QSplitter *splitter) {
 
     // Optional: initial sizes
     setColumnWidth(COLUMN_NAME, 200);
-    setColumnWidth(COLUMN_EXT, 80);
+    setColumnWidth(COLUMN_TYPE, 80);
     setColumnWidth(COLUMN_SIZE, 100);
     setColumnWidth(COLUMN_DATE, 150);
 
@@ -316,8 +318,6 @@ FilePanel::FilePanel(QSplitter *splitter) {
 
     connect(header, &QHeaderView::sectionClicked,
             this, &FilePanel::onHeaderSectionClicked);
-
-    splitter->addWidget(this);
 
     connect(this, &QTableView::activated, [this](const QModelIndex &index) {
         onPanelActivated(index);

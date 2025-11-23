@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "Config.h"
+#include "FilePaneWidget.h"
 #include "FilePanel.h"
 
 #include "editor/EditorFrame.h"
@@ -27,16 +28,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUi();
 
-    for (auto & panel : panels)
+    for (auto* panel : allFilePanels())
         panel->loadDirectory();
 
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
-}
-
-MainWindow::~MainWindow() {
-    for (int i=0; i<panels.size(); i++)
-        delete panels[i];
 }
 
 void MainWindow::setupUi()
@@ -44,28 +40,43 @@ void MainWindow::setupUi()
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
-    mainSplitter = new QSplitter(Qt::Horizontal, centralWidget);
+    auto* splitter = new QSplitter(Qt::Horizontal, centralWidget);
 
-    for (int i=0; i<numPanels; i++)
-        panels.push_back(new FilePanel(mainSplitter));
+    m_leftTabs = new QTabWidget(splitter);
+    m_rightTabs = new QTabWidget(splitter);
+
+    splitter->addWidget(m_leftTabs);
+    splitter->addWidget(m_rightTabs);
+    splitter->setStretchFactor(0, 1);
+    splitter->setStretchFactor(1, 1);
 
     commandLineEdit = new QLineEdit(centralWidget);
 
+    auto* leftPane  = new FilePaneWidget(m_leftTabs);
+    auto* rightPane = new FilePaneWidget(m_rightTabs);
+    m_leftTabs->addTab(leftPane,  "Left");
+    m_rightTabs->addTab(rightPane, "Right");
+
     // Install event filters for Tab key handling
-    for (int i = 0; i < panels.size(); ++i)
-        panels[i]->installEventFilter(this);
+    filePanelForSide(0)->installEventFilter(this);
+    filePanelForSide(1)->installEventFilter(this);
     commandLineEdit->installEventFilter(this);
 
-    mainLayout->addWidget(mainSplitter);
+    mainLayout->addWidget(splitter);
     mainLayout->addWidget(commandLineEdit);
-    mainLayout->setStretchFactor(mainSplitter, 1);
+    mainLayout->setStretchFactor(splitter, 1);
     mainLayout->setStretchFactor(commandLineEdit, 0);
 
     setCentralWidget(centralWidget);
-    for (int i = 0; i < panels.size(); ++i)
-         panels[i]->active(false);
+    m_activeSide = LeftSide;
+    if (auto* left = filePanelForSide(LeftSide))
+        left->active(true);
+    if (auto* right = filePanelForSide(RightSide))
+        right->active(false);
+
     QTimer::singleShot(0, this, [this]() {
-           panels[nPanel]->setFocus();   });
+    setActiveSide(LeftSide);
+    });
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -76,23 +87,22 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         if (keyEvent->key() == Qt::Key_Tab) {
             auto view = dynamic_cast<QTableView*> (obj);
             if (view) {
-                int n = numberForWidget(view);
-                int next = (n+1) % panels.size();
-                panels[next]->setFocus();
+                m_activeSide = 1 - m_activeSide;
+                currentFilePanel()->setFocus();
                 return true; // Event handled
             }
         } else if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
-            QModelIndex currentIndex = panels[nPanel]->currentIndex();
+            QModelIndex currentIndex = currentFilePanel()->currentIndex();
             if (!currentIndex.isValid()) {
                 return true;
             }
 
-            QString name = panels[nPanel]->getRowName(currentIndex.row());
+            QString name = currentFilePanel()->getRowName(currentIndex.row());
             if (name == "") {
                 return true;
             }
 
-            QDir dir(panels[nPanel]->currentPath);
+            QDir dir(currentFilePanel()->currentPath);
             QString fullPath = dir.absoluteFilePath(name);
 
             QFileInfo info(fullPath);
@@ -115,10 +125,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
-            showFavoriteDirsMenu(nPanel);
+            showFavoriteDirsMenu(m_activeSide);
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
-            FilePanel* panel = panels[nPanel];
+            FilePanel* panel =  currentFilePanel();
             if (panel->sortColumn == COLUMN_NAME) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
@@ -132,13 +142,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F4) {
-            FilePanel* panel = panels[nPanel];
-            if (panel->sortColumn == COLUMN_EXT) {
+            FilePanel* panel =  currentFilePanel();
+            if (panel->sortColumn == COLUMN_TYPE) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
                         : Qt::AscendingOrder;
             } else {
-                panel->sortColumn = COLUMN_EXT;
+                panel->sortColumn = COLUMN_TYPE;
                 panel->sortOrder = Qt::AscendingOrder;
             }
             panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
@@ -146,7 +156,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F6) {
-            FilePanel* panel = panels[nPanel];
+            FilePanel* panel =  currentFilePanel();
             if (panel->sortColumn == COLUMN_SIZE) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
@@ -160,7 +170,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
 
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F5) {
-            FilePanel* panel = panels[nPanel];
+            FilePanel* panel = currentFilePanel();
             if (panel->sortColumn == COLUMN_DATE) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
                         ? Qt::DescendingOrder
@@ -178,30 +188,30 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             commandLineEdit->selectAll();
             return true; // Event handled
         } else if (obj==commandLineEdit && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) && modifiers == Qt::NoModifier) {
-            panels[nPanel]->setFocus();
+            currentFilePanel()->setFocus();
             return true; // Event handled
         }
         else if (keyEvent->key() == Qt::Key_Home && modifiers == Qt::NoModifier) {
-            QTableView* view = panels[nPanel];
-            int rows = view->model()->rowCount();
+            auto *panel = currentFilePanel();
+            int rows = panel->model->rowCount();
             if (rows > 0) {
-                QModelIndex idx = view->model()->index(0, COLUMN_NAME);
-                view->setCurrentIndex(idx);
-                view->scrollTo(idx, QAbstractItemView::PositionAtTop);
+                QModelIndex idx = panel->model->index(0, COLUMN_NAME);
+                panel->setCurrentIndex(idx);
+                panel->scrollTo(idx, QAbstractItemView::PositionAtTop);
             }
             return true;
 
         } else if (keyEvent->key() == Qt::Key_End && modifiers == Qt::NoModifier) {
-            QTableView* view = panels[nPanel];
-            int rows = view->model()->rowCount();
+            auto *panel = currentFilePanel();
+            int rows = panel->model->rowCount();
             if (rows > 0) {
-                QModelIndex idx = view->model()->index(rows - 1, COLUMN_NAME);
-                view->setCurrentIndex(idx);
-                view->scrollTo(idx, QAbstractItemView::PositionAtBottom);
+                QModelIndex idx = panel->model->index(rows - 1, COLUMN_NAME);
+                panel->setCurrentIndex(idx);
+                panel->scrollTo(idx, QAbstractItemView::PositionAtBottom);
             }
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageUp) {
-            FilePanel* panel = panels[nPanel];
+            FilePanel* panel = currentFilePanel();
             QDir dir(panel->currentPath);
 
             // If we are in the root directory – do nothing
@@ -223,27 +233,27 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
             // Ctrl + P: Set current directory to commandLineEdit
-            QString currentPath = panels[nPanel]->currentPath;
+            QString currentPath = currentFilePanel()->currentPath;
             commandLineEdit->setText(commandLineEdit->text() + currentPath);
             return true; // Event handled
         } else if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
             if (modifiers == Qt::ControlModifier) {
                 // Ctrl + Enter: Set selected item name to commandLineEdit
-                QModelIndex currentIndex = panels[nPanel]->currentIndex();
+                QModelIndex currentIndex = currentFilePanel()->currentIndex();
                 if (currentIndex.isValid()) {
-                    QString name = panels[nPanel]->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
+                    QString name = currentFilePanel()->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
                     commandLineEdit->setText(commandLineEdit->text() + name);
                     return true; // Event handled
                 }
             } else if (modifiers == (Qt::ControlModifier | Qt::ShiftModifier)) {
                 // Shift + Ctrl + Enter: Set full path of selected item to commandLineEdit
-                QModelIndex currentIndex = panels[nPanel]->currentIndex();
+                QModelIndex currentIndex = currentFilePanel()->currentIndex();
                 if (currentIndex.isValid()) {
-                    QString name = panels[nPanel]->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
+                    QString name = currentFilePanel()->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
                     if (name == "[..]") {
                         name = "..";
                     }
-                    QDir dir(panels[nPanel]->currentPath);
+                    QDir dir(currentFilePanel()->currentPath);
                     QString fullPath = dir.absoluteFilePath(name);
                     commandLineEdit->setText(commandLineEdit->text() + fullPath);
                     return true; // Event handled
@@ -252,38 +262,37 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             // Plain Enter: Let default handling (activated signal) proceed
         }
     } else if (event->type() == QEvent::FocusIn) {
-        auto view = dynamic_cast<QTableView*> (obj);
-        if (view) {
-            nPanel = numberForWidget(view);
-            panels[nPanel]->active(true);
-        }
-    } else if (event->type() == QEvent::FocusOut) {
-        auto view = dynamic_cast<QTableView*> (obj);
-        if (view) {
-            panels[numberForWidget(view)]->active(false);
+        if (auto* panel = panelForObject(obj)) {
+            int side = sideForPanel(panel);
+            if (side != -1) {
+                // dezaktywuj poprzedni side, jeśli chcesz mieć tylko jeden aktywny „na niebiesko”
+                if (side != m_activeSide) {
+                    if (auto* prev = currentFilePanel())
+                        prev->active(false);
+                    m_activeSide = side;
+                }
+
+                panel->active(true);
+            }
         }
     }
+    else if (event->type() == QEvent::FocusOut) {
+        if (auto* panel = panelForObject(obj)) {
+            // prosto: panel traci focus → nieaktywny
+            panel->active(false);
+        }
+    }
+
     return QMainWindow::eventFilter(obj, event);
 }
 
-int MainWindow::numberForWidget(QTableView *widget) {
-    for (int i=0; i<panels.size(); ++i)
-        if (panels[i] == widget)
-            return i;
-    return -1;
-}
-
-void MainWindow::showFavoriteDirsMenu(int panelIndex)
+void MainWindow::showFavoriteDirsMenu(int side)
 {
-    if (panelIndex < 0 || panelIndex >= panels.size())
-        return;
-
-    FilePanel* panel = panels[panelIndex];
+    FilePanel* panel = filePanelForSide(side);
     if (!panel)
         return;
 
     const QString currentDir = QDir::cleanPath(panel->currentPath);
-
     const auto& favorites = Config::instance().favoriteDirs();
 
     // Split favorites into root entries (no group) and grouped entries
@@ -405,4 +414,118 @@ void MainWindow::showFavoriteDirsMenu(int panelIndex)
     panel->currentPath = dir.absolutePath();
     panel->loadDirectory();
     panel->setFocus();
+}
+
+void MainWindow::reloadAllPanels()
+{
+    for (QTabWidget* tabs : {m_leftTabs, m_rightTabs}) {
+        if (!tabs) continue;
+        for (int i = 0; i < tabs->count(); i++) {
+            if (auto* pane = qobject_cast<FilePaneWidget*>(tabs->widget(i))) {
+                pane->filePanel()->loadDirectory();
+            }
+        }
+    }
+}
+
+QVector<FilePanel*> MainWindow::allFilePanels() const
+{
+    QVector<FilePanel*> result;
+
+    for (QTabWidget* tabs : {m_leftTabs, m_rightTabs}) {
+        if (!tabs) continue;
+
+        for (int i = 0; i < tabs->count(); ++i) {
+            if (auto* pane = qobject_cast<FilePaneWidget*>(tabs->widget(i))) {
+                result.append(pane->filePanel());
+            }
+        }
+    }
+
+    return result;
+}
+
+
+FilePaneWidget* MainWindow::paneForSide(int side) const
+{
+    QTabWidget* tabs = nullptr;
+    if (side == LeftSide)
+        tabs = m_leftTabs;
+    else
+        tabs = m_rightTabs;
+
+    if (!tabs || tabs->count() == 0)
+        return nullptr;
+
+    return qobject_cast<FilePaneWidget*>(tabs->currentWidget());
+}
+
+FilePanel* MainWindow::filePanelForSide(int side) const
+{
+    if (auto* pane = paneForSide(side))
+        return pane->filePanel();
+    return nullptr;
+}
+
+FilePaneWidget* MainWindow::currentPane() const
+{
+    return paneForSide(m_activeSide);
+}
+
+FilePanel* MainWindow::currentFilePanel() const
+{
+    return filePanelForSide(m_activeSide);
+}
+
+void MainWindow::setActiveSide(int side)
+{
+    if (side != LeftSide && side != RightSide)
+        return;
+    m_activeSide = side;
+
+    if (auto* panel = currentFilePanel())
+        panel->setFocus();
+}
+
+
+FilePanel* MainWindow::panelForObject(QObject* obj) const
+{
+    // Fokus czasem trafia w viewport, czasem w sam FilePanel
+    if (auto* panel = qobject_cast<FilePanel*>(obj))
+        return panel;
+
+    if (auto* w = qobject_cast<QWidget*>(obj)) {
+        if (auto* panel = qobject_cast<FilePanel*>(w->parentWidget()))
+            return panel;
+    }
+
+    return nullptr;
+}
+
+int MainWindow::sideForPanel(FilePanel* panel) const
+{
+    if (!panel)
+        return -1;
+
+    QWidget* w = panel;
+    QTabWidget* tabs = nullptr;
+
+    // idziemy w górę po parentach, aż znajdziemy QTabWidget
+    while (w) {
+        if (auto* tw = qobject_cast<QTabWidget*>(w)) {
+            tabs = tw;
+            break;
+        }
+        w = w->parentWidget();
+    }
+
+    if (!tabs)
+        return -1;
+
+    if (tabs == m_leftTabs)
+        return LeftSide;
+    if (tabs == m_rightTabs)
+        return RightSide;
+
+    return -1;
 }

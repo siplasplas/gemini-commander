@@ -16,7 +16,7 @@ QT_END_NAMESPACE
 enum Columns {
         COLUMN_ID = 0,
         COLUMN_NAME = 1,
-        COLUMN_EXT = 2,
+        COLUMN_TYPE = 2,
         COLUMN_SIZE = 3,
         COLUMN_DATE = 4,
 };
@@ -31,7 +31,7 @@ public:
     int sortColumn = COLUMN_NAME;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
 
-    explicit FilePanel(QSplitter* splitter);
+    explicit FilePanel(QWidget* parent = nullptr);
     ~FilePanel() override;
 
     void active(bool active);
@@ -51,6 +51,10 @@ private slots:
     void onPanelActivated(const QModelIndex &index);
     void onHeaderSectionClicked(int logicalIndex);
     void onSearchTextChanged(const QString& text);
+
+signals:
+    void selectionChanged();
+    void directoryChanged(const QString& path);
 
 private:
     void styleActive();
