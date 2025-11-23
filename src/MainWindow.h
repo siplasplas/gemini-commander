@@ -27,6 +27,9 @@ private:
     QTabWidget* m_leftTabs;
     QTabWidget* m_rightTabs;
     int m_activeSide = 0; // 0 = left, 1 = right
+    QTabWidget* tabsForSide(int side) const;
+    void goToNextTab(QTabWidget *tabWidget);
+    void goToPreviousTab(QTabWidget *tabWidget);
     QLineEdit *commandLineEdit;
     EditorFrame *editorFrame = nullptr;
     int numberForWidget(QTableView* widget);

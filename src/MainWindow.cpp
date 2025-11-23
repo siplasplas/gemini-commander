@@ -33,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
+    qApp->installEventFilter(this);
 }
 
 void MainWindow::setupUi()
@@ -57,11 +58,6 @@ void MainWindow::setupUi()
     m_leftTabs->addTab(leftPane,  "Left");
     m_rightTabs->addTab(rightPane, "Right");
 
-    // Install event filters for Tab key handling
-    filePanelForSide(0)->installEventFilter(this);
-    filePanelForSide(1)->installEventFilter(this);
-    commandLineEdit->installEventFilter(this);
-
     mainLayout->addWidget(splitter);
     mainLayout->addWidget(commandLineEdit);
     mainLayout->setStretchFactor(splitter, 1);
@@ -84,6 +80,27 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
+        // we check if it's a file event (viewport or FilePanel itself)
+        FilePanel* panel = panelForObject(obj);
+        if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Tab) {
+            if (auto* panel = panelForObject(obj)) {
+                // here you can be sure that the event came from the FilePanel / its viewport
+                // e.g., switch the tab in the active QTabWidget
+                // switchTab(+1);
+                goToNextTab(tabsForSide(m_activeSide));
+                return true; // IMPORTANT: we do not let you pass any further
+            }
+        }
+
+        // Ctrl+Shift+Tab
+        if (modifiers == (Qt::ControlModifier | Qt::ShiftModifier)
+            && keyEvent->key() == Qt::Key_Backtab) {
+            if (auto* panel = panelForObject(obj)) {
+                goToPreviousTab(tabsForSide(m_activeSide));
+                return true;
+            }
+            }
+
         if (keyEvent->key() == Qt::Key_Tab) {
             auto view = dynamic_cast<QTableView*> (obj);
             if (view) {
@@ -260,6 +277,28 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 }
             }
             // Plain Enter: Let default handling (activated signal) proceed
+        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_T) {
+            // Ctrl+T: duplicate current tab on active side
+            QTabWidget* tabs = tabsForSide(m_activeSide);
+            FilePaneWidget* pane = currentPane();
+            if (!tabs || !pane)
+                return true;
+
+            const QString path = pane->currentPath();
+
+            auto* newPane = new FilePaneWidget(tabs);
+            // duplicate the same folder
+            newPane->setCurrentPath(path);
+
+            const int insertIndex = tabs->currentIndex() + 1;
+            const int newIndex = tabs->insertTab(insertIndex, newPane, tabs->tabText(tabs->currentIndex()));
+
+            tabs->setCurrentIndex(newIndex);
+            setActiveSide(m_activeSide); //ensure, focus and style are consistent
+            if (auto* fp = newPane->filePanel())
+                fp->setFocus();
+
+            return true;
         }
     } else if (event->type() == QEvent::FocusIn) {
         if (auto* panel = panelForObject(obj)) {
@@ -528,4 +567,34 @@ int MainWindow::sideForPanel(FilePanel* panel) const
         return RightSide;
 
     return -1;
+}
+
+QTabWidget* MainWindow::tabsForSide(int side) const
+{
+    if (side == LeftSide)
+        return m_leftTabs;
+    if (side == RightSide)
+        return m_rightTabs;
+    return nullptr;
+}
+
+void MainWindow::goToNextTab(QTabWidget* tabWidget) {
+    int current = tabWidget->currentIndex();
+    int count = tabWidget->count();
+
+    if (current < count - 1) {
+        tabWidget->setCurrentIndex(current + 1);
+    } else {
+        tabWidget->setCurrentIndex(0);
+    }
+}
+
+void MainWindow::goToPreviousTab(QTabWidget* tabWidget) {
+    int current = tabWidget->currentIndex(); // Bieżący indeks
+
+    if (current > 0) {
+        tabWidget->setCurrentIndex(current - 1);
+    } else {
+        tabWidget->setCurrentIndex(tabWidget->count() - 1);
+    }
 }
