@@ -5,17 +5,12 @@
 #include <QDrag>
 #include <QFileInfo>
 #include <QHeaderView>
+#include <QKeyEvent>
+#include <QLineEdit>
 #include <QMimeData>
 #include <QPainter>
 #include <QStandardItemModel>
 #include <QUrl>
-
-void FilePanel::active(bool active) {
-    if (active)
-        styleActive(this);
-    else
-        styleInactive(this);
-}
 
 void FilePanel::loadDirectory()
 {
@@ -283,6 +278,10 @@ FilePanel::FilePanel(QSplitter *splitter) {
     connect(this, &QTableView::activated, [this](const QModelIndex &index) {
         onPanelActivated(index);
     });
+
+    initSearchEdit();
+    loadDirectory();
+
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::DragOnly);
 }
@@ -291,8 +290,270 @@ FilePanel::~FilePanel() {
     delete model;
 }
 
-void FilePanel::styleActive(QWidget* widget) {
-    widget->setStyleSheet(
+void FilePanel::initSearchEdit()
+{
+    searchEdit = new QLineEdit(this);
+    searchEdit->hide();
+    searchEdit->setPlaceholderText("Search...");
+    searchEdit->setClearButtonEnabled(true);
+
+    // Make it visually distinct and compact
+    QFont f = font();
+    f.setPointSizeF(f.pointSizeF() - 1);
+    searchEdit->setFont(f);
+
+    searchEdit->setFrame(true);
+
+    // We will manually position it in resizeEvent()
+    searchEdit->installEventFilter(this);
+
+    connect(searchEdit, &QLineEdit::textChanged,
+            this, &FilePanel::onSearchTextChanged);
+}
+
+
+void FilePanel::resizeEvent(QResizeEvent* event)
+{
+    QTableView::resizeEvent(event);
+
+    if (!searchEdit)
+        return;
+
+    const int h = 24; // height of search bar
+    const int margin = 4;
+
+    QRect r = viewport()->geometry();
+    QRect editRect(r.left() + margin,
+                   r.bottom() - h - margin,
+                   r.width() - 2 * margin,
+                   h);
+    searchEdit->setGeometry(editRect);
+    searchEdit->raise();
+}
+
+
+QString FilePanel::normalizeForSearch(const QString& s) const
+{
+    if (s.isEmpty())
+        return {};
+
+    QString tmp = s;
+
+    // Treat names starting with dot as if the dot was not there (".git" -> "git")
+    if (tmp.size() > 1 && tmp[0] == u'.')
+        tmp.remove(0, 1);
+
+    // Case-insensitive: use case folding
+    tmp = tmp.toCaseFolded();
+
+    // Basic diacritics folding for Polish (you can extend this mapping)
+    auto mapChar = [](QChar c) -> QChar {
+        switch (c.unicode()) {
+        case u'ą': case u'Ą': return u'a';
+        case u'ć': case u'Ć': return u'c';
+        case u'ę': case u'Ę': return u'e';
+        case u'ł': case u'Ł': return u'l';
+        case u'ń': case u'Ń': return u'n';
+        case u'ó': case u'Ó': return u'o';
+        case u'ś': case u'Ś': return u's';
+        case u'ź': case u'Ź': return u'z';
+        case u'ż': case u'Ż': return u'z';
+        default:
+            return c;
+        }
+    };
+
+    for (int i = 0; i < tmp.size(); ++i) {
+        tmp[i] = mapChar(tmp[i]);
+    }
+
+    return tmp;
+}
+
+bool FilePanel::findAndSelectPattern(const QString& pattern,
+                                     bool forward,
+                                     bool wrap,
+                                     int startRow)
+{
+    if (!model || model->rowCount() == 0)
+        return false;
+
+    const QString normPattern = normalizeForSearch(pattern);
+    if (normPattern.isEmpty())
+        return false;
+
+    const int rows = model->rowCount();
+    if (rows <= 0)
+        return false;
+
+    // Determine search direction
+    int step = forward ? 1 : -1;
+
+    auto nextRow = [rows, wrap](int row, int step) -> int {
+        int nr = row + step;
+        if (wrap) {
+            if (nr < 0)
+                nr = rows - 1;
+            else if (nr >= rows)
+                nr = 0;
+        }
+        return nr;
+    };
+
+    int row = startRow;
+    // Start from "next" row, not the current one
+    row = nextRow(row, step);
+
+    for (int i = 0; i < rows; ++i) {
+        if (row < 0 || row >= rows)
+            break;
+
+        QString fullName = getRowName(row);
+        if (!fullName.isEmpty()) {
+            QString normName = normalizeForSearch(fullName);
+            if (normName.startsWith(normPattern)) {
+                QModelIndex idx = model->index(row, COLUMN_NAME);
+                setCurrentIndex(idx);
+                scrollTo(idx);
+                return true;
+            }
+        }
+
+        row = nextRow(row, step);
+    }
+
+    return false;
+}
+
+void FilePanel::active(bool active) {
+    if (active)
+        styleActive();
+    else
+        styleInactive();
+}
+
+
+void FilePanel::onSearchTextChanged(const QString& text)
+{
+    // Remember current text as candidate
+    QString newText = text;
+
+    if (newText.isEmpty()) {
+        lastSearchText.clear();
+        return;
+    }
+
+    int startRow = currentIndex().isValid() ? currentIndex().row() : -1;
+
+    // Try to find match from current position
+    if (findAndSelectPattern(newText, /*forward*/true, /*wrap*/true, startRow)) {
+        lastSearchText = newText;
+    } else {
+        // No match: revert to previous text and restore cursor position
+        // (blocks further typing that would lead to "no matches")
+        searchEdit->blockSignals(true);
+        searchEdit->setText(lastSearchText);
+        searchEdit->blockSignals(false);
+
+        // Optional: beep to indicate failure
+        // QApplication::beep();
+    }
+}
+
+void FilePanel::keyPressEvent(QKeyEvent* event) {
+    // Ctrl+S: explicit search start, empty pattern
+    if (event->key() == Qt::Key_S &&
+    (event->modifiers() & Qt::ControlModifier)) {
+        if (!searchEdit)
+            initSearchEdit();
+
+        if (searchEdit) {
+            searchEdit->show();
+            searchEdit->raise();
+            searchEdit->setFocus();
+
+            searchEdit->blockSignals(true);
+            searchEdit->clear();
+            searchEdit->blockSignals(false);
+
+            lastSearchText.clear();
+        }
+        return;
+    }
+
+    // Printable char without modifiers: start / continue search
+    if (event->modifiers() == Qt::NoModifier &&
+        !event->text().isEmpty()) {
+
+        const QChar ch = event->text().at(0);
+        if (!ch.isNull() && !ch.isSpace()) {
+            if (!searchEdit)
+                initSearchEdit();
+
+            if (searchEdit) {
+                if (!searchEdit->isVisible())
+                    searchEdit->show();
+                searchEdit->raise();
+
+                // If searchEdit does not have focus yet, we start a new pattern
+                if (!searchEdit->hasFocus()) {
+                    searchEdit->blockSignals(true);
+                    searchEdit->setText(QString(ch));
+                    searchEdit->blockSignals(false);
+                    lastSearchText.clear();
+                    searchEdit->setFocus();
+                    // Manual trigger search for single char
+                    onSearchTextChanged(searchEdit->text());
+                } else {
+                    // Let QLineEdit handle the character; our onSearchTextChanged will react
+                    QTableView::keyPressEvent(event);
+                }
+                return;
+            }
+        }
+        }
+
+    // Default behavior for other keys (navigation, F-keys, etc.)
+    QTableView::keyPressEvent(event);
+}
+
+
+
+bool FilePanel::eventFilter(QObject* obj, QEvent* ev)
+{
+    if (obj == searchEdit && ev->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(ev);
+
+        if (ke->key() == Qt::Key_Escape) {
+            // ESC: close search bar
+            searchEdit->hide();
+            searchEdit->clear();
+            lastSearchText.clear();
+            setFocus();
+            return true;
+        }
+
+        if (ke->key() == Qt::Key_Down || ke->key() == Qt::Key_Up) {
+            if (!lastSearchText.isEmpty()) {
+                int startRow = currentIndex().isValid()
+                               ? currentIndex().row()
+                               : -1;
+                bool forward = (ke->key() == Qt::Key_Down);
+                findAndSelectPattern(lastSearchText,
+                                     forward,
+                                     /*wrap*/true,
+                                     startRow);
+            }
+            return true; // do not move cursor in QLineEdit
+        }
+    }
+
+    return QTableView::eventFilter(obj, ev);
+}
+
+
+void FilePanel::styleActive() {
+    setStyleSheet(
         "QTableView:item {"
         "background-color: white;"
         "color: black;"
@@ -303,8 +564,8 @@ void FilePanel::styleActive(QWidget* widget) {
         "}");
 }
 
-void FilePanel::styleInactive(QWidget* widget) {
-    widget->setStyleSheet(
+void FilePanel::styleInactive() {
+    setStyleSheet(
         "QTableView:item {"
         "background-color: white;"
         "color: black;"
