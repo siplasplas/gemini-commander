@@ -13,6 +13,7 @@
 #include <QWidget>
 
 #include <QHeaderView>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -55,7 +56,9 @@ void MainWindow::setupUi()
 
     setCentralWidget(centralWidget);
     for (int i = 0; i < panels.size(); ++i)
-        panels[i]->active(i==nPanel);
+         panels[i]->active(false);
+    QTimer::singleShot(0, this, [this]() {
+           panels[nPanel]->setFocus();   });
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)

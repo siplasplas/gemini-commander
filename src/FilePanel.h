@@ -56,6 +56,7 @@ private:
     void styleActive();
     void styleInactive();
 
+    bool mixedHidden = true;//filenames with dot, are between others
     // Search UI and logic
     QLineEdit* searchEdit = nullptr;
     QString lastSearchText;

@@ -15,6 +15,13 @@
 #include <QStandardItemModel>
 #include <QUrl>
 
+QString stripLeadingDot(const QString& s)
+{
+    if (!s.isEmpty() && s.startsWith('.'))
+        return s.mid(1);
+    return s;
+}
+
 void FilePanel::sortEntries() {
   // --------------------------
   // Sorting (TC-like)
@@ -38,9 +45,13 @@ void FilePanel::sortEntries() {
               const bool asc = (sortOrder == Qt::AscendingOrder);
 
               auto cmpNames = [&](bool ascLocal) {
-                const QString na = a.fileName();
-                const QString nb = b.fileName();
-                return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
+                  QString na = a.fileName();
+                  QString nb = b.fileName();
+                  if (mixedHidden) {
+                      na = stripLeadingDot(na);
+                      nb = stripLeadingDot(nb);
+                  }
+                  return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
               };
 
               switch (sortColumn) {
@@ -121,9 +132,19 @@ void FilePanel::addEntries() {
   // Add files and directories
   // --------------------------
   for (const QFileInfo &info : entries) {
+      QString base, ext;
+      if (info.isDir()) {
+          base = info.fileName();
+      } else {
+          base = info.completeBaseName();
+          ext =  info.suffix();
+          //special case for hidden
+          if (base.isEmpty()) {
+              base = "." + ext;
+              ext.clear();
+          }
+      }
 
-    const QString base = info.completeBaseName();
-    const QString ext = info.isDir() ? QString() : info.suffix();
     QString fullName = base;
     if (!ext.isEmpty())
       fullName += "." + ext;
@@ -176,7 +197,7 @@ void FilePanel::loadDirectory()
         return;
     }
 
-    QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
+    QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden;
     entries = dir->entryInfoList(filters, QDir::NoSort);
     addAllEntries();
 }
@@ -329,23 +350,30 @@ void FilePanel::resizeEvent(QResizeEvent* event)
 {
     QTableView::resizeEvent(event);
 
-    if (!searchEdit || !searchEdit->isVisible())
+    if (!searchEdit->isVisible())
         return;
 
     const int margin = 4;
-    const int h = searchEdit->sizeHint().height();
+    int h = 0;
 
-    // Use full widget rect, not viewport geometry, so we do not overlap header layout
-    QRect r = rect();
+    if (searchEdit->isVisible()) {
+        // reserve space for the search bar at the bottom
+        h = searchEdit->sizeHint().height() + 2 * margin;
+    }
 
-    // Place search bar at the bottom, above the widget's bottom edge
-    QRect editRect(r.left() + margin,
-                   r.bottom() - h - margin,
-                   r.width() - 2 * margin,
-                   h);
+    // Tell QTableView that the bottom 'h' pixels are not for the viewport
+    setViewportMargins(0, 0, 0, h);
 
-    searchEdit->setGeometry(editRect);
-    searchEdit->raise();
+    // Place the searchEdit in the reserved bottom area (outside the viewport)
+    QRect r = rect(); // full widget rect, not viewport()
+    if (h > 0) {
+        QRect editRect(r.left() + margin,
+                       r.bottom() - h + margin,
+                       r.width() - 2 * margin,
+                       h - 2 * margin);
+        searchEdit->setGeometry(editRect);
+        searchEdit->raise();
+    }
 }
 
 QString FilePanel::normalizeForSearch(const QString& s) const
@@ -521,7 +549,7 @@ void FilePanel::keyPressEvent(QKeyEvent* event) {
         !event->text().isEmpty()) {
 
         const QChar ch = event->text().at(0);
-        if (!ch.isNull() && !ch.isSpace()) {
+        if (!ch.isNull() && !ch.isSpace() && event->key() != Qt::Key_Escape)  {
             if (!searchEdit)
                 initSearchEdit();
 
