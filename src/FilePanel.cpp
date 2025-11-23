@@ -852,3 +852,77 @@ void FilePanel::prevMatch()
 
     } while (row != start);
 }
+
+void FilePanel::jumpWithControl(int direction)
+{
+    // direction: +1 = Ctrl+Down, -1 = Ctrl+Up
+    if (!model || model->rowCount() == 0)
+        return;
+
+    int rowCount = model->rowCount();
+
+    // Find a range of directories and files
+    int lastDirRow = -1;
+    int firstFileRow = rowCount;
+
+    for (int r = 0; r < rowCount; ++r) {
+        QString size = model->item(r, COLUMN_SIZE)->text();
+        bool isDir = (size == "<DIR>");
+        if (isDir)
+            lastDirRow = r;
+        else if (firstFileRow == rowCount)
+            firstFileRow = r;
+    }
+
+    // current position
+    int row = currentIndex().row();
+
+    // ────────────────────────────────────────────────
+    // CTRL + DOWN
+    // ────────────────────────────────────────────────
+    if (direction > 0) {
+
+        // if we are in directories → go to the first file
+        if (row <= lastDirRow) {
+            if (firstFileRow < rowCount) {
+                row = firstFileRow;
+            } else {
+                row = rowCount - 1; // no files
+            }
+        }
+        else {
+            // we are in the files → go to the bottom
+            row = rowCount - 1;
+        }
+    }
+
+    // ────────────────────────────────────────────────
+    // CTRL + UP
+    // ────────────────────────────────────────────────
+    else {
+
+        // if we are in files → go to the last directory
+        if (row >= firstFileRow) {
+            if (lastDirRow >= 0)
+                row = lastDirRow;
+            else
+                row = 0; // no directories
+        }
+        else {
+            // we are in the directories → go to the top
+            row = 0;
+        }
+    }
+    QModelIndex idx = model->index(row, COLUMN_NAME);
+
+    QItemSelectionModel* sm = selectionModel();
+    if (sm) {
+        sm->clearSelection();
+        sm->setCurrentIndex(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    } else {
+        setCurrentIndex(idx);
+    }
+
+    scrollTo(idx, QAbstractItemView::PositionAtCenter);
+
+}

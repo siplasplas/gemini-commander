@@ -55,7 +55,9 @@ public slots:
     void updateSearch(const QString& text);
     void nextMatch();
     void prevMatch();
-private:
+    void jumpWithControl(int direction);
+
+  private:
     int m_lastSearchRow = -1;
     QString m_lastSearchText;
 

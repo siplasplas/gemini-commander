@@ -122,6 +122,20 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
         // we check if it's a file event (viewport or FilePanel itself)
+        if (auto* panel = panelForObject(obj)) {
+
+            // CTRL + DOWN
+            if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Down) {
+                panel->jumpWithControl(+1);
+                return true;
+            }
+
+            // CTRL + UP
+            if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Up) {
+                panel->jumpWithControl(-1);
+                return true;
+            }
+        }
         FilePanel* panel = panelForObject(obj);
         if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Tab) {
             if (auto* panel = panelForObject(obj)) {
