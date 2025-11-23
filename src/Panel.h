@@ -15,14 +15,18 @@ class Panel: public QObject
     Q_OBJECT
     void styleActive(QWidget *widget);
     void styleInactive(QWidget *widget);
+
+    int sortColumn = 0;
+    Qt::SortOrder sortOrder = Qt::AscendingOrder;
 private slots:
     void onPanelActivated(const QModelIndex &index);
+    void onHeaderSectionClicked(int logicalIndex);
 public:
     QTableView *tableView;
     QStandardItemModel *model;
     QString currentPath;
     explicit Panel(QSplitter *splitter);
-    ~Panel();
+    ~Panel() override;
     void active(bool active);
     void loadDirectory();
 };

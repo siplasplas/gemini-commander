@@ -18,65 +18,62 @@ void Panel::loadDirectory()
 
     QDir dir(currentPath);
     if (!dir.exists()) {
-        return; // Handle error if needed
+        return;
     }
 
-    // Filters: All dirs and files, no "." and ".."
+    // Determine sort flags
+    QDir::SortFlags sortFlags = QDir::DirsFirst | QDir::IgnoreCase;
+
+    switch (sortColumn) {
+    case 0: // name
+        sortFlags |= QDir::Name;
+        break;
+    case 1: // size
+        sortFlags |= QDir::Size;
+        break;
+    case 3: // time
+        sortFlags |= QDir::Time;
+        break;
+    default:
+        sortFlags |= QDir::Name;
+        break;
+    }
+
+    if (sortOrder == Qt::DescendingOrder) {
+        sortFlags |= QDir::Reversed;
+    }
+
     QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot;
-    QFileInfoList entries = dir.entryInfoList(filters, QDir::Name | QDir::IgnoreCase);
-
-    // Separate dirs and files for "directories first" sorting
-    QList<QFileInfo> dirs;
-    QList<QFileInfo> files;
-    for (const QFileInfo &info : entries) {
-        if (info.fileName() == ".") continue; // Explicitly skip "."
-        if (info.isDir()) {
-            dirs.append(info);
-        } else {
-            files.append(info);
-        }
-    }
-
-    // Sort dirs and files alphabetically (case-insensitive already from QDir)
-    std::sort(dirs.begin(), dirs.end(), [](const QFileInfo &a, const QFileInfo &b) {
-        return a.fileName().toLower() < b.fileName().toLower();
-    });
-    std::sort(files.begin(), files.end(), [](const QFileInfo &a, const QFileInfo &b) {
-        return a.fileName().toLower() < b.fileName().toLower();
-    });
+    QFileInfoList entries = dir.entryInfoList(filters, sortFlags);
 
     // Add "[..]" if not root
     bool isRoot = dir.isRoot();
     if (!isRoot) {
         QList<QStandardItem*> row;
         row.append(new QStandardItem("[..]"));
-        row.append(new QStandardItem("")); // Size empty for dir
-        row.append(new QStandardItem("Directory")); // Type
-        row.append(new QStandardItem("")); // Modified empty
-        model->appendRow(row);
-    }
-
-    // Add dirs
-    for (const QFileInfo &info : dirs) {
-        QList<QStandardItem*> row;
-        row.append(new QStandardItem(info.fileName()));
-        row.append(new QStandardItem("")); // Size empty for dir
+        row.append(new QStandardItem(""));
         row.append(new QStandardItem("Directory"));
-        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
+        row.append(new QStandardItem(""));
         model->appendRow(row);
     }
 
-    // Add files
-    for (const QFileInfo &info : files) {
+    // Add all sorted entries
+    for (const QFileInfo &info : entries) {
         QList<QStandardItem*> row;
         row.append(new QStandardItem(info.fileName()));
-        row.append(new QStandardItem(QString::number(info.size())));
-        row.append(new QStandardItem("File"));
+
+        if (info.isDir()) {
+            row.append(new QStandardItem(""));
+            row.append(new QStandardItem("Directory"));
+        } else {
+            row.append(new QStandardItem(QString::number(info.size())));
+            row.append(new QStandardItem("File"));
+        }
+
         row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
         model->appendRow(row);
     }
 
-    // Set root index to show the entire model
     tableView->setRootIndex(QModelIndex());
 }
 
@@ -153,6 +150,15 @@ Panel::Panel(QSplitter *splitter) {
     tableView->setColumnWidth(1, 100);
     tableView->setColumnWidth(3, 150);
 
+    QHeaderView* header = tableView->horizontalHeader();
+    header->setSectionsClickable(true);
+    header->setSortIndicatorShown(true);
+    header->setHighlightSections(false);
+
+
+    connect(header, &QHeaderView::sectionClicked,
+            this, &Panel::onHeaderSectionClicked);
+
     splitter->addWidget(tableView);
 
     connect(tableView, &QTableView::activated, [this](const QModelIndex &index) {
@@ -187,4 +193,21 @@ void Panel::styleInactive(QWidget* widget) {
         "    background-color: lightgray;"
         "    color: white;"
         "}");
+}
+
+
+void Panel::onHeaderSectionClicked(int logicalIndex)
+{
+    // Columns: 0 = Name, 1 = Size, 2 = Date
+    if (sortColumn == logicalIndex) {
+        sortOrder = (sortOrder == Qt::AscendingOrder)
+                    ? Qt::DescendingOrder
+                    : Qt::AscendingOrder;
+    } else {
+        sortColumn = logicalIndex;
+        sortOrder = Qt::AscendingOrder;
+    }
+    tableView->horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    // Przeładuj katalog z nowym sortowaniem
+    loadDirectory();
 }
