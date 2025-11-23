@@ -63,11 +63,11 @@ void Panel::loadDirectory()
     for (const QFileInfo &info : entries) {
         QList<QStandardItem*> row;
         row.append(new QStandardItem("id"));
-        row.append(new QStandardItem(info.fileName()));
+        row.append(new QStandardItem(info.completeBaseName()));
         if (info.isDir()) {
-            row.append(new QStandardItem("Directory"));
+            row.append(new QStandardItem(""));
         } else {
-            row.append(new QStandardItem("File"));
+            row.append(new QStandardItem(info.suffix()));
         }
         row.append(new QStandardItem(QString::number(info.size())));
         row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));

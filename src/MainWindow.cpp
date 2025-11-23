@@ -121,6 +121,20 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             panel->loadDirectory();
             return true;
 
+        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F4) {
+            Panel* panel = panels[nPanel];
+            if (panel->sortColumn == COLUMN_TYPE) {
+                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
+                        ? Qt::DescendingOrder
+                        : Qt::AscendingOrder;
+            } else {
+                panel->sortColumn = COLUMN_TYPE;
+                panel->sortOrder = Qt::AscendingOrder;
+            }
+            panel->tableView->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
+            panel->loadDirectory();
+            return true;
+
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F6) {
             Panel* panel = panels[nPanel];
             if (panel->sortColumn == COLUMN_SIZE) {
