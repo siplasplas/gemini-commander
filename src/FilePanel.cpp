@@ -2,13 +2,13 @@
 
 #include "FilePanel.h"
 #include <QDir>
+#include <QDrag>
 #include <QFileInfo>
 #include <QHeaderView>
-#include <QStandardItemModel>
-#include <QDrag>
 #include <QMimeData>
+#include <QPainter>
+#include <QStandardItemModel>
 #include <QUrl>
-#include <QDir>
 
 void FilePanel::active(bool active) {
     if (active)
@@ -300,6 +300,13 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     QList<QUrl> urls;
     urls.reserve(selectedRows.size());
 
+    // Use first selected row to build drag pixmap
+    QString firstName;
+    {
+        int row = selectedRows.first().row();
+        firstName = getRowName(row);
+    }
+
     for (const QModelIndex& idx : selectedRows) {
         int row = idx.row();
         QString name = getRowName(row);
@@ -320,7 +327,50 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     QDrag* drag = new QDrag(this);
     drag->setMimeData(mimeData);
 
-    // Prefer copy; use supportedActions mask from Qt
+    // --- Custom drag pixmap (big icon + filename) ---
+    const int size = 96; // bigger icon
+    QPixmap pixmap(size, size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter p(&pixmap);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    // Example: simple rounded rectangle as "badge"
+    QRect rect(0, 0, size, size);
+    QColor bg(30, 144, 255, 220); // semi-transparent blue
+    p.setBrush(bg);
+    p.setPen(Qt::NoPen);
+    p.drawRoundedRect(rect.adjusted(4, 4, -4, -4), 12, 12);
+
+    // Draw file icon (you can use your own QIcon)
+    QStyle* st = style();
+    QIcon fileIcon = st->standardIcon(QStyle::SP_FileIcon);
+
+    QPixmap iconPixmap = fileIcon.pixmap(48, 48);
+    QPoint iconPos((size - iconPixmap.width()) / 2,
+                   (size - iconPixmap.height()) / 2 - 10);
+    p.drawPixmap(iconPos, iconPixmap);
+
+    // Draw file name (only base, trimmed)
+    p.setPen(Qt::white);
+    QFont f = font();
+    f.setPointSize(f.pointSize() + 1);
+    p.setFont(f);
+
+    QString text = firstName;
+    QFontMetrics fm(f);
+    text = fm.elidedText(text, Qt::ElideRight, size - 10);
+
+    p.drawText(QRect(5, size - fm.height() - 8, size - 10, fm.height() + 4),
+               Qt::AlignCenter, text);
+
+    p.end();
+
+    drag->setPixmap(pixmap);
+    // Hot spot near the middle, slightly above icon center
+    drag->setHotSpot(QPoint(size / 2, size / 2));
+
+    // --- Execute drag ---
     Qt::DropActions actions = supportedActions;
     if (!(actions & Qt::CopyAction))
         actions |= Qt::CopyAction;
