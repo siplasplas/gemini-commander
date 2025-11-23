@@ -14,6 +14,8 @@
 #include <QPainter>
 #include <QStandardItemModel>
 #include <QUrl>
+#include <QDesktopServices>
+#include <QUrl>
 
 QString stripLeadingDot(const QString& s)
 {
@@ -230,33 +232,32 @@ void FilePanel::selectEntryByName(const QString& fullName)
     setFocus();
 }
 
-
 void FilePanel::onPanelActivated(const QModelIndex &index) {
     if (!index.isValid()) return;
 
     QString name = getRowName(index.row());
-    dir = new QDir(currentPath);
+    QDir dir(currentPath);
     QString selectedName;
 
-    if (name == "") {
-        // Going up: Select the previous directory name after load
-        selectedName = dir->dirName(); // Basename of current path
-        dir->cdUp();
-        currentPath = dir->absolutePath();
+    if (name.isEmpty()) {
+        // Going up: select the previous directory name after load
+        selectedName = dir.dirName(); // basename of current path
+        dir.cdUp();
+        currentPath = dir.absolutePath();
     } else {
-        // Check if dir
-        QFileInfo info(dir->absoluteFilePath(name));
+        QFileInfo info(dir.absoluteFilePath(name));
         if (info.isDir()) {
-            dir->cd(name);
-            currentPath = dir->absolutePath();
-            selectedName = ""; // Select first item ([..]) when going down
+            dir.cd(name);
+            currentPath = dir.absolutePath();
+            selectedName = ""; // select parent entry when going down
         } else {
-            // Handle file open if needed (currently do nothing)
-            return;
+            // Regular file: open with system default application
+            const QString absPath = info.absoluteFilePath();
+            QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
+            return; // do not reload directory
         }
     }
 
-    // Reload directory
     loadDirectory();
     selectEntryByName(selectedName);
 }
