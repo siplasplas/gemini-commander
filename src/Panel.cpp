@@ -145,12 +145,18 @@ void Panel::loadDirectory()
 void Panel::onPanelActivated(const QModelIndex &index) {
     if (!index.isValid()) return;
 
-    QString name = model->data(index.sibling(index.row(), 0)).toString(); // Name column
+    QString name;
+    if (index.row() > 0 ||currentPath=="/") {
+        name = model->data(index.sibling(index.row(), COLUMN_NAME)).toString(); // Name column
+        QString ext = model->data(index.sibling(index.row(), COLUMN_EXT)).toString();
+        if (!ext.isEmpty())
+            name += "." + ext;
+    }
 
     QDir dir(currentPath);
     QString selectedName;
 
-    if (name == "[..]") {
+    if (name == "") {
         // Going up: Select the previous directory name after load
         selectedName = dir.dirName(); // Basename of current path
         dir.cdUp();
@@ -161,7 +167,7 @@ void Panel::onPanelActivated(const QModelIndex &index) {
         if (info.isDir()) {
             dir.cd(name);
             currentPath = dir.absolutePath();
-            selectedName = "[..]"; // Select first item ([..]) when going down
+            selectedName = ""; // Select first item ([..]) when going down
         } else {
             // Handle file open if needed (currently do nothing)
             return;
@@ -172,18 +178,23 @@ void Panel::onPanelActivated(const QModelIndex &index) {
     loadDirectory();
 
     // Select and set current index for the appropriate row
-    if (!selectedName.isEmpty()) {
-        for (int row = 0; row < model->rowCount(); ++row) {
-            QString rowName = model->item(row, 0)->text();
-            if (rowName == selectedName) {
-                QModelIndex selectIndex = model->index(row, 0);
-                tableView->setCurrentIndex(selectIndex); // Sets both selection and current for keyboard navigation
-                tableView->scrollTo(selectIndex); // Optional: Scroll to the selected item
-                tableView->setFocus(); // Ensure the view has focus for keyboard input
-                break;
-            }
+    for (int row = 0; row < model->rowCount(); ++row) {
+        QString rowName;
+        if (row>0 || currentPath=="/") {
+            rowName = model->item(row, COLUMN_NAME)->text();
+            QString ext = model->item(row, COLUMN_EXT)->text();
+            if (!ext.isEmpty())
+                rowName += "." + ext;
+        }
+        if (rowName == selectedName) {
+            QModelIndex selectIndex = model->index(row, COLUMN_NAME);
+            tableView->setCurrentIndex(selectIndex); // Sets both selection and current for keyboard navigation
+            tableView->scrollTo(selectIndex); // Optional: Scroll to the selected item
+            tableView->setFocus(); // Ensure the view has focus for keyboard input
+            break;
         }
     }
+
 }
 
 Panel::Panel(QSplitter *splitter) {
