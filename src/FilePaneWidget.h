@@ -7,6 +7,7 @@
 
 #include "FilePanel.h"
 
+class SearchLineEdit;
 class FilePaneWidget : public QWidget
 {
   Q_OBJECT
@@ -20,13 +21,15 @@ public:
   QString currentPath() const;
 
 public slots:
-    void onDirectoryChanged(const QString& path);
-  void onSelectionChanged();
+  void onDirectoryChanged(const QString& path);
+void onSelectionChanged();
 
 private:
   QLineEdit* m_pathEdit = nullptr;
   FilePanel* m_filePanel = nullptr;
   QLabel*    m_statusLabel = nullptr;
+
+  SearchLineEdit* m_searchEdit = nullptr;
 
   void updateStatusLabel();
 };

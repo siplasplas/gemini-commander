@@ -182,6 +182,11 @@ void FilePanel::addAllEntries() {
     selectEntryByName(selectedName);
 }
 
+void FilePanel::triggerCurrentEntry() {
+    auto rows = selectionModel()->selectedRows();
+    onPanelActivated(rows.first());
+}
+
 void FilePanel::loadDirectory()
 {
     dir = new QDir(currentPath);
@@ -347,36 +352,6 @@ void FilePanel::initSearchEdit()
             this, &FilePanel::onSearchTextChanged);
 }
 
-void FilePanel::resizeEvent(QResizeEvent* event)
-{
-    QTableView::resizeEvent(event);
-
-    if (!searchEdit->isVisible())
-        return;
-
-    const int margin = 4;
-    int h = 0;
-
-    if (searchEdit->isVisible()) {
-        // reserve space for the search bar at the bottom
-        h = searchEdit->sizeHint().height() + 2 * margin;
-    }
-
-    // Tell QTableView that the bottom 'h' pixels are not for the viewport
-    setViewportMargins(0, 0, 0, h);
-
-    // Place the searchEdit in the reserved bottom area (outside the viewport)
-    QRect r = rect(); // full widget rect, not viewport()
-    if (h > 0) {
-        QRect editRect(r.left() + margin,
-                       r.bottom() - h + margin,
-                       r.width() - 2 * margin,
-                       h - 2 * margin);
-        searchEdit->setGeometry(editRect);
-        searchEdit->raise();
-    }
-}
-
 QString FilePanel::normalizeForSearch(const QString& s) const
 {
     if (s.isEmpty())
@@ -516,66 +491,24 @@ void FilePanel::onSearchTextChanged(const QString& text)
     }
 }
 
-void FilePanel::updateSearchGeometry()
-{
-    // możesz tu wywołać fragment z resizeEvent albo po prostu:
-    QResizeEvent ev(size(), size());
-    resizeEvent(&ev);
-}
-
 void FilePanel::keyPressEvent(QKeyEvent* event) {
     // Ctrl+S: explicit search start, empty pattern
     if (event->key() == Qt::Key_S &&
     (event->modifiers() & Qt::ControlModifier)) {
-        if (!searchEdit)
-            initSearchEdit();
-
-        if (searchEdit) {
-            searchEdit->show();
-            searchEdit->raise();
-            updateSearchGeometry();
-            searchEdit->setFocus();
-
-            searchEdit->blockSignals(true);
-            searchEdit->clear();
-            searchEdit->blockSignals(false);
-
-            lastSearchText.clear();
-        }
+        emit searchRequested(QString{});  // puste – użytkownik zaczyna pisać
+        event->accept();
         return;
     }
 
     // Printable char without modifiers: start / continue search
     if (event->modifiers() == Qt::NoModifier &&
         !event->text().isEmpty()) {
-
         const QChar ch = event->text().at(0);
-        if (!ch.isNull() && !ch.isSpace() && event->key() != Qt::Key_Escape)  {
-            if (!searchEdit)
-                initSearchEdit();
-
-            if (searchEdit) {
-                if (!searchEdit->isVisible())
-                    searchEdit->show();
-                searchEdit->raise();
-                updateSearchGeometry();
-
-                // If searchEdit does not have focus yet, we start a new pattern
-                if (!searchEdit->hasFocus()) {
-                    searchEdit->blockSignals(true);
-                    searchEdit->setText(QString(ch));
-                    searchEdit->blockSignals(false);
-                    lastSearchText.clear();
-                    searchEdit->setFocus();
-                    // Manual trigger search for single char
-                    onSearchTextChanged(searchEdit->text());
-                } else {
-                    // Let QLineEdit handle the character; our onSearchTextChanged will react
-                    QTableView::keyPressEvent(event);
-                }
-                return;
+        if (!ch.isSpace()) {
+            emit searchRequested(QString(ch));
+            event->accept();
+            return;
             }
-        }
         }
 
     // Default behavior for other keys (navigation, F-keys, etc.)
@@ -800,4 +733,119 @@ QIcon FilePanel::iconForExtension(const QString& ext, bool isDir)
 
     cache.insert(key, icon);
     return icon;
+}
+
+void FilePanel::updateSearch(const QString& text)
+{
+    m_lastSearchText = text;
+
+    if (text.isEmpty()) {
+        m_lastSearchRow = -1;
+        return;
+    }
+
+    const int rowCount = model->rowCount();
+    if (rowCount == 0)
+        return;
+
+    // Start from current row if no previous match
+    int startRow = m_lastSearchRow >= 0
+                   ? m_lastSearchRow
+                   : currentIndex().row();
+
+    int row = startRow;
+
+    auto normalize = [&](const QString& s) {
+        return normalizeForSearch(s);  // Twoja istniejąca funkcja
+    };
+
+    const QString needle = normalize(text);
+
+    do {
+        row = (row + 1) % rowCount;
+
+        QString name = getRowName(row);
+        if (normalize(name).contains(needle)) {
+            QModelIndex idx = model->index(row, COLUMN_NAME);
+            setCurrentIndex(idx);
+            scrollTo(idx);
+            m_lastSearchRow = row;
+            return;
+        }
+
+    } while (row != startRow);
+
+    // No match found
+}
+
+void FilePanel::nextMatch()
+{
+    if (m_lastSearchText.isEmpty())
+        return;
+
+    const int rowCount = model->rowCount();
+    if (rowCount == 0)
+        return;
+
+    int row = (m_lastSearchRow >= 0)
+              ? m_lastSearchRow
+              : currentIndex().row();
+
+    auto normalize = [&](const QString& s) {
+        return normalizeForSearch(s);
+    };
+
+    QString needle = normalize(m_lastSearchText);
+
+    int start = row;
+
+    do {
+        row = (row + 1) % rowCount;
+
+        QString name = getRowName(row);
+        if (normalize(name).contains(needle)) {
+            QModelIndex idx = model->index(row, COLUMN_NAME);
+            setCurrentIndex(idx);
+            scrollTo(idx);
+            m_lastSearchRow = row;
+            return;
+        }
+
+    } while (row != start);
+}
+
+void FilePanel::prevMatch()
+{
+    if (m_lastSearchText.isEmpty())
+        return;
+
+    const int rowCount = model->rowCount();
+    if (rowCount == 0)
+        return;
+
+    int row = (m_lastSearchRow >= 0)
+              ? m_lastSearchRow
+              : currentIndex().row();
+
+    auto normalize = [&](const QString& s) {
+        return normalizeForSearch(s);
+    };
+
+    QString needle = normalize(m_lastSearchText);
+
+    int start = row;
+
+    do {
+        row = (row - 1 + rowCount) % rowCount;
+
+        QString name = getRowName(row);
+        if (normalize(name).contains(needle)) {
+            QModelIndex idx = model->index(row, COLUMN_NAME);
+            setCurrentIndex(idx);
+            scrollTo(idx);
+            m_lastSearchRow = row;
+            return;
+        }
+
+    } while (row != start);
 }

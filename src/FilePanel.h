@@ -40,21 +40,30 @@ public:
     QString getRowName(int row) const;
     void selectEntryByName(const QString& fullName);
     void addAllEntries();
+    void triggerCurrentEntry();
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
     void keyPressEvent(QKeyEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
     bool eventFilter(QObject* obj, QEvent* ev) override;
 
 private slots:
     void onPanelActivated(const QModelIndex &index);
     void onHeaderSectionClicked(int logicalIndex);
     void onSearchTextChanged(const QString& text);
+public slots:
+    void updateSearch(const QString& text);
+    void nextMatch();
+    void prevMatch();
+private:
+    int m_lastSearchRow = -1;
+    QString m_lastSearchText;
+
 
 signals:
     void selectionChanged();
     void directoryChanged(const QString& path);
+    void searchRequested(const QString& initialText);
 
 private:
    static QIcon iconForEntry(const QFileInfo& info);

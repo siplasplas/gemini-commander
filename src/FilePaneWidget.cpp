@@ -1,7 +1,9 @@
 #include "FilePaneWidget.h"
-#include <QVBoxLayout>
+#include "SearchLineEdit.h"
+
 #include <QItemSelectionModel>
 #include <QStandardItemModel>
+#include <QVBoxLayout>
 
 FilePaneWidget::FilePaneWidget(QWidget* parent)
     : QWidget(parent)
@@ -21,11 +23,15 @@ FilePaneWidget::FilePaneWidget(QWidget* parent)
     // Teraz najlepiej dodać alternatywny konstruktor bez splittera,
     // albo przekazywać splitter z zewnątrz. Przyjmijmy, że masz już wersję bez splittera.
 
+    m_searchEdit = new SearchLineEdit(this);
+    m_searchEdit->hide();
+
     m_statusLabel = new QLabel(this);
     m_statusLabel->setText(QString());
 
     layout->addWidget(m_pathEdit);
     layout->addWidget(m_filePanel);
+    layout->addWidget(m_searchEdit);
     layout->addWidget(m_statusLabel);
 
     setLayout(layout);
@@ -36,6 +42,43 @@ FilePaneWidget::FilePaneWidget(QWidget* parent)
             this, &FilePaneWidget::onDirectoryChanged);
     connect(m_filePanel, &FilePanel::selectionChanged,
             this, &FilePaneWidget::onSelectionChanged);
+
+    connect(m_searchEdit, &QLineEdit::textChanged,
+            m_filePanel,  &FilePanel::updateSearch);
+
+    connect(m_searchEdit, &SearchLineEdit::nextMatchRequested,
+            m_filePanel,  &FilePanel::nextMatch);
+
+    connect(m_searchEdit, &SearchLineEdit::prevMatchRequested,
+            m_filePanel,  &FilePanel::prevMatch);
+
+    connect(m_searchEdit, &SearchLineEdit::escapePressed,
+            this, [this]() {
+                m_searchEdit->clear();
+                m_searchEdit->hide();
+                if (m_filePanel)
+                    m_filePanel->setFocus();
+                // opcjonalnie: m_filePanel->cancelSearch();
+            });
+
+    connect(m_filePanel, &FilePanel::searchRequested,
+        this, [this](const QString& initialText) {
+            m_searchEdit->show();
+            m_searchEdit->setFocus();
+            m_searchEdit->clear();
+            if (!initialText.isEmpty())
+                m_searchEdit->setText(initialText);
+            // poinformuj panel o nowym tekście
+            m_filePanel->updateSearch(m_searchEdit->text());
+        });
+
+    connect(m_searchEdit, &SearchLineEdit::acceptPressed,
+            this, [this]() {
+                m_searchEdit->hide();
+                if (m_filePanel) {
+                    m_filePanel->triggerCurrentEntry();
+                }
+            });
 
     // initial
     setCurrentPath(m_filePanel->currentPath);

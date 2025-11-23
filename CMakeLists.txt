@@ -70,6 +70,7 @@ add_executable(${PROJECT_NAME}
         src/Config.h
         src/FilePaneWidget.cpp
         src/FilePaneWidget.h
+        src/SearchLineEdit.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
