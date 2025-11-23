@@ -30,6 +30,8 @@ private:
     QLineEdit *commandLineEdit;
     EditorFrame *editorFrame = nullptr;
     int numberForWidget(QTableView* widget);
+    void showFavoriteDirsMenu(int panelIndex);
+    void showFavoriteDirsMenu();
 };
 
 #endif // MAINWINDOW_H

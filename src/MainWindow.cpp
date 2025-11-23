@@ -1,4 +1,6 @@
 #include "MainWindow.h"
+
+#include "Config.h"
 #include "FilePanel.h"
 
 #include "editor/EditorFrame.h"
@@ -14,10 +16,15 @@
 
 #include <QHeaderView>
 #include <QTimer>
+#include <QActionGroup>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    QString cfg = Config::instance().defaultConfigPath();
+    Config::instance().load(cfg);
+    Config::instance().setConfigPath(cfg);
+
     setupUi();
 
     for (auto & panel : panels)
@@ -106,6 +113,9 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             editorFrame->raise();
             editorFrame->activateWindow();
 
+            return true;
+        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
+            showFavoriteDirsMenu(nPanel);
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
             FilePanel* panel = panels[nPanel];
@@ -261,4 +271,138 @@ int MainWindow::numberForWidget(QTableView *widget) {
         if (panels[i] == widget)
             return i;
     return -1;
+}
+
+void MainWindow::showFavoriteDirsMenu(int panelIndex)
+{
+    if (panelIndex < 0 || panelIndex >= panels.size())
+        return;
+
+    FilePanel* panel = panels[panelIndex];
+    if (!panel)
+        return;
+
+    const QString currentDir = QDir::cleanPath(panel->currentPath);
+
+    const auto& favorites = Config::instance().favoriteDirs();
+
+    // Split favorites into root entries (no group) and grouped entries
+    QVector<const FavoriteDir*> rootEntries;
+    QMap<QString, QVector<const FavoriteDir*>> grouped;
+
+    for (const auto& fav : favorites) {
+        if (fav.group.isEmpty()) {
+            rootEntries.append(&fav);
+        } else {
+            grouped[fav.group].append(&fav);
+        }
+    }
+
+    QMenu menu(this);
+    QActionGroup groupActions(&menu);
+    groupActions.setExclusive(true);
+
+    auto makeLabel = [](const FavoriteDir& fav) -> QString {
+        if (!fav.label.isEmpty())
+            return fav.label;
+        QFileInfo fi(fav.path);
+        QString label = fi.fileName();
+        if (label.isEmpty())
+            label = fav.path;
+        return label;
+    };
+
+    int accelIndex = 1;
+
+    // Root favorites – shown directly in the main menu
+    for (const FavoriteDir* fav : rootEntries) {
+        QString path = QDir::cleanPath(fav->path);
+        QString label = makeLabel(*fav);
+
+        QString text;
+        if (accelIndex <= 9) {
+            text = QString("&%1  %2").arg(accelIndex).arg(label);
+            ++accelIndex;
+        } else {
+            text = label;
+        }
+
+        QAction* act = menu.addAction(text);
+        act->setCheckable(true);
+        act->setData(path);
+
+        if (!currentDir.isEmpty() && path == currentDir)
+            act->setChecked(true);
+
+        groupActions.addAction(act);
+    }
+
+    // Grouped favorites – each group as submenu
+    for (auto it = grouped.cbegin(); it != grouped.cend(); ++it) {
+        const QString& groupName = it.key();
+        const auto& entries = it.value();
+
+        QMenu* sub = menu.addMenu(groupName);
+
+        for (const FavoriteDir* fav : entries) {
+            QString path = QDir::cleanPath(fav->path);
+            QString label = makeLabel(*fav);
+
+            QString text;
+            if (accelIndex <= 9) {
+                text = QString("&%1  %2").arg(accelIndex).arg(label);
+                ++accelIndex;
+            } else {
+                text = label;
+            }
+
+            QAction* act = sub->addAction(text);
+            act->setCheckable(true);
+            act->setData(path);
+
+            if (!currentDir.isEmpty() && path == currentDir)
+                act->setChecked(true);
+
+            groupActions.addAction(act);
+        }
+    }
+
+    if (!favorites.isEmpty())
+        menu.addSeparator();
+
+    if (favorites.isEmpty()) {
+        QAction* infoAct = menu.addAction("No dirs yet");
+        infoAct->setEnabled(false);
+    }
+
+    menu.addSeparator();
+    QAction* addAct = menu.addAction("Add current dir");
+
+    bool alreadyInFavorites = Config::instance().containsFavoriteDir(currentDir);
+    addAct->setEnabled(!alreadyInFavorites && !currentDir.isEmpty());
+
+    // Popup position: above the active panel
+    QPoint panelPos = panel->mapToGlobal(QPoint(panel->width() / 2, panel->height()/2));
+    QAction* chosen = menu.exec(panelPos);
+    if (!chosen)
+        return;
+
+    if (chosen == addAct) {
+        // Add to root group ("")
+        Config::instance().addFavoriteDir(currentDir, /*label*/ QString(), /*group*/ QString());
+        Config::instance().save();
+        return;
+    }
+
+    QString targetDir = chosen->data().toString();
+    if (targetDir.isEmpty())
+        return;
+
+    QDir dir(targetDir);
+    if (!dir.exists())
+        return;
+
+    panel->currentPath = dir.absolutePath();
+    panel->loadDirectory();
+    panel->setFocus();
 }

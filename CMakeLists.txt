@@ -35,6 +35,9 @@ find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 
+set(TOMLPLUSPLUS_INCLUDE_DIR
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/tomlplusplus/include
+)
 add_executable(${PROJECT_NAME}
         src/main.cpp
         src/MainWindow.cpp
@@ -63,9 +66,13 @@ add_executable(${PROJECT_NAME}
         external/textviewers/logic/ChangeableDocument.cpp
         external/textviewers/logic/LineIndexedDocument.cpp
         external/textviewers/misc/selection.cpp
+        src/Config.cpp
+        src/Config.h
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}  ${CMAKE_SOURCE_DIR}/external/textviewers)
+target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
+        ${CMAKE_SOURCE_DIR}/external/textviewers
+        ${TOMLPLUSPLUS_INCLUDE_DIR})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_MAJOR_VERSION}::Widgets
