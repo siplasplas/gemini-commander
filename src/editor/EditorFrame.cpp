@@ -46,9 +46,10 @@ KTextEditor::MainWindow* getDummyKateMainWindow()
 
 
 EditorFrame::EditorFrame(QWidget* parent)
-    : QDialog(parent)
+    : QMainWindow(parent)
 {
-    m_mainLayout = new QVBoxLayout(this);
+    auto* central = new QWidget(this);
+    m_mainLayout = new QVBoxLayout(central);
     m_mainLayout->setContentsMargins(0, 0, 0, 0);
     m_mainLayout->setSpacing(0);
 
@@ -96,6 +97,7 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainHeader->setupToolBar(m_buildAction, m_runAction);
 
     m_mainLayout->addWidget(m_mainSplitter);
+    setCentralWidget(central);
 
     // --- Finish setup ---
     setMinimumSize(600, 400);
@@ -167,11 +169,27 @@ void EditorFrame::createActions()
     connect(m_aboutAction, &QAction::triggered, this, &EditorFrame::onAboutTriggered);
 }
 
-void EditorFrame::openFileInViewer(const QString& fileName) {
-    auto viewer = new Viewer(fileName, m_editorTabWidget);
-    int newIndex = m_editorTabWidget->addTab(viewer, "tabTitle");
+void EditorFrame::openFileInViewer(const QString& fileName)
+{
+    auto* viewer = new Viewer(fileName, m_editorTabWidget);
+
+    // ESC inside viewer should close only this tab, not the whole app
+    connect(viewer, &Viewer::closeRequested, this, [this, viewer]() {
+        int idx = m_editorTabWidget->indexOf(viewer);
+        if (idx >= 0) {
+            m_editorTabWidget->removeTab(idx);
+            viewer->deleteLater();
+        }
+    });
+
+    // Add tab normally
+    const QString baseName = QFileInfo(fileName).fileName();
+    int newIndex = m_editorTabWidget->addTab(viewer, baseName);
+
+    // If you have MRU/limit logic, keep it:
     int removedCount = m_editorTabWidget->enforceTabLimit();
     m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
+    viewer->setFocus();
 }
 /**
  * @brief Opens file in editor tab

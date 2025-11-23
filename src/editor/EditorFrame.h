@@ -1,13 +1,9 @@
 #ifndef EDITORFRAME_H
 #define EDITORFRAME_H
 
-#include <QMainWindow>
 #include <QString>
 #include "mainheader.h"
 #include <QMainWindow>
-#include <QDialog>
-#include "mainheader.h"
-
 
 class QSplitter;
 class QTreeView;
@@ -29,7 +25,8 @@ class Editor;
  *
  * Integrates editor tabs, project tree, build system and LSP integration
  */
-class EditorFrame : public QDialog {
+class EditorFrame : public QMainWindow
+{
     Q_OBJECT
 
 public:
