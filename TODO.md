@@ -1,27 +1,99 @@
-* Basic file and directory operations: Missing support for copying (F5), moving (F6), deleting (F8),
-creating directories/files (F7), multi-rename (Ctrl+M), or directory synchronization. 
-Current code only navigates directories without file modifications.
-* View and edit files: Missing file preview (F3), editing (F4), or quick view (Ctrl+Q). 
-Code does not handle opening files in external editors or built-in viewers.
-* Multi-select and batch operations: Extended selection exists, but no actions on selected files
-(e.g., size summation, packing, comparing).
-* Sorting and views: Sorting only by name (directories first); missing sorting by size, date, 
-extension. Missing views: brief (list), full (details), thumbnails, tree view, or custom columns.
-* Search and filtering: Missing file search (Alt+F7), quick search (typing letters to focus), 
-or filters (e.g., by extension, date). Code lacks dynamic panel filtering.
-* Command line (commandLineEdit): Exists but does not execute commands (e.g., cd, dir, copy, 
-external commands). Shortcuts like Ctrl+P/Enter partially work, but missing shell integration
-(e.g., cmd.exe/bash) or command history.
-* Keyboard shortcuts and usability: Some shortcuts exist (Tab, Ctrl+P), but missing many standards
-(e.g., F2 rename, Alt+Enter properties, Ctrl+A select all, Ctrl+Z undo).
-* User interface elements: Missing status bar (with free space info, file count), drag-and-drop 
-between panels, mouse support for operations (e.g., right-click menu).
-* History and bookmarks: Missing navigation history (Alt+Down), bookmarks (Ctrl+D), or quick access
-to favorite directories.
-* Configuration and personalization: Missing menus, toolbars, configurable shortcuts, colors for 
-file types, file icons, or settings (e.g., hidden files, case sensitivity).
-* Compare and synchronization: Missing file/directory comparison (Ctrl+F3) or synchronization (Alt+S).
-* Performance and advanced features: Missing handling of large directories 
-(lazy loading), multi-threading for operations, symbolic links, or file attributes (permissions, hidden).
-* Archives and protocols support: Missing treatment of archives (ZIP, RAR, TAR) as directories, 
-* Plugins and extensions: Missing support for plugins (e.g., lister plugins for file format previews).
+# MUST-HAVE (Core File Manager Functionality)
+
+* **Basic file and directory operations**
+
+    * Implement copying (F5), moving (F6), deleting (F8).
+    * Implement creating directories/files (F7).
+    * Implement renaming (at least single rename).
+    * Add file selection support.
+
+* **File selection mechanics (essential)**
+
+    * Space / Insert: toggle selection of the current item and move cursor down.
+    * Gray Plus (+): select files matching a mask (e.g., `*.cpp`).
+    * Gray Minus (–): deselect files matching a mask.
+    * Gray Asterisk (*): invert selection.
+
+* **Essential editor and viewer features**
+
+    * Implement reliable file saving in the editor.
+    * Add a “save / discard / cancel” dialog when exiting with unsaved changes.
+    * Implement Quick View (Ctrl+Q) with basic text/image support.
+    * Ensure F4 opens a file in the editor or assigned viewer.
+
+* **Information and status display**
+
+    * Add a status bar (free space, file count, size of selected items).
+    * Implement F3 “properties” for files.
+
+* **Keyboard usability**
+
+    * Add standard shortcuts:
+
+        * Shift+F6 rename
+        * Ctrl+A select all
+    * Fix Ctrl+P / Ctrl+Enter / Ctrl+Shift+Enter so inserted paths end with a space and are quoted when containing spaces.
+
+* **Command line basics**
+
+    * Make the command line execute essential commands (cd, external programs).
+    * Minimal shell integration (history not required initially).
+
+* **Essential filtering**
+
+    * Implement visibility filtering by mask/pattern (e.g., `*.cpp`).
+    * Implement show/hide hidden files.
+
+* **Basic configuration UI**
+
+    * Add a simple configuration dialog (Ctrl+D).
+    * Add minimal menu/toolbars (File / View / Options).
+
+---
+
+# IMPORTANT BUT NOT URGENT (Second Priority)
+
+* **Quick navigation improvements**
+
+    * Add navigation history (Alt+Down).
+    * Improve behavior of F4 on folders (disable or define expected behavior).
+    * Improve behavior of F3 on folders (show total size).
+
+* **Editor and viewer extensions**
+
+    * Support “view as image” mode more fully.
+    * Add “view as hex” widget.
+    * Implement folder preview or info panels.
+
+* **Visual/UX improvements**
+
+    * Optional status line modes.
+    * Separate appearance for sudo mode.
+    * Right-click context menu and better mouse support.
+
+---
+
+# LATER (Nice-to-Have / Advanced)
+
+* **Advanced operations**
+
+    * Multi-rename (Ctrl+M).
+    * Directory comparison and synchronization.
+    * File attribute editing (permissions, hidden).
+    * Proper handling of symbolic links.
+
+* **Command line enhancements**
+
+    * Full shell integration (history, completion).
+
+* **Filtering enhancements**
+
+    * Filter by type (folders/hidden/others) as separate modes.
+
+* **Archive and protocol support**
+
+    * Treat ZIP, RAR, TAR, etc. as directories.
+
+* **Plugin system**
+
+    * Add plugin support (e.g., lister/viewer plugins).
