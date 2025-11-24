@@ -709,7 +709,8 @@ QIcon FilePanel::iconForExtension(const QString& ext, bool isDir)
     static QHash<QString, QIcon> cache;
 
     if (isDir) {
-        return provider.icon(QFileIconProvider::Folder);
+        static QIcon folderIcon(":/icons/folder_yellow.svg");
+        return folderIcon;
     }
 
     QString key = ext.toLower();

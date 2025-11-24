@@ -90,3 +90,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         KF${KF_MAJOR_VERSION}::Parts
         ICU::uc ICU::i18n
  )
+
+qt_add_resources(APP_RESOURCES src/resources.qrc)
+target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
