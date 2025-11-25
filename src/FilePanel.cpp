@@ -21,6 +21,8 @@
 #include <QInputDialog>
 #include <QStorageInfo>
 
+#include "SizeFormat.h"
+
 QString stripLeadingDot(const QString& s)
 {
     if (!s.isEmpty() && s.startsWith('.'))
@@ -173,7 +175,8 @@ void FilePanel::addEntries()
         if (info.isDir())
             row.append(new QStandardItem("<DIR>"));
         else
-            row.append(new QStandardItem(QString::number(info.size())));
+            row.append(new QStandardItem(QString::fromStdString(SizeFormat::formatSize(info.size(), false))));
+
         row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
 
         model->appendRow(row);
