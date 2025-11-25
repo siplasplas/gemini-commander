@@ -59,6 +59,7 @@ private:
     FilePanel* filePanelForSide(int side) const;
 
     QToolBar* m_mainToolBar = nullptr;
+    QToolBar* m_mountsToolBar = nullptr;;
     QAction* m_openTerminalAction = nullptr;
 
     void createMountsToolbar();

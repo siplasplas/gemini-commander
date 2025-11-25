@@ -109,6 +109,24 @@ void MainWindow::setupUi()
 
     addToolBarBreak(Qt::TopToolBarArea);
     createMountsToolbar();
+    QSize icon16(16,16);
+    m_mainToolBar->setIconSize(icon16);
+    m_mountsToolBar->setIconSize(icon16);
+
+    QFontMetrics fm(m_mainToolBar->font());
+    int h = fm.height() + 8;
+    m_mainToolBar->setFixedHeight(h);
+    m_mountsToolBar->setFixedHeight(h);
+
+    QString tbStyle =
+        "QToolBar QToolButton { "
+        "  padding: 0px; "
+        "  margin: 0px; "
+        "  min-height: 16px; "
+        "} ";
+
+    m_mainToolBar->setStyleSheet(tbStyle);
+    m_mountsToolBar->setStyleSheet(tbStyle);
 
     m_activeSide = LeftSide;
     if (auto* left = filePanelForSide(LeftSide))
@@ -905,12 +923,12 @@ QStringList MainWindow::listMountPoints() const
 
 void MainWindow::createMountsToolbar()
 {
-    auto* tb = addToolBar(tr("Mounts"));
-    tb->setMovable(true);
+    m_mountsToolBar = addToolBar(tr("Mounts"));
+    m_mountsToolBar->setMovable(true);
 
     QStringList pts = listMountPoints();
     for (const QString& mp : pts) {
-        QAction* act = new QAction(mp, tb);
+        QAction* act = new QAction(mp, m_mountsToolBar);
 
         connect(act, &QAction::triggered, this, [this, mp]() {
             FilePanel* panel = currentFilePanel();
@@ -921,7 +939,7 @@ void MainWindow::createMountsToolbar()
             panel->loadDirectory();
         });
 
-        tb->addAction(act);
+        m_mountsToolBar->addAction(act);
     }
 }
 
