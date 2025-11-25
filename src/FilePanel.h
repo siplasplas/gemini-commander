@@ -8,6 +8,8 @@
 #include <QMimeDatabase>
 #include <QStyle>
 
+
+class QStandardItem;
 QT_BEGIN_NAMESPACE
 class QTableView;
 class QStandardItemModel;
@@ -25,6 +27,8 @@ struct PanelEntry {
     QFileInfo info;
     bool isMarked = false;
     EntryContentState contentState;
+    std::size_t totalSizeBytes = 0;
+    bool hasTotalSize = false;
     PanelEntry() = default;
     explicit PanelEntry(const QFileInfo& fi)
         : info(fi)
@@ -70,6 +74,9 @@ public:
     void toggleMarkOnCurrent(bool advanceRow);
     void rememberSelectionAndClear();
     void restoreSelectionFromMemory();
+    std::pair<PanelEntry*, int> currentEntryRow();
+    void updateColumn(int row, PanelEntry& entry);
+    QList<QStandardItem*> entryToRow(PanelEntry& entry);
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;

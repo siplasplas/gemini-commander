@@ -219,6 +219,30 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         }
         else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Space) {
             if (auto* panel = panelForObject(obj)) {
+                auto p = panel->currentEntryRow();
+                PanelEntry* entry = p.first;
+                int row = p.second;
+
+                // brak wpisu albo [..]
+                if (!entry) {
+                    panel->toggleMarkOnCurrent(false);
+                    return true;
+                }
+
+                // tylko katalogi liczymy; plik -> zachowanie jak wcześniej
+                if (entry->info.isDir()) {
+                    if (!entry->hasTotalSize) {
+                        CopyStats stats;
+                        bool ok = false;
+                        collectCopyStats(entry->info.absoluteFilePath(), stats, ok);
+                        if (ok) {
+                            entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
+                            entry->hasTotalSize = true;
+                            panel->updateColumn(row, *entry);
+                        }
+                    }
+                }
+
                 panel->toggleMarkOnCurrent(false);
                 return true;
             }

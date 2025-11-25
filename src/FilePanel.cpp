@@ -139,48 +139,94 @@ void FilePanel::addFirstEntry(bool isRoot) {
   }
 }
 
+static QStringList getTextColumn(PanelEntry& entry)
+{
+    QStringList colStrings;
+    colStrings.append(""); // ID column
+
+    QString base, ext;
+    auto& info = entry.info;
+
+    if (info.isDir()) {
+        base = info.fileName();
+    } else {
+        base = info.completeBaseName();
+        ext  = info.suffix();
+
+        // hidden: ".git" type case
+        if (base.isEmpty()) {
+            base = "." + ext;
+            ext.clear();
+        }
+    }
+
+    QString fullName = base;
+    if (!ext.isEmpty())
+        fullName += "." + ext;
+
+    colStrings.append(fullName);               // COLUMN_NAME
+    colStrings.append(ext);                    // COLUMN_EXT
+
+    QString sizeStr;
+    if (!info.isDir()) {
+        sizeStr = QString::fromStdString(SizeFormat::formatSize(info.size(), false));
+    } else if (entry.hasTotalSize) {
+        sizeStr = QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
+    } else {
+        sizeStr = "<DIR>";
+    }
+    colStrings.append(sizeStr);                // COLUMN_SIZE
+
+    colStrings.append(info.lastModified().toString("yyyy-MM-dd hh:mm")); // COLUMN_DATE
+
+    return colStrings;
+}
+
+QList<QStandardItem*> FilePanel::entryToRow(PanelEntry& entry)
+{
+    const auto list = getTextColumn(entry);
+    QList<QStandardItem*> row;
+
+    for (int col = COLUMN_ID; col <= COLUMN_DATE; ++col)
+        row.append(new QStandardItem(list[col]));
+
+    // fullName dla UserRole
+    QString fullName;
+    if (list[COLUMN_EXT].isEmpty())
+        fullName = list[COLUMN_NAME];
+    else
+        fullName = list[COLUMN_NAME] + "." + list[COLUMN_EXT];
+
+    row[COLUMN_NAME]->setData(fullName, Qt::UserRole);
+
+    EntryContentState state = ensureContentState(entry);
+    row[COLUMN_NAME]->setIcon(iconForExtension(list[COLUMN_EXT], state));
+
+    return row;
+}
+
+void FilePanel::updateColumn(int row, PanelEntry& entry)
+{
+    const auto list = getTextColumn(entry);
+
+    for (int col = COLUMN_NAME; col <= COLUMN_DATE; ++col) {
+        if (QStandardItem* item = model->item(row, col)) {
+            item->setText(list[col]);
+        }
+    }
+
+    // ikona (na wypadek gdyby state się zmienił)
+    EntryContentState state = ensureContentState(entry);
+    if (QStandardItem* nameItem = model->item(row, COLUMN_NAME)) {
+        nameItem->setIcon(iconForExtension(list[COLUMN_EXT], state));
+    }
+}
+
 void FilePanel::addEntries()
 {
-    for (PanelEntry &entry : entries) {
-
-        QString base, ext;
-        auto info = entry.info;
-
-        if (info.isDir()) {
-            base = info.fileName();
-        } else {
-            base = info.completeBaseName();
-            ext  = info.suffix();
-
-            // hidden: ".git" type case
-            if (base.isEmpty()) {
-                base = "." + ext;
-                ext.clear();
-            }
-        }
-        QString fullName = base;
-        if (!ext.isEmpty())
-            fullName += "." + ext;
-
-        QList<QStandardItem*> row;
-        row.append(new QStandardItem("id"));
-
-        auto* nameItem = new QStandardItem(base);
-        nameItem->setData(fullName, Qt::UserRole);
-        EntryContentState state = ensureContentState(entry);
-        nameItem->setIcon(iconForExtension(ext, state));
-        row.append(nameItem);
-
-        row.append(new QStandardItem(ext));
-        if (info.isDir())
-            row.append(new QStandardItem("<DIR>"));
-        else
-            row.append(new QStandardItem(QString::fromStdString(SizeFormat::formatSize(info.size(), false))));
-
-        row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
-
-        model->appendRow(row);
+    for (PanelEntry& entry : entries) {
         const int rowIndex = model->rowCount();
+        model->appendRow(entryToRow(entry));
         if (entry.isMarked)
             updateRowMarking(rowIndex, true);
     }
@@ -1153,31 +1199,38 @@ void FilePanel::updateRowMarking(int row, bool marked)
     }
 }
 
-void FilePanel::toggleMarkOnCurrent(bool advanceRow)
-{
+std::pair<PanelEntry*, int> FilePanel::currentEntryRow() {
     QModelIndex idx = currentIndex();
     if (!idx.isValid())
-        return;
+        return {nullptr, -1};
 
     const int row = idx.row();
 
     if (!dir)
-        return;
+        return {nullptr, row};
 
     const bool isRoot = dir->isRoot();
-    const int offset = isRoot ? 0 : 1; // 0: brak [..], 1: pierwszy wiersz to [..]
+    const int offset = isRoot ? 0 : 1; // 0: no [..], 1:first row is [..]
     const int entryIndex = row - offset;
 
     if (entryIndex < 0 || entryIndex >= entries.size())
-        return; // np. [..]
+        return {nullptr, row}; // np. [..]
 
-    PanelEntry& entry = entries[entryIndex];
-    entry.isMarked = !entry.isMarked;
+    return {&entries[entryIndex], row};
+}
 
-    updateRowMarking(row, entry.isMarked);
+void FilePanel::toggleMarkOnCurrent(bool advanceRow)
+{
+    auto p = currentEntryRow();
+    if (!p.first)
+        return;
+    auto entry = p.first;
+    entry->isMarked = !entry->isMarked;
+
+    updateRowMarking(p.second, entry->isMarked);
 
     if (advanceRow) {
-        int nextRow = row + 1;
+        int nextRow = p.second + 1;
         if (nextRow < model->rowCount()) {
             QModelIndex nextIdx = model->index(nextRow, COLUMN_NAME);
             setCurrentIndex(nextIdx);
