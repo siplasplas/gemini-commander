@@ -64,6 +64,7 @@ public:
     void selectEntryByName(const QString& fullName);
     void addAllEntries();
     void triggerCurrentEntry();
+    void createNewDirectory(QWidget*dialogParent);
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;

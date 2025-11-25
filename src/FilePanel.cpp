@@ -17,6 +17,8 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QDirIterator>
+#include <QMessageBox>
+#include <QInputDialog>
 
 QString stripLeadingDot(const QString& s)
 {
@@ -970,3 +972,43 @@ EntryContentState FilePanel::ensureContentState(PanelEntry& entry) const
     return entry.contentState;
 }
 
+void FilePanel::createNewDirectory(QWidget* dialogParent)
+{
+    if (!dir)
+        return;
+
+    auto rows = selectionModel()->selectedRows();
+    QModelIndex currentIndex = rows.first();//todo need small common method
+    QString suggestedName;
+
+    if (currentIndex.isValid()) {
+        QString baseName = model->item(currentIndex.row(), COLUMN_NAME)->text();
+        suggestedName = baseName;
+    } else {
+        suggestedName = "newDir";
+    }
+
+    QWidget* parent = dialogParent ? dialogParent : this;
+
+    bool ok = false;
+    QString name = QInputDialog::getText(
+        parent,
+        tr("Create new directory"),
+        tr("Input new name:"),
+        QLineEdit::Normal,
+        suggestedName,
+        &ok
+    );
+
+    if (!ok || name.isEmpty())
+        return;
+
+    if (!dir->mkpath(name)) {
+        QMessageBox::warning(parent, tr("Error"), tr("Failed to create directory."));
+        return;
+    }
+
+    loadDirectory();
+    auto firstPart = name.section('/', 0, 0);
+    selectEntryByName(firstPart);
+}

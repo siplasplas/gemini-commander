@@ -255,7 +255,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             panel->addAllEntries();
             return true;
 
-        } else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
+        } else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F7) {
+            if (auto* panel = panelForObject(obj)) {
+                panel->createNewDirectory(this);
+                return true;
+            }
+        }
+        else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
             commandLineEdit->setFocus();
             commandLineEdit->selectAll();
             return true; // Event handled
