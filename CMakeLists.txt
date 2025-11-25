@@ -34,6 +34,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets)
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(BOTAN2 REQUIRED botan-2)
 
 set(TOMLPLUSPLUS_INCLUDE_DIR
         ${CMAKE_CURRENT_SOURCE_DIR}/external/tomlplusplus/include
@@ -71,11 +73,14 @@ add_executable(${PROJECT_NAME}
         src/FilePaneWidget.cpp
         src/FilePaneWidget.h
         src/SearchLineEdit.h
+        src/fileutils.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
         ${CMAKE_SOURCE_DIR}/external/textviewers
-        ${TOMLPLUSPLUS_INCLUDE_DIR})
+        ${TOMLPLUSPLUS_INCLUDE_DIR}
+        ${BOTAN2_INCLUDE_DIRS}
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_MAJOR_VERSION}::Widgets
@@ -89,7 +94,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         KF${KF_MAJOR_VERSION}::KIOWidgets
         KF${KF_MAJOR_VERSION}::Parts
         ICU::uc ICU::i18n
+        ${BOTAN2_LIBRARIES}
  )
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+        ${BOTAN2_CFLAGS_OTHER}
+)
 
 qt_add_resources(APP_RESOURCES src/resources.qrc)
 target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
