@@ -977,15 +977,14 @@ void FilePanel::createNewDirectory(QWidget* dialogParent)
     if (!dir)
         return;
 
-    auto rows = selectionModel()->selectedRows();
-    QModelIndex currentIndex = rows.first();//todo need small common method
+    QModelIndex current_index = currentIndex();
     QString suggestedName;
 
-    if (currentIndex.isValid()) {
-        QString baseName = model->item(currentIndex.row(), COLUMN_NAME)->text();
-        suggestedName = baseName;
-    } else {
-        suggestedName = "newDir";
+    if (current_index.isValid()) {
+        QStandardItem* item = model->item(current_index.row(), COLUMN_NAME);
+        QString fullName = item->data(Qt::UserRole).toString();
+        if (!fullName.isEmpty())
+            suggestedName = fullName;      // poprawna nazwa pliku/katalogu
     }
 
     QWidget* parent = dialogParent ? dialogParent : this;

@@ -260,6 +260,89 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->createNewDirectory(this);
                 return true;
             }
+        }  else if ((keyEvent->key() == Qt::Key_F8 || keyEvent->key() == Qt::Key_Delete)
+           && modifiers == Qt::NoModifier) {
+
+        FilePanel* panel = currentFilePanel();
+        if (!panel)
+            return true;
+
+        QModelIndex currentIndex = panel->currentIndex();
+        if (!currentIndex.isValid())
+            return true;
+
+        // nazwa z wiersza
+        QString name = panel->getRowName(currentIndex.row());
+        if (name.isEmpty())
+            return true;
+
+        QDir dir(panel->currentPath);
+        QString fullPath = dir.absoluteFilePath(name);
+        QFileInfo info(fullPath);
+        if (!info.exists())
+            return true;
+
+        QString question;
+        bool useTrash = true;
+
+        if (info.isDir()) {
+            // ponowne, bieżące sprawdzenie pustego katalogu
+            QDir d(fullPath);
+            bool empty = d.isEmpty();
+
+            if (empty) {
+                question = tr("Delete selected empty dir '%1'?").arg(name);
+                useTrash = false;   // pusty katalog – kasujemy od razu
+            } else {
+                question = tr("Delete selected non empty dir '%1' into trashcan?").arg(name);
+            }
+        } else {
+            question = tr("Delete selected '%1' into trashcan?").arg(name);
+        }
+
+        auto reply = QMessageBox::question(
+            this,
+            tr("Delete"),
+            question,
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::Yes
+        );
+
+        if (reply != QMessageBox::Yes)
+            return true;
+
+        bool ok = false;
+
+        if (info.isDir() && !useTrash) {
+            // pusty katalog – usuwamy bez kosza
+            ok = dir.rmdir(name);
+        } else {
+        // plik lub niepusty katalog – próbujemy przenieść do kosza
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+        ok = QFile::moveToTrash(fullPath);
+#else
+        // fallback gdyby moveToTrash nie było dostępne
+        if (info.isDir()) {
+            QDir d(fullPath);
+            ok = d.removeRecursively();
+        } else {
+            ok = QFile::remove(fullPath);
+        }
+#endif
+            }
+
+            if (!ok) {
+                QMessageBox::warning(
+                    this,
+                    tr("Error"),
+                    tr("Failed to delete '%1'.").arg(name)
+                );
+            } else {
+                panel->loadDirectory();
+                panel->setCurrentIndex(currentIndex);
+                panel->scrollTo(currentIndex);
+            }
+            return true;
         }
         else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
             commandLineEdit->setFocus();
