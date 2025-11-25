@@ -231,15 +231,18 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 // tylko katalogi liczymy; plik -> zachowanie jak wcześniej
                 if (entry->info.isDir()) {
-                    if (!entry->hasTotalSize) {
+                    if (entry->hasTotalSize != TotalSizeStatus::Has) {
                         CopyStats stats;
                         bool ok = false;
+                        entry->hasTotalSize = TotalSizeStatus::InPogress;
+                        panel->updateColumn(row, *entry);
                         collectCopyStats(entry->info.absoluteFilePath(), stats, ok);
                         if (ok) {
                             entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
-                            entry->hasTotalSize = true;
+                            entry->hasTotalSize = TotalSizeStatus::Has;
                             panel->updateColumn(row, *entry);
-                        }
+                        } else
+                            entry->hasTotalSize = TotalSizeStatus::Unknown;
                     }
                 }
 

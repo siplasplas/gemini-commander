@@ -85,8 +85,8 @@ void FilePanel::sortEntries() {
 
                   case COLUMN_SIZE:
                       if (aDir && bDir) {
-                          const bool aHas = c.hasTotalSize;
-                          const bool bHas = d.hasTotalSize;
+                          const bool aHas = c.hasTotalSize == TotalSizeStatus::Has;
+                          const bool bHas = d.hasTotalSize == TotalSizeStatus::Has;
 
                           // 1) directories with calculated size always at the top,
                           // regardless of asc/desc
@@ -186,8 +186,10 @@ static QStringList getTextColumn(PanelEntry& entry)
     QString sizeStr;
     if (!info.isDir()) {
         sizeStr = QString::fromStdString(SizeFormat::formatSize(info.size(), false));
-    } else if (entry.hasTotalSize) {
+    } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
         sizeStr = QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
+    } else if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
+        sizeStr = "....";
     } else {
         sizeStr = "<DIR>";
     }
@@ -235,6 +237,11 @@ void FilePanel::updateColumn(int row, PanelEntry& entry)
     EntryContentState state = ensureContentState(entry);
     if (QStandardItem* nameItem = model->item(row, COLUMN_NAME)) {
         nameItem->setIcon(iconForExtension(list[COLUMN_EXT], state));
+    }
+    if (viewport()) {
+        QModelIndex idx = model->index(row, COLUMN_NAME);
+        QRect r = visualRect(idx);
+        viewport()->repaint(r);
     }
 }
 

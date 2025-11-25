@@ -23,12 +23,19 @@ enum class EntryContentState {
     DirUnknown
 };
 
+enum class TotalSizeStatus {
+    Unknown,
+    InPogress,
+    Has,
+};
+
+
 struct PanelEntry {
     QFileInfo info;
     bool isMarked = false;
     EntryContentState contentState;
     std::size_t totalSizeBytes = 0;
-    bool hasTotalSize = false;
+    TotalSizeStatus hasTotalSize = TotalSizeStatus::Unknown;
     PanelEntry() = default;
     explicit PanelEntry(const QFileInfo& fi)
         : info(fi)
