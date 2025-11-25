@@ -62,6 +62,7 @@ private:
 
     void createMountsToolbar();
     QStringList listMountPoints() const;
+    void copyFromPanel(FilePanel* srcPanel);
 
 private slots:
     void onOpenTerminal();

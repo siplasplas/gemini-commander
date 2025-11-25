@@ -22,6 +22,7 @@
 #include <QMenu>
 #include <QToolBar>
 #include <QAction>
+#include <QInputDialog>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QMessageBox>
@@ -263,7 +264,16 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->createNewDirectory(this);
                 return true;
             }
-        } else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F6) {
+        }
+
+        else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F5) {
+            if (auto* panel = panelForObject(obj)) {
+                copyFromPanel(panel);
+                return true;
+            }
+        }
+
+        else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F6) {
             if (auto* panel = panelForObject(obj)) {
                 int srcSide = sideForPanel(panel); // masz już taką funkcję
                 QString targetDir;
@@ -911,5 +921,124 @@ void MainWindow::createMountsToolbar()
         });
 
         tb->addAction(act);
+    }
+}
+
+void MainWindow::copyFromPanel(FilePanel* srcPanel)
+{
+    if (!srcPanel)
+        return;
+
+    // source index
+    QModelIndex currentIndex = srcPanel->currentIndex();
+    if (!currentIndex.isValid())
+        return;
+
+    // name from UserRole (full name of the entry)
+    QStandardItem* item = srcPanel->model->item(currentIndex.row(), COLUMN_NAME);
+    if (!item)
+        return;
+
+    const QString fullName = item->data(Qt::UserRole).toString();
+    if (fullName.isEmpty()) {
+        // e.g. [..] – we do not copy
+        return;
+    }
+
+    QDir srcDir(srcPanel->currentPath);
+    const QString srcPath = srcDir.absoluteFilePath(fullName);
+    QFileInfo srcInfo(srcPath);
+
+    if (!srcInfo.isFile()) {
+        QMessageBox::information(
+            this,
+            tr("Copy"),
+            tr("Copying directories is not implemented yet.")
+        );
+        return;
+    }
+
+    // target panel = opposite
+    int srcSide = sideForPanel(srcPanel);
+    FilePanel* dstPanel = nullptr;
+    QString targetDir;
+
+    if (srcSide != -1) {
+        int dstSide = (srcSide == LeftSide) ? RightSide : LeftSide;
+        dstPanel = filePanelForSide(dstSide);
+        if (dstPanel)
+            targetDir = dstPanel->currentPath;
+    }
+
+    // default destination path suggestion
+    QString suggested;
+    if (!targetDir.isEmpty()) {
+        QDir dstDir(targetDir);
+        suggested = dstDir.filePath(fullName);
+    } else {
+        suggested = srcPath; // fallback – copying to the same directory
+    }
+
+    bool ok = false;
+    QString destInput = QInputDialog::getText(
+        this,
+        tr("Copy"),
+        tr("Copy to:"),
+        QLineEdit::Normal,
+        suggested,
+        &ok
+    );
+
+    if (!ok || destInput.isEmpty())
+        return;
+
+    // calculate the target path
+    QString dstPath;
+    if (QDir::isAbsolutePath(destInput)) {
+        dstPath = destInput;
+    } else {
+        QString baseDir = !targetDir.isEmpty()
+                          ? targetDir
+                          : srcPanel->currentPath;
+        QDir dstDir(baseDir);
+        dstPath = dstDir.absoluteFilePath(destInput);
+    }
+
+    QFileInfo dstInfo(dstPath);
+
+    // file already exists - we ask to overwrite it
+    if (dstInfo.exists()) {
+        auto reply = QMessageBox::question(
+            this,
+            tr("Overwrite"),
+            tr("File '%1' already exists.\nOverwrite?")
+                .arg(dstInfo.fileName()),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No
+        );
+        if (reply != QMessageBox::Yes)
+            return;
+
+        QFile::remove(dstPath);
+    }
+
+    // copy without progress (single file)
+    if (!QFile::copy(srcPath, dstPath)) {
+        QMessageBox::warning(
+            this,
+            tr("Error"),
+            tr("Failed to copy:\n%1\nto\n%2")
+                .arg(srcPath, dstPath)
+        );
+        return;
+    }
+
+    // refresh the target panel
+    if (dstPanel) {
+        QDir dstPanelDir(dstPanel->currentPath);
+        // sprawdzamy, czy skopiowaliśmy do bieżącego katalogu dstPanel
+        if (dstPanelDir.absoluteFilePath(QFileInfo(dstPath).fileName()) == dstPath) {
+            dstPanel->loadDirectory();
+        }
     }
 }

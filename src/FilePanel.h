@@ -65,7 +65,7 @@ public:
     void addAllEntries();
     void triggerCurrentEntry();
     void createNewDirectory(QWidget*dialogParent);
-        void renameOrMoveEntry(QWidget* dialogParent = nullptr,
+    void renameOrMoveEntry(QWidget* dialogParent = nullptr,
                        const QString& defaultTargetDir = QString());
 
 protected:
