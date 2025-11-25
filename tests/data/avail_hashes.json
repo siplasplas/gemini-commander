@@ -1,0 +1,25 @@
+{
+  "test_input": {
+    "description": "String '0123456' repeated 10,000 times (total 70,000 bytes)",
+    "pattern": "0123456",
+    "repeats": 10000,
+    "size_bytes": 70000
+  },
+  "hashes": [
+    {
+      "name": "CRC32",
+      "algorithm": "CRC32",
+      "expected_hex": "afaadb67"
+    },
+    {
+      "name": "SHA-256",
+      "algorithm": "SHA-256",
+      "expected_hex": "d488d2272dea0966b36e4e5e0014eac188a713e9dfd089c30eaf13ddb7b143f8"
+    },
+    {
+      "name": "SHA-3(256)",
+      "algorithm": "SHA-3(256)",
+      "expected_hex": "86f94b587c131d9d83046a660dad97fbc93ca93456531ef39a843b95ca984cbc"
+    }
+  ]
+}
