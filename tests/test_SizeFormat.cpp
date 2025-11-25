@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-#include "../src/SizeFormat.h"
+#include "SizeFormat.h"
 
 using SizeFormat::formatSize;
 using SizeFormat::formatWithSeparators;

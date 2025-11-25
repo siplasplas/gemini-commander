@@ -1,9 +1,11 @@
-#include <string>
+#include "fileutils.h"
+
 #include <filesystem>
 #include <chrono>
 #include <iomanip>
 #include <sstream>
 #include <atomic>
+#include <fstream>
 
 #include <botan/hash.h>
 #include <botan/hex.h>
@@ -16,6 +18,7 @@
 #  define GETPID() getpid()
 #endif
 
+namespace fileutils {
 std::string makeTempPartPath(const std::string& path, bool pathIsDir)
 {
     static std::atomic<uint32_t> g_seq{0};
@@ -66,4 +69,68 @@ std::string makeTempPartPath(const std::string& path, bool pathIsDir)
     name << crcHex << pid << timeStr << seq << ".part";
 
     return (dir / name.str()).string();
+}
+
+
+std::string compute_file_hash(const std::filesystem::path& file_path,
+                              std::size_t buffer_size,
+                              std::string_view algorithm,
+                              HashProgressCallback progress_cb)
+{
+    if (buffer_size == 0) {
+        // Zero buffer size is a logic error in the caller.
+        throw std::logic_error("compute_file_hash: buffer_size must be > 0");
+    }
+
+    // Obtain file size for progress reporting.
+    std::uintmax_t total_size = 0;
+    try {
+        total_size = std::filesystem::file_size(file_path);
+    } catch (const std::filesystem::filesystem_error& e) {
+        throw std::runtime_error(
+            std::string("compute_file_hash: unable to get file size: ") + e.what());
+    }
+
+    std::ifstream in(file_path, std::ios::binary);
+    if (!in) {
+        throw std::runtime_error("compute_file_hash: unable to open file for reading");
+    }
+
+    // Create hash function via Botan using the requested algorithm.
+    auto hash = Botan::HashFunction::create(std::string(algorithm));
+    if (!hash) {
+        throw std::runtime_error(
+            std::string("compute_file_hash: unsupported algorithm: ") +
+            std::string(algorithm));
+    }
+
+    std::vector<std::uint8_t> buffer(buffer_size);
+    std::uintmax_t processed = 0;
+
+    // Initial progress notification.
+    if (progress_cb) {
+        progress_cb(total_size, processed);
+    }
+
+    while (in) {
+        in.read(reinterpret_cast<char*>(buffer.data()),
+                static_cast<std::streamsize>(buffer.size()));
+        const std::streamsize got = in.gcount();
+        if (got <= 0) {
+            break;
+        }
+
+        hash->update(buffer.data(), static_cast<std::size_t>(got));
+        processed += static_cast<std::uintmax_t>(got);
+
+        if (progress_cb) {
+            progress_cb(total_size, processed);
+        }
+    }
+
+    // Finalize the digest and return lower-case hex.
+    const auto digest = hash->final();
+    const std::string hex = Botan::hex_encode(digest, false /*lowercase*/);
+    return hex;
+}
 }
