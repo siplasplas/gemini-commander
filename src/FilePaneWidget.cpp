@@ -32,8 +32,6 @@ FilePaneWidget::FilePaneWidget(QWidget* parent)
 
     setLayout(layout);
 
-    // sygnały z FilePanel – musimy je mieć w FilePanel
-    // np. directoryChanged(path), selectionChanged()
     connect(m_filePanel, &FilePanel::directoryChanged,
             this, &FilePaneWidget::onDirectoryChanged);
     connect(m_filePanel, &FilePanel::selectionChanged,
