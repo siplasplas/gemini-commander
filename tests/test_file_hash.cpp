@@ -73,4 +73,12 @@ TEST(FileHashTest, HashesWithVariousBufferSizes)
             EXPECT_EQ(hash, EXP_CRC32) << "bufSize = " << bufSize;
         }
     }
+    // --- cleanup: remove temporary file ---
+    try {
+        if (std::filesystem::exists(tmpPath)) {
+            std::filesystem::remove(tmpPath);
+        }
+    } catch (...) {
+        // ignore deletion errors
+    }
 }
