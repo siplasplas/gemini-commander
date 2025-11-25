@@ -83,17 +83,33 @@ void FilePanel::sortEntries() {
                   return cmpNames(asc);
                 }
 
-              case COLUMN_SIZE:
-                if (aDir && bDir) {
-                  return cmpNames(asc);
-                } else if (!aDir && !bDir) {
-                  if (a.size() != b.size())
-                    return asc ? (a.size() < b.size()) : (a.size() > b.size());
-                  return cmpNames(asc);
-                } else {
-                  return cmpNames(asc);
-                }
+                  case COLUMN_SIZE:
+                      if (aDir && bDir) {
+                          const bool aHas = c.hasTotalSize;
+                          const bool bHas = d.hasTotalSize;
 
+                          // 1) directories with calculated size always at the top,
+                          // regardless of asc/desc
+                          if (aHas != bHas) {
+                              return aHas; // true < false → counted before uncountable
+                          }
+
+                          // 2) both have their size calculated → we sort by totalSizeBytes
+                          if (aHas && bHas) {
+                              if (c.totalSizeBytes != d.totalSizeBytes)
+                                  return asc ? (c.totalSizeBytes < d.totalSizeBytes)
+                                             : (c.totalSizeBytes > d.totalSizeBytes);
+                              return cmpNames(asc);
+                          }
+
+                          // 3) both have no calculated size → sort only by name
+                          return cmpNames(asc);
+                      } else if (!aDir && !bDir) {
+                          if (a.size() != b.size())
+                              return asc ? (a.size() < b.size()) : (a.size() > b.size());
+                          return cmpNames(asc);
+                      }
+                      return aDir; // dirs before files
               case COLUMN_DATE: {
                 QDateTime da = a.lastModified();
                 QDateTime db = b.lastModified();
@@ -670,9 +686,7 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex)
         sortOrder = Qt::AscendingOrder;
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
-    // Przeładuj katalog z nowym sortowaniem
     loadDirectory();
-    // Ensure first visible item is shown
 }
 
 void FilePanel::startDrag(Qt::DropActions supportedActions)
