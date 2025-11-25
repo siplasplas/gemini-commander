@@ -19,6 +19,7 @@
 #include <QDirIterator>
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QStorageInfo>
 
 QString stripLeadingDot(const QString& s)
 {
@@ -1011,3 +1012,93 @@ void FilePanel::createNewDirectory(QWidget* dialogParent)
     auto firstPart = name.section('/', 0, 0);
     selectEntryByName(firstPart);
 }
+
+void FilePanel::renameOrMoveEntry(QWidget* dialogParent)
+{
+    if (!dir)
+        return;
+
+    QModelIndex current_index = currentIndex();
+    if (!current_index.isValid())
+        return;
+
+    // pełna nazwa z UserRole, jak przy F7
+    QStandardItem* item = model->item(current_index.row(), COLUMN_NAME);
+    if (!item)
+        return;
+
+    const QString fullName = item->data(Qt::UserRole).toString();
+    if (fullName.isEmpty()) {
+        // np. [..] – nie ma sensu tego „przenosić”
+        return;
+    }
+
+    QWidget* parent = dialogParent ? dialogParent : this;
+
+    // domyślna propozycja = istniejąca nazwa
+    bool ok = false;
+    QString newName = QInputDialog::getText(
+        parent,
+        tr("Rename / move"),
+        tr("New name or path:"),
+        QLineEdit::Normal,
+        fullName,
+        &ok
+    );
+
+    if (!ok || newName.isEmpty() || newName == fullName)
+        return;
+
+    QDir currentDir(currentPath);
+    const QString srcPath = currentDir.absoluteFilePath(fullName);
+
+    QString dstPath;
+    if (QDir::isAbsolutePath(newName)) {
+        dstPath = newName;
+    } else {
+        dstPath = currentDir.absoluteFilePath(newName);
+    }
+
+    // Sprawdzenie czy źródło i cel są na tym samym urządzeniu
+    QStorageInfo srcInfo(srcPath);
+    QStorageInfo dstInfo(dstPath);
+
+    if (!srcInfo.isValid() || !dstInfo.isValid()) {
+        QMessageBox::warning(
+            parent,
+            tr("Error"),
+            tr("Cannot determine storage devices for source or destination.")
+        );
+        return;
+    }
+
+    if (srcInfo.device() != dstInfo.device()) {
+        QMessageBox::warning(
+            parent,
+            tr("Error"),
+            tr("Source and destination are on different devices.\n"
+               "Move operation is not supported in this mode.")
+        );
+        return;
+    }
+
+    // Próba rename/move w obrębie jednego filesystemu
+    QFile file(srcPath);
+    if (!file.rename(dstPath)) {
+        QMessageBox::warning(
+            parent,
+            tr("Error"),
+            tr("Failed to rename/move:\n%1\nto\n%2").arg(srcPath, dstPath)
+        );
+        return;
+    }
+
+    // Odśwież panel
+    loadDirectory();
+
+    // Spróbuj zaznaczyć nową nazwę (tylko ostatni segment)
+    const QString leafName = QFileInfo(dstPath).fileName();
+    if (!leafName.isEmpty())
+        selectEntryByName(leafName);
+}
+

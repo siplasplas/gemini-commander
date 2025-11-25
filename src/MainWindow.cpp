@@ -263,7 +263,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->createNewDirectory(this);
                 return true;
             }
-        }  else if ((keyEvent->key() == Qt::Key_F8 || keyEvent->key() == Qt::Key_Delete)
+        } else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F6) {
+            if (auto* panel = panelForObject(obj)) {
+                panel->renameOrMoveEntry(this);
+                return true;
+            }
+        } else if ((keyEvent->key() == Qt::Key_F8 || keyEvent->key() == Qt::Key_Delete)
            && modifiers == Qt::NoModifier) {
 
         FilePanel* panel = currentFilePanel();
@@ -348,32 +353,37 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
         else if ((keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) && modifiers == Qt::NoModifier) {
-            commandLineEdit->setFocus();
-            commandLineEdit->selectAll();
-            return true; // Event handled
+            if (auto* panel = panelForObject(obj)) {
+                commandLineEdit->setFocus();
+                commandLineEdit->selectAll();
+                return true; // Event handled
+            }
         } else if (obj==commandLineEdit && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) && modifiers == Qt::NoModifier) {
-            currentFilePanel()->setFocus();
-            return true; // Event handled
+            if (auto* panel = panelForObject(obj)) {
+                currentFilePanel()->setFocus();
+                return true; // Event handled
+            }
         }
         else if (keyEvent->key() == Qt::Key_Home && modifiers == Qt::NoModifier) {
-            auto *panel = currentFilePanel();
-            int rows = panel->model->rowCount();
-            if (rows > 0) {
-                QModelIndex idx = panel->model->index(0, COLUMN_NAME);
-                panel->setCurrentIndex(idx);
-                panel->scrollTo(idx, QAbstractItemView::PositionAtTop);
+            if (auto* panel = panelForObject(obj)) {
+                int rows = panel->model->rowCount();
+                if (rows > 0) {
+                    QModelIndex idx = panel->model->index(0, COLUMN_NAME);
+                    panel->setCurrentIndex(idx);
+                    panel->scrollTo(idx, QAbstractItemView::PositionAtTop);
+                }
+                return true;
             }
-            return true;
-
         } else if (keyEvent->key() == Qt::Key_End && modifiers == Qt::NoModifier) {
-            auto *panel = currentFilePanel();
-            int rows = panel->model->rowCount();
-            if (rows > 0) {
-                QModelIndex idx = panel->model->index(rows - 1, COLUMN_NAME);
-                panel->setCurrentIndex(idx);
-                panel->scrollTo(idx, QAbstractItemView::PositionAtBottom);
+            if (auto* panel = panelForObject(obj)) {
+                int rows = panel->model->rowCount();
+                if (rows > 0) {
+                    QModelIndex idx = panel->model->index(rows - 1, COLUMN_NAME);
+                    panel->setCurrentIndex(idx);
+                    panel->scrollTo(idx, QAbstractItemView::PositionAtBottom);
+                }
+                return true;
             }
-            return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageUp) {
             FilePanel* panel = currentFilePanel();
             QDir dir(panel->currentPath);

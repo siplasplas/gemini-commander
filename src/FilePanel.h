@@ -65,6 +65,7 @@ public:
     void addAllEntries();
     void triggerCurrentEntry();
     void createNewDirectory(QWidget*dialogParent);
+    void renameOrMoveEntry(QWidget* dialogParent = nullptr);
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
