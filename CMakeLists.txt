@@ -93,6 +93,8 @@ add_executable(${PROJECT_NAME}
         src/FilePaneWidget.cpp
         src/FilePaneWidget.h
         src/SearchLineEdit.h
+        src/SortedDirIterator.cpp
+        src/SortedDirIterator.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}

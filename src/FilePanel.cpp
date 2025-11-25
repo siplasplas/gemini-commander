@@ -15,13 +15,14 @@
 #include <QStandardItemModel>
 #include <QUrl>
 #include <QDesktopServices>
-#include <QUrl>
+#include <QUrl>5
 #include <QDirIterator>
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QStorageInfo>
 
 #include "SizeFormat.h"
+#include "SortedDirIterator.h"
 
 QString stripLeadingDot(const QString& s)
 {

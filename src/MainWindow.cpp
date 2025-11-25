@@ -22,12 +22,13 @@
 #include <QMenu>
 #include <QToolBar>
 #include <QAction>
-#include <QDirIterator>
 #include <QInputDialog>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QMessageBox>
 #include <QStorageInfo>
+
+#include "SortedDirIterator.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -1177,12 +1178,12 @@ void MainWindow::collectCopyStats(const QString& srcPath, CopyStats& stats, bool
     // liczymy katalog root też
     stats.totalDirs += 1;
 
-    QDirIterator it(srcPath,
-                    QDir::AllEntries | QDir::NoDotAndDotDot,
-                    QDirIterator::Subdirectories);
+    SortedDirIterator it(srcPath,
+                    QDir::AllEntries | QDir::NoDotAndDotDot);
 
     while (it.hasNext()) {
         it.next();
+        qDebug() << it.filePath();
         const QFileInfo fi = it.fileInfo();
 
         if (fi.isDir()) {
