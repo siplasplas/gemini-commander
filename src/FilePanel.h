@@ -67,6 +67,7 @@ public:
     void createNewDirectory(QWidget*dialogParent);
     void renameOrMoveEntry(QWidget* dialogParent = nullptr,
                        const QString& defaultTargetDir = QString());
+    void toggleMarkOnCurrent(bool advanceRow);
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
@@ -86,6 +87,7 @@ public slots:
 private:
     int m_lastSearchRow = -1;
     QString m_lastSearchText;
+    void updateRowMarking(int row, bool marked);
 
 
 signals:

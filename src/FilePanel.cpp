@@ -180,6 +180,9 @@ void FilePanel::addEntries()
         row.append(new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
 
         model->appendRow(row);
+        const int rowIndex = model->rowCount();
+        if (entry.isMarked)
+            updateRowMarking(rowIndex, true);
     }
 }
 
@@ -565,7 +568,7 @@ bool FilePanel::eventFilter(QObject* obj, QEvent* ev)
     return QTableView::eventFilter(obj, ev);
 }
 
-
+/*
 void FilePanel::styleActive() {
     setStyleSheet(
         "QTableView:item {"
@@ -588,6 +591,29 @@ void FilePanel::styleInactive() {
         "    background-color: lightgray;"
         "    color: white;"
         "}");
+}
+
+*/
+void FilePanel::styleActive() {
+    setStyleSheet(
+        "QTableView::item {"
+        "    background-color: white;"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: blue;"
+        "}"
+    );
+}
+
+void FilePanel::styleInactive() {
+    setStyleSheet(
+        "QTableView::item {"
+        "    background-color: white;"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: #f0f0f0;"
+        "}"
+    );
 }
 
 void FilePanel::onHeaderSectionClicked(int logicalIndex)
@@ -1109,5 +1135,57 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
     const QString leafName = QFileInfo(dstPath).fileName();
     if (!leafName.isEmpty())
         selectEntryByName(leafName);
+}
+
+void FilePanel::updateRowMarking(int row, bool marked)
+{
+    if (!model || row < 0 || row >= model->rowCount())
+        return;
+
+    const int cols = model->columnCount();
+    for (int col = 0; col < cols; ++col) {
+        QStandardItem* item = model->item(row, col);
+        if (!item)
+            continue;
+
+        if (marked) {
+            item->setForeground(Qt::red);
+        } else {
+            item->setForeground(QBrush()); // reset do domyślnego koloru
+        }
+    }
+}
+
+void FilePanel::toggleMarkOnCurrent(bool advanceRow)
+{
+    QModelIndex idx = currentIndex();
+    if (!idx.isValid())
+        return;
+
+    const int row = idx.row();
+
+    if (!dir)
+        return;
+
+    const bool isRoot = dir->isRoot();
+    const int offset = isRoot ? 0 : 1; // 0: brak [..], 1: pierwszy wiersz to [..]
+    const int entryIndex = row - offset;
+
+    if (entryIndex < 0 || entryIndex >= entries.size())
+        return; // np. [..]
+
+    PanelEntry& entry = entries[entryIndex];
+    entry.isMarked = !entry.isMarked;
+
+    updateRowMarking(row, entry.isMarked);
+
+    if (advanceRow) {
+        int nextRow = row + 1;
+        if (nextRow < model->rowCount()) {
+            QModelIndex nextIdx = model->index(nextRow, COLUMN_NAME);
+            setCurrentIndex(nextIdx);
+            scrollTo(nextIdx, QAbstractItemView::PositionAtCenter);
+        }
+    }
 }
 

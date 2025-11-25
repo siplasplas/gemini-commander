@@ -222,7 +222,19 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
             showFavoriteDirsMenu(m_activeSide);
             return true;
-        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
+        }
+        else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Space) {
+            if (auto* panel = panelForObject(obj)) {
+                panel->toggleMarkOnCurrent(false);
+                return true;
+            }
+        } else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Insert) {
+            if (auto* panel = panelForObject(obj)) {
+                panel->toggleMarkOnCurrent(true);
+                return true;
+            }
+        }
+        else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
             FilePanel* panel =  currentFilePanel();
             if (panel->sortColumn == COLUMN_NAME) {
                 panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
