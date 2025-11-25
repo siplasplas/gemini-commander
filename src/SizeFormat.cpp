@@ -34,6 +34,8 @@ std::string formatSize(std::size_t value, bool binaryPrefix) {
   } else {
     precision = 0;
   }
+  if (divisor == 1)
+    precision = 0;
 
   std::ostringstream oss;
 

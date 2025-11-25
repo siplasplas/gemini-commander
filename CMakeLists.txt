@@ -105,3 +105,6 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 qt_add_resources(APP_RESOURCES src/resources.qrc)
 target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
+
+enable_testing()
+add_subdirectory(tests)
