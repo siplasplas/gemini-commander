@@ -25,6 +25,7 @@
 #include <QProcess>
 #include <QStandardPaths>
 #include <QMessageBox>
+#include <QStorageInfo>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -104,6 +105,8 @@ void MainWindow::setupUi()
 
     m_mainToolBar->addAction(m_openTerminalAction);
 
+    addToolBarBreak(Qt::TopToolBarArea);
+    createMountsToolbar();
 
     m_activeSide = LeftSide;
     if (auto* left = filePanelForSide(LeftSide))
@@ -800,3 +803,94 @@ void MainWindow::onOpenTerminal()
     }
 }
 
+QStringList MainWindow::listMountPoints() const
+{
+    QStringList pts;
+
+    QFile f("/proc/mounts");
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return pts;
+
+    QTextStream in(&f);
+
+    const QString user = qEnvironmentVariable("USER");
+    const QString userMedia1 = user.isEmpty()
+        ? QString()
+        : ("/media/" + user + "/");
+    const QString userMedia2 = user.isEmpty()
+        ? QString()
+        : ("/run/media/" + user + "/");
+
+    while (true) {
+        const QString line = in.readLine();
+        if (line.isNull())
+            break; // EOF
+
+        const QString trimmed = line.trimmed();
+        if (trimmed.isEmpty() || trimmed.startsWith('#'))
+            continue;
+
+        const auto parts = trimmed.split(' ', Qt::SkipEmptyParts);
+        if (parts.size() < 3)
+            continue;
+
+        const QString device     = parts[0];
+        const QString mountPoint = parts[1];
+        const QString fsType     = parts[2];
+
+        static const QSet<QString> goodFsTypes = {
+            "ext4",
+            "exfat",
+            "vfat",
+            "ntfs",
+            "btrfs",
+            "xfs"
+        };
+        if (!goodFsTypes.contains(fsType))
+            continue;
+
+        if (!user.isEmpty()) {
+            if (!mountPoint.startsWith(userMedia1) &&
+                !mountPoint.startsWith(userMedia2))
+            {
+                // eq. /boot/efi (vfat) will skipped
+                continue;
+            }
+        } else {
+            // fallback if USER is not set:
+            if (!mountPoint.startsWith("/media/") &&
+                !mountPoint.startsWith("/run/media/"))
+            {
+                continue;
+            }
+        }
+
+        pts << mountPoint;
+    }
+
+    pts.removeDuplicates();
+    pts.sort();
+    return pts;
+}
+
+void MainWindow::createMountsToolbar()
+{
+    auto* tb = addToolBar(tr("Mounts"));
+    tb->setMovable(true);
+
+    QStringList pts = listMountPoints();
+    for (const QString& mp : pts) {
+        QAction* act = new QAction(mp, tb);
+
+        connect(act, &QAction::triggered, this, [this, mp]() {
+            FilePanel* panel = currentFilePanel();
+            if (!panel)
+                return;
+
+            panel->currentPath = mp;
+            panel->loadDirectory();
+        });
+
+        tb->addAction(act);
+    }
+}

@@ -59,6 +59,10 @@ private:
 
     QToolBar* m_mainToolBar = nullptr;
     QAction* m_openTerminalAction = nullptr;
+
+    void createMountsToolbar();
+    QStringList listMountPoints() const;
+
 private slots:
     void onOpenTerminal();
 };
