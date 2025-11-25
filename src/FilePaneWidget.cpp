@@ -18,11 +18,7 @@ FilePaneWidget::FilePaneWidget(QWidget* parent)
     int h = fm.height() + 4;
     m_pathEdit->setFixedHeight(h);
 
-    m_filePanel = new FilePanel(nullptr); // jeśli FilePanel wymaga QSplitter, trzeba lekko przerobić ctor
-    // U Ciebie FilePanel dziedziczy z QTableView i przyjmował QSplitter*.
-    // Teraz najlepiej dodać alternatywny konstruktor bez splittera,
-    // albo przekazywać splitter z zewnątrz. Przyjmijmy, że masz już wersję bez splittera.
-
+    m_filePanel = new FilePanel(nullptr);
     m_searchEdit = new SearchLineEdit(this);
     m_searchEdit->hide();
 
