@@ -1013,7 +1013,7 @@ void FilePanel::createNewDirectory(QWidget* dialogParent)
     selectEntryByName(firstPart);
 }
 
-void FilePanel::renameOrMoveEntry(QWidget* dialogParent)
+void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultTargetDir)
 {
     if (!dir)
         return;
@@ -1022,27 +1022,31 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent)
     if (!current_index.isValid())
         return;
 
-    // pełna nazwa z UserRole, jak przy F7
     QStandardItem* item = model->item(current_index.row(), COLUMN_NAME);
     if (!item)
         return;
 
     const QString fullName = item->data(Qt::UserRole).toString();
     if (fullName.isEmpty()) {
-        // np. [..] – nie ma sensu tego „przenosić”
         return;
     }
 
     QWidget* parent = dialogParent ? dialogParent : this;
 
-    // domyślna propozycja = istniejąca nazwa
+    QString suggested = fullName;
+
+    if (!defaultTargetDir.isEmpty()) {
+        QDir dstDir(defaultTargetDir);
+        suggested = dstDir.filePath(fullName);
+    }
+
     bool ok = false;
     QString newName = QInputDialog::getText(
         parent,
         tr("Rename / move"),
         tr("New name or path:"),
         QLineEdit::Normal,
-        fullName,
+        suggested,
         &ok
     );
 
@@ -1061,8 +1065,10 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent)
 
     // Sprawdzenie czy źródło i cel są na tym samym urządzeniu
     QStorageInfo srcInfo(srcPath);
-    QStorageInfo dstInfo(dstPath);
+    QStorageInfo dstInfo(defaultTargetDir);
 
+    qDebug() << srcInfo;
+    qDebug() << dstInfo;
     if (!srcInfo.isValid() || !dstInfo.isValid()) {
         QMessageBox::warning(
             parent,

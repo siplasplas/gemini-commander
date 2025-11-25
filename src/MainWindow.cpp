@@ -265,7 +265,16 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
         } else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F6) {
             if (auto* panel = panelForObject(obj)) {
-                panel->renameOrMoveEntry(this);
+                int srcSide = sideForPanel(panel); // masz już taką funkcję
+                QString targetDir;
+
+                if (srcSide != -1) {
+                    int dstSide = (srcSide == LeftSide) ? RightSide : LeftSide;
+                    if (auto* dstPanel = filePanelForSide(dstSide)) {
+                        targetDir = dstPanel->currentPath;
+                    }
+                }
+                panel->renameOrMoveEntry(this, targetDir);
                 return true;
             }
         } else if ((keyEvent->key() == Qt::Key_F8 || keyEvent->key() == Qt::Key_Delete)
