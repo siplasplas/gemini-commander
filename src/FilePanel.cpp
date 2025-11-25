@@ -1181,8 +1181,40 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow)
         if (nextRow < model->rowCount()) {
             QModelIndex nextIdx = model->index(nextRow, COLUMN_NAME);
             setCurrentIndex(nextIdx);
-            scrollTo(nextIdx, QAbstractItemView::PositionAtCenter);
+            scrollTo(nextIdx);
         }
     }
 }
 
+void FilePanel::rememberSelectionAndClear()
+{
+    QModelIndex idx = currentIndex();
+    if (idx.isValid())
+        m_lastSelectedRow = idx.row();
+    else
+        m_lastSelectedRow = -1;
+    clearSelection();
+    setCurrentIndex(QModelIndex());
+}
+
+void FilePanel::restoreSelectionFromMemory()
+{
+    if (!model)
+        return;
+
+    if (m_lastSelectedRow < 0 || m_lastSelectedRow >= model->rowCount())
+        return;
+
+    QModelIndex idx = model->index(m_lastSelectedRow, COLUMN_NAME);
+    if (!idx.isValid())
+        return;
+
+    setCurrentIndex(idx);
+    if (selectionModel()) {
+        selectionModel()->select(
+            idx,
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows
+        );
+    }
+    scrollTo(idx);
+}

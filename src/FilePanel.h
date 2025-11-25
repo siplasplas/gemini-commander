@@ -68,6 +68,8 @@ public:
     void renameOrMoveEntry(QWidget* dialogParent = nullptr,
                        const QString& defaultTargetDir = QString());
     void toggleMarkOnCurrent(bool advanceRow);
+    void rememberSelectionAndClear();
+    void restoreSelectionFromMemory();
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
@@ -88,7 +90,7 @@ private:
     int m_lastSearchRow = -1;
     QString m_lastSearchText;
     void updateRowMarking(int row, bool marked);
-
+    int m_lastSelectedRow = -1;
 
 signals:
     void selectionChanged();

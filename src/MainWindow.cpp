@@ -128,14 +128,8 @@ void MainWindow::setupUi()
     m_mainToolBar->setStyleSheet(tbStyle);
     m_mountsToolBar->setStyleSheet(tbStyle);
 
-    m_activeSide = LeftSide;
-    if (auto* left = filePanelForSide(LeftSide))
-        left->active(true);
-    if (auto* right = filePanelForSide(RightSide))
-        right->active(false);
-
     QTimer::singleShot(0, this, [this]() {
-    setActiveSide(LeftSide);
+        setActiveSide(LeftSide);
     });
 }
 
@@ -519,12 +513,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 }
 
                 panel->active(true);
+                panel->restoreSelectionFromMemory();
             }
         }
     }
     else if (event->type() == QEvent::FocusOut) {
         if (auto* panel = panelForObject(obj)) {
-            // prosto: panel traci focus → nieaktywny
+            panel->rememberSelectionAndClear();
             panel->active(false);
         }
     }
@@ -723,12 +718,18 @@ FilePanel* MainWindow::currentFilePanel() const
     return filePanelForSide(m_activeSide);
 }
 
+FilePanel* MainWindow::oppositeFilePanel() const
+{
+    return filePanelForSide(!m_activeSide);
+}
+
 void MainWindow::setActiveSide(int side)
 {
     if (side != LeftSide && side != RightSide)
         return;
     m_activeSide = side;
-
+    if (auto* panel = oppositeFilePanel())
+        panel->rememberSelectionAndClear();
     if (auto* panel = currentFilePanel())
         panel->setFocus();
 }

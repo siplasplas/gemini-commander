@@ -53,6 +53,7 @@ private:
     // Dostęp do aktualnego FilePaneWidget na aktywnej stronie
     FilePaneWidget* currentPane() const;
     FilePanel* currentFilePanel() const;
+    FilePanel* oppositeFilePanel() const;
 
     // Dostęp do panelu po stronie (left/right)
     FilePaneWidget* paneForSide(int side) const;
