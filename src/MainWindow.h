@@ -5,6 +5,7 @@
 
 #include <QMainWindow>
 #include <QTableView>
+#include <QProgressDialog>
 
 #include "editor/EditorFrame.h"
 
@@ -63,6 +64,22 @@ private:
     void createMountsToolbar();
     QStringList listMountPoints() const;
     void copyFromPanel(FilePanel* srcPanel);
+
+    struct CopyStats {
+        quint64 totalBytes = 0;
+        quint64 totalFiles = 0;
+        quint64 totalDirs  = 0;
+    };
+
+    void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok);
+    bool copyDirectoryRecursive(const QString& srcRoot,
+                                const QString& dstRoot,
+                                const CopyStats& stats,
+                                QProgressDialog& progress,
+                                quint64& bytesCopied,
+                                bool& userAbort);
+
+
 
 private slots:
     void onOpenTerminal();
