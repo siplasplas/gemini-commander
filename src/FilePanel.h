@@ -15,26 +15,24 @@ QT_END_NAMESPACE
 
 
 enum class EntryContentState {
-    NotDirectory,      // wpis nie jest katalogiem
-    DirEmpty,          // katalog pusty
-    DirNotEmpty,       // katalog niepusty
-    DirUnknown         // jeszcze nie sprawdzono
+    NotDirectory,
+    DirEmpty,
+    DirNotEmpty,
+    DirUnknown
 };
 
 struct PanelEntry {
     QFileInfo info;
     bool isMarked = false;
-    EntryContentState contentState = EntryContentState::NotDirectory;
+    EntryContentState contentState;
     PanelEntry() = default;
     explicit PanelEntry(const QFileInfo& fi)
-        : info(fi) {
-        if (info.isDir()) {
-            QDir dir(fi.absoluteFilePath());
-            if (dir.isEmpty())
-                contentState = EntryContentState::DirEmpty;
-            else
-                contentState = EntryContentState::DirNotEmpty;
-        }
+        : info(fi)
+    {
+        if (info.isDir())
+            contentState = EntryContentState::DirUnknown;
+        else
+            contentState = EntryContentState::NotDirectory;
     }
 };
 
@@ -82,7 +80,7 @@ public slots:
     void prevMatch();
     void jumpWithControl(int direction);
 
-  private:
+private:
     int m_lastSearchRow = -1;
     QString m_lastSearchText;
 
@@ -95,6 +93,7 @@ signals:
 private:
    static QIcon iconForEntry(const QFileInfo& info);
    QIcon iconForExtension(const QString &ext, EntryContentState contentState);
+   EntryContentState ensureContentState(PanelEntry&entry)const;
 
 void styleActive();
     void styleInactive();

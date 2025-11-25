@@ -136,7 +136,7 @@ void FilePanel::addFirstEntry(bool isRoot) {
 
 void FilePanel::addEntries()
 {
-    for (const PanelEntry &entry : entries) {
+    for (PanelEntry &entry : entries) {
 
         QString base, ext;
         auto info = entry.info;
@@ -162,7 +162,8 @@ void FilePanel::addEntries()
 
         auto* nameItem = new QStandardItem(base);
         nameItem->setData(fullName, Qt::UserRole);
-        nameItem->setIcon(iconForExtension(ext, entry.contentState));
+        EntryContentState state = ensureContentState(entry);
+        nameItem->setIcon(iconForExtension(ext, state));
         row.append(nameItem);
 
         row.append(new QStandardItem(ext));
@@ -205,7 +206,6 @@ void FilePanel::loadDirectory()
     while (it.hasNext()) {
         it.next();
         QFileInfo info = it.fileInfo();
-        qDebug() << info.fileName();
         PanelEntry entry(info);
         entries.append(entry);
     }
@@ -275,7 +275,6 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
             return; // do not reload directory
         }
     }
-
     loadDirectory();
     selectEntryByName(selectedName);
 }
@@ -714,9 +713,16 @@ QIcon FilePanel::iconForExtension(const QString& ext, EntryContentState contentS
 {
     static QFileIconProvider provider;
     static QMimeDatabase db;
-    static QHash<QString, QIcon> cache;
+    static QHash<QString, QIcon> cache;   // pliki
+    static QHash<int, QIcon> folderCache; // katalogi (EntryContentState jako int)
 
+    // --- katalogi ---
     if (contentState != EntryContentState::NotDirectory) {
+        int key = static_cast<int>(contentState);
+        auto it = folderCache.find(key);
+        if (it != folderCache.end())
+            return it.value();
+
         QString iconPath;
         if (contentState == EntryContentState::DirEmpty)
             iconPath = ":/icons/folder_blue.svg";
@@ -724,33 +730,36 @@ QIcon FilePanel::iconForExtension(const QString& ext, EntryContentState contentS
             iconPath = ":/icons/folder_yellow.svg";
         else
             iconPath = ":/icons/folder_white.svg";
-        QIcon folderIcon(iconPath);
-        return folderIcon;
+
+        QIcon icon(iconPath);
+        folderCache.insert(key, icon);
+        return icon;
     }
 
-    QString key = ext.toLower();
+    // --- pliki: cache po rozszerzeniu ---
+    auto it = cache.find(ext);
+    if (it != cache.end())
+        return it.value();
 
-    // cache hit
-    if (cache.contains(key)) {
-        return cache[key];
-    }
-
-    // MIME-based icon
     QIcon icon;
 
-    if (!key.isEmpty()) {
-        QMimeType mt = db.mimeTypeForFile("." + key, QMimeDatabase::MatchExtension);
+    if (!ext.isEmpty()) {
+        QMimeType mt = db.mimeTypeForFile("." + ext, QMimeDatabase::MatchExtension);
         if (mt.isValid()) {
+            // próba ikony z motywu
             icon = QIcon::fromTheme(mt.iconName());
+
+            // ewentualnie możesz użyć mt.genericIconName() jako fallback motywu:
+            if (icon.isNull() && !mt.genericIconName().isEmpty())
+                icon = QIcon::fromTheme(mt.genericIconName());
         }
     }
 
-    // fallback
-    if (icon.isNull()) {
+    // jeśli nie udało się wyciągnąć nic z motywu, bierz domyślną
+    if (icon.isNull())
         icon = provider.icon(QFileIconProvider::File);
-    }
 
-    cache.insert(key, icon);
+    cache.insert(ext, icon);
     return icon;
 }
 
@@ -942,3 +951,22 @@ void FilePanel::jumpWithControl(int direction)
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 
 }
+
+EntryContentState FilePanel::ensureContentState(PanelEntry& entry) const
+{
+    if (entry.contentState != EntryContentState::DirUnknown)
+        return entry.contentState;
+
+    if (!entry.info.isDir()) {
+        entry.contentState = EntryContentState::NotDirectory;
+        return entry.contentState;
+    }
+
+    QDir dir(entry.info.absoluteFilePath());
+    entry.contentState = dir.isEmpty()
+        ? EntryContentState::DirEmpty
+        : EntryContentState::DirNotEmpty;
+
+    return entry.contentState;
+}
+
