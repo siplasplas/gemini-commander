@@ -538,19 +538,14 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                         prev->active(false);
                     m_activeSide = side;
                 }
-
+                auto sibling = filePanelForSide(!m_activeSide);
+                if (sibling)
+                    sibling->active(false);
                 panel->active(true);
                 panel->restoreSelectionFromMemory();
             }
         }
     }
-    else if (event->type() == QEvent::FocusOut) {
-        if (auto* panel = panelForObject(obj)) {
-            panel->rememberSelectionAndClear();
-            panel->active(false);
-        }
-    }
-
     return QMainWindow::eventFilter(obj, event);
 }
 
