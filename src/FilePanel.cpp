@@ -16,6 +16,7 @@
 #include <QUrl>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QDirIterator>
 
 QString stripLeadingDot(const QString& s)
 {
@@ -29,7 +30,9 @@ void FilePanel::sortEntries() {
   // Sorting (TC-like)
   // --------------------------
   std::sort(entries.begin(), entries.end(),
-            [this](const QFileInfo &a, const QFileInfo &b) {
+            [this](const PanelEntry &c, const PanelEntry &d) {
+              auto a = c.info;
+              auto b = d.info;
               const bool aDir = a.isDir();
               const bool bDir = b.isDir();
 
@@ -133,9 +136,10 @@ void FilePanel::addFirstEntry(bool isRoot) {
 
 void FilePanel::addEntries()
 {
-    for (const QFileInfo &info : entries) {
+    for (const PanelEntry &entry : entries) {
 
         QString base, ext;
+        auto info = entry.info;
 
         if (info.isDir()) {
             base = info.fileName();
@@ -158,7 +162,7 @@ void FilePanel::addEntries()
 
         auto* nameItem = new QStandardItem(base);
         nameItem->setData(fullName, Qt::UserRole);
-        nameItem->setIcon(iconForExtension(ext, info.isDir()));
+        nameItem->setIcon(iconForExtension(ext, entry.contentState));
         row.append(nameItem);
 
         row.append(new QStandardItem(ext));
@@ -196,9 +200,15 @@ void FilePanel::loadDirectory()
     if (!dir->exists()) {
         return;
     }
-
-    QDir::Filters filters = QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden;
-    entries = dir->entryInfoList(filters, QDir::NoSort);
+    entries.clear();
+    QDirIterator it(currentPath, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden, QDirIterator::NoIteratorFlags);
+    while (it.hasNext()) {
+        it.next();
+        QFileInfo info = it.fileInfo();
+        qDebug() << info.fileName();
+        PanelEntry entry(info);
+        entries.append(entry);
+    }
     addAllEntries();
     emit directoryChanged(currentPath);
 }
@@ -323,8 +333,6 @@ FilePanel::FilePanel(QWidget* parent)
     });
 
     initSearchEdit();
-    loadDirectory();
-
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::DragOnly);
 }
@@ -702,14 +710,21 @@ QIcon FilePanel::iconForEntry(const QFileInfo& info)
     return provider.icon(QFileIconProvider::File);
 }
 
-QIcon FilePanel::iconForExtension(const QString& ext, bool isDir)
+QIcon FilePanel::iconForExtension(const QString& ext, EntryContentState contentState)
 {
     static QFileIconProvider provider;
     static QMimeDatabase db;
     static QHash<QString, QIcon> cache;
 
-    if (isDir) {
-        static QIcon folderIcon(":/icons/folder_yellow.svg");
+    if (contentState != EntryContentState::NotDirectory) {
+        QString iconPath;
+        if (contentState == EntryContentState::DirEmpty)
+            iconPath = ":/icons/folder_blue.svg";
+        else if (contentState == EntryContentState::DirNotEmpty)
+            iconPath = ":/icons/folder_yellow.svg";
+        else
+            iconPath = ":/icons/folder_white.svg";
+        QIcon folderIcon(iconPath);
         return folderIcon;
     }
 

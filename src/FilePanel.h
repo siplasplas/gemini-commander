@@ -1,6 +1,7 @@
 #ifndef PANEL_H
 #define PANEL_H
 
+#include <QDir>
 #include <QTableView>
 #include <qfileinfo.h>
 #include <QFileIconProvider>
@@ -12,6 +13,30 @@ class QTableView;
 class QStandardItemModel;
 QT_END_NAMESPACE
 
+
+enum class EntryContentState {
+    NotDirectory,      // wpis nie jest katalogiem
+    DirEmpty,          // katalog pusty
+    DirNotEmpty,       // katalog niepusty
+    DirUnknown         // jeszcze nie sprawdzono
+};
+
+struct PanelEntry {
+    QFileInfo info;
+    bool isMarked = false;
+    EntryContentState contentState = EntryContentState::NotDirectory;
+    PanelEntry() = default;
+    explicit PanelEntry(const QFileInfo& fi)
+        : info(fi) {
+        if (info.isDir()) {
+            QDir dir(fi.absoluteFilePath());
+            if (dir.isEmpty())
+                contentState = EntryContentState::DirEmpty;
+            else
+                contentState = EntryContentState::DirNotEmpty;
+        }
+    }
+};
 
 enum Columns {
         COLUMN_ID = 0,
@@ -69,7 +94,7 @@ signals:
 
 private:
    static QIcon iconForEntry(const QFileInfo& info);
-   QIcon iconForExtension(const QString &ext, bool isDir);
+   QIcon iconForExtension(const QString &ext, EntryContentState contentState);
 
 void styleActive();
     void styleInactive();
@@ -78,7 +103,7 @@ void styleActive();
     // Search UI and logic
     QLineEdit* searchEdit = nullptr;
     QString lastSearchText;
-    QFileInfoList entries;
+    QList<PanelEntry> entries;
     QDir *dir = nullptr;
     void sortEntries();
     void addFirstEntry(bool isRoot);

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg1"
+   width="85.333336"
+   height="85.333336"
+   viewBox="0 0 85.333336 85.333336"
+   sodipodi:docname="folder_white.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="19.473057"
+     inkscape:cx="43.958173"
+     inkscape:cy="38.69449"
+     inkscape:window-width="2494"
+     inkscape:window-height="1377"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g1" />
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Image"
+     id="g1">
+    <path
+       style="fill:#000000"
+       d="M 10.666667,42.666668 V 10.666667 h 13.333334 c 12.444445,0 11.504588,0.978395 13.333333,2.666667 2.47197,2.966224 0.813627,1.112251 5.333334,5.333333 1.84063,1.719017 0.888889,2.666667 16,2.666667 H 74.666669 V 48.000001 74.666669 H 42.666668 10.666667 Z M 69.333335,53.333335 V 37.333334 H 42.666668 16 v 16.000001 16 H 42.666668 69.333335 Z M 32.000001,29.333334 c 1.27321,-1.240738 1.324281,-1.37266 2.666667,-2.666667 1.812809,-1.747476 2.666666,-5.407952 2.666666,-5.333333 V 16 H 26.666667 16 v 8.000001 8 h 8.000001 c 7.111111,0 6.305351,-1.015238 8,-2.666667 z"
+       id="path1"
+       sodipodi:nodetypes="ccsssscccccccccccccccssccccccss" />
+    <path
+       style="fill:#ffd42a;stroke-width:0.051353"
+       d="M 16.022137,53.330095 V 37.359311 h 26.65221 26.652209 V 53.330095 69.30088 H 42.674347 16.022137 Z"
+       id="path2" />
+    <path
+       style="fill:#ffeeaa;stroke-width:0.051353"
+       d="M 16.022137,53.330095 V 37.359311 h 26.65221 26.652209 V 53.330095 69.30088 H 42.674347 16.022137 Z"
+       id="path3" />
+    <path
+       style="fill:#f9f9f9;stroke-width:0.051353"
+       d="M 16.022137,53.330095 V 37.359311 h 26.65221 26.652209 V 53.330095 69.30088 H 42.674347 16.022137 Z"
+       id="path4" />
+  </g>
+</svg>
