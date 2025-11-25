@@ -1183,7 +1183,6 @@ void MainWindow::collectCopyStats(const QString& srcPath, CopyStats& stats, bool
 
     while (it.hasNext()) {
         it.next();
-        qDebug() << it.filePath();
         const QFileInfo fi = it.fileInfo();
 
         if (fi.isDir()) {

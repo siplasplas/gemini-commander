@@ -15,7 +15,6 @@
 #include <QStandardItemModel>
 #include <QUrl>
 #include <QDesktopServices>
-#include <QUrl>5
 #include <QDirIterator>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -177,11 +176,7 @@ static QStringList getTextColumn(PanelEntry& entry)
         }
     }
 
-    QString fullName = base;
-    if (!ext.isEmpty())
-        fullName += "." + ext;
-
-    colStrings.append(fullName);               // COLUMN_NAME
+    colStrings.append(base);               // COLUMN_NAME
     colStrings.append(ext);                    // COLUMN_EXT
 
     QString sizeStr;
@@ -1161,8 +1156,6 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
     QStorageInfo srcInfo(srcPath);
     QStorageInfo dstInfo(defaultTargetDir);
 
-    qDebug() << srcInfo;
-    qDebug() << dstInfo;
     if (!srcInfo.isValid() || !dstInfo.isValid()) {
         QMessageBox::warning(
             parent,
