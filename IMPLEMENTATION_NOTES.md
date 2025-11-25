@@ -19,4 +19,4 @@
     • Ctrl+P, Ctrl+Enter, Ctrl+Shift+Enter – when inserting paths they should end with a space and be wrapped in quotes if they contain spaces.
     • Navigation history (Alt+Down).
     • Handling of symbolic links or file attributes (permissions, hidden).
-      
+    * F5/F6/F7 - refresh sibling panel  
