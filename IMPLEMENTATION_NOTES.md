@@ -1,4 +1,3 @@
-    • Method to convert size_t to string like "41.6 Gi"
     • When copying or moving to removable media, sync mut be used.
     • Editing and viewing should use different Frame classes.
     • Viewer as image mode.
@@ -20,3 +19,4 @@
     • Navigation history (Alt+Down).
     • Handling of symbolic links or file attributes (permissions, hidden).
     * F5/F6/F7 - refresh sibling panel  
+    * copy file by QFile + QIODevice::read /

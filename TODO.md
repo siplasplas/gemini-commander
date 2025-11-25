@@ -1,10 +1,7 @@
 # MUST-HAVE (Core File Manager Functionality)
 
 * **Basic file and directory operations**
-
-    * Implement copying (F5), moving (F6), deleting (F8).
-    * Implement creating directories/files (F7).
-    * Implement renaming (at least single rename).
+ 
     * Add file selection support.
 
 * **File selection mechanics (essential)**
