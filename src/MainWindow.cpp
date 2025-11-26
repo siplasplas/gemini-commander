@@ -395,19 +395,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             ok = dir.rmdir(name);
         } else {
         // plik lub niepusty katalog – próbujemy przenieść do kosza
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         ok = QFile::moveToTrash(fullPath);
-#else
-        // fallback gdyby moveToTrash nie było dostępne
-        if (info.isDir()) {
-            QDir d(fullPath);
-            ok = d.removeRecursively();
-        } else {
-            ok = QFile::remove(fullPath);
-        }
-#endif
             }
-
             if (!ok) {
                 QMessageBox::warning(
                     this,
