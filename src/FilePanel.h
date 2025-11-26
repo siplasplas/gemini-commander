@@ -16,6 +16,11 @@ class QStandardItemModel;
 QT_END_NAMESPACE
 
 
+enum class Side {
+    Left  = 0,
+    Right = 1
+};
+
 enum class EntryContentState {
     NotDirectory,
     DirEmpty,
@@ -65,10 +70,9 @@ public:
     int sortColumn = COLUMN_NAME;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
 
-    explicit FilePanel(QWidget* parent = nullptr);
+    FilePanel(Side side, QWidget* parent = nullptr);
     ~FilePanel() override;
 
-    void active(bool active);
     void loadDirectory();
 
     QString getRowName(int row) const;
@@ -84,6 +88,7 @@ public:
     std::pair<PanelEntry*, int> currentEntryRow();
     void updateColumn(int row, PanelEntry& entry);
     QList<QStandardItem*> entryToRow(PanelEntry& entry);
+    Side side() {return m_side;}
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
@@ -101,6 +106,7 @@ public slots:
     void jumpWithControl(int direction);
 
 private:
+    Side m_side;
     int m_lastSearchRow = -1;
     QString m_lastSearchText;
     void updateRowMarking(int row, bool marked);
@@ -112,13 +118,9 @@ signals:
     void searchRequested(const QString& initialText);
 
 private:
-   static QIcon iconForEntry(const QFileInfo& info);
-   QIcon iconForExtension(const QString &ext, EntryContentState contentState);
-   EntryContentState ensureContentState(PanelEntry&entry)const;
-
-void styleActive();
-    void styleInactive();
-
+    static QIcon iconForEntry(const QFileInfo& info);
+    QIcon iconForExtension(const QString &ext, EntryContentState contentState);
+    EntryContentState ensureContentState(PanelEntry&entry)const;
     bool mixedHidden = true;//filenames with dot, are between others
     // Search UI and logic
     QLineEdit* searchEdit = nullptr;

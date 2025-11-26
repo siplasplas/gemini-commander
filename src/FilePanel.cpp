@@ -295,33 +295,27 @@ QString FilePanel::getRowName(int row) const {
 
 void FilePanel::selectEntryByName(const QString& fullName)
 {
+    m_lastSelectedRow = -1;
     // For "[..]" / going up we expect empty fullName
     if (fullName.isEmpty()) {
-        // row 0 (parent entry), unless we are at root
-        if (currentPath != "/" && model->rowCount() > 0) {
-            QModelIndex idx = model->index(0, COLUMN_NAME);
-            setCurrentIndex(idx);
-            scrollTo(idx);
-            setFocus();
-        }
+        if (currentPath != "/" && model->rowCount() > 0)
+            m_lastSelectedRow = 0;
+    } else {
+        QModelIndex start = model->index(0, COLUMN_NAME);
+        QModelIndexList matches = model->match(
+            start,
+            Qt::UserRole,             // search fullName stored in UserRole
+            fullName,
+            1,                        // first match only
+            Qt::MatchExactly
+        );
+
+        if (matches.isEmpty())
+            return;
+
+        QModelIndex selectIndex = matches.first();
+        m_lastSelectedRow = selectIndex.row();
     }
-
-    QModelIndex start = model->index(0, COLUMN_NAME);
-    QModelIndexList matches = model->match(
-        start,
-        Qt::UserRole,             // search fullName stored in UserRole
-        fullName,
-        1,                        // first match only
-        Qt::MatchExactly
-    );
-
-    if (matches.isEmpty())
-        return;
-
-    QModelIndex selectIndex = matches.first();
-    setCurrentIndex(selectIndex);
-    scrollTo(selectIndex);
-    setFocus();
 }
 
 void FilePanel::onPanelActivated(const QModelIndex &index) {
@@ -353,8 +347,7 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
     selectEntryByName(selectedName);
 }
 
-FilePanel::FilePanel(QWidget* parent)
-    : QTableView(parent) {
+FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(parent) {
     model = new QStandardItemModel(nullptr);
     QStringList headers = {"id","Name", "Ext", "Size", "Date"};
     model->setHorizontalHeaderLabels(headers);
@@ -540,14 +533,6 @@ bool FilePanel::findAndSelectPattern(const QString& pattern,
     return false;
 }
 
-void FilePanel::active(bool active) {
-    if (active)
-        styleActive();
-    else
-        styleInactive();
-}
-
-
 void FilePanel::onSearchTextChanged(const QString& text)
 {
     // Remember current text as candidate
@@ -631,51 +616,6 @@ bool FilePanel::eventFilter(QObject* obj, QEvent* ev)
     }
 
     return QTableView::eventFilter(obj, ev);
-}
-
-/*
-void FilePanel::styleActive() {
-    setStyleSheet(
-        "QTableView:item {"
-        "background-color: white;"
-        "color: black;"
-        "}"
-        "QTableView:item:selected {"
-        "    background-color: blue;"
-        "    color: white;"
-        "}");
-}
-
-void FilePanel::styleInactive() {
-    setStyleSheet(
-        "QTableView:item {"
-        "background-color: white;"
-        "color: black;"
-        "}"
-        "QTableView:item:selected {"
-        "    background-color: lightgray;"
-        "    color: white;"
-        "}");
-}
-
-*/
-void FilePanel::styleActive() {
-    setStyleSheet(
-        "QTableView::item {"
-        "    background-color: white;"
-        "}"
-        "QTableView::item:selected {"
-        "    background-color: blue;"
-        "}"
-    );
-}
-
-void FilePanel::styleInactive() {
-    setStyleSheet(
-        "QTableView::item {"
-        "    background-color: white;"
-        "}"
-    );
 }
 
 void FilePanel::onHeaderSectionClicked(int logicalIndex)
@@ -1259,8 +1199,6 @@ void FilePanel::rememberSelectionAndClear()
     QModelIndex idx = currentIndex();
     if (idx.isValid())
         m_lastSelectedRow = idx.row();
-    else
-        m_lastSelectedRow = -1;
     clearSelection();
     setCurrentIndex(QModelIndex());
 }

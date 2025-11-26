@@ -5,8 +5,8 @@
 #include <QStandardItemModel>
 #include <QVBoxLayout>
 
-FilePaneWidget::FilePaneWidget(QWidget* parent)
-    : QWidget(parent)
+FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
+    : m_side(side), QWidget(parent)
 {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -18,7 +18,7 @@ FilePaneWidget::FilePaneWidget(QWidget* parent)
     int h = fm.height() + 4;
     m_pathEdit->setFixedHeight(h);
 
-    m_filePanel = new FilePanel(nullptr);
+    m_filePanel = new FilePanel(side, nullptr);
     m_searchEdit = new SearchLineEdit(this);
     m_searchEdit->hide();
 

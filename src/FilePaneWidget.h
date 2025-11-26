@@ -12,11 +12,10 @@ class FilePaneWidget : public QWidget
 {
   Q_OBJECT
 public:
-  explicit FilePaneWidget(QWidget* parent = nullptr);
+  FilePaneWidget(Side side, QWidget* parent = nullptr);
 
   FilePanel* filePanel() const { return m_filePanel; }
 
-  // helpery do ustawiania katalogu / aktualizacji UI
   void setCurrentPath(const QString& path);
   QString currentPath() const;
 
@@ -25,6 +24,7 @@ public slots:
 void onSelectionChanged();
 
 private:
+  Side m_side;
   QLineEdit* m_pathEdit = nullptr;
   FilePanel* m_filePanel = nullptr;
   QLabel*    m_statusLabel = nullptr;

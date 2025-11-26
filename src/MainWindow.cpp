@@ -41,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     for (auto* panel : allFilePanels())
         panel->loadDirectory();
+    setActiveSideWithFocus(Side::Left);
 
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
@@ -75,8 +76,8 @@ void MainWindow::setupUi()
 
     commandLineEdit = new QLineEdit(centralWidget);
 
-    auto* leftPane  = new FilePaneWidget(m_leftTabs);
-    auto* rightPane = new FilePaneWidget(m_rightTabs);
+    auto* leftPane  = new FilePaneWidget(Side::Left, m_leftTabs);
+    auto* rightPane = new FilePaneWidget(Side::Right, m_rightTabs);
     m_leftTabs->addTab(leftPane,  "Left");
     m_rightTabs->addTab(rightPane, "Right");
 
@@ -128,10 +129,10 @@ void MainWindow::setupUi()
 
     m_mainToolBar->setStyleSheet(tbStyle);
     m_mountsToolBar->setStyleSheet(tbStyle);
+}
 
-    QTimer::singleShot(0, this, [this]() {
-        setActiveSide(LeftSide);
-    });
+Side MainWindow::opposite(Side side){
+    return side==Side::Left?Side::Right:Side::Left;
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -177,8 +178,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         if (keyEvent->key() == Qt::Key_Tab) {
             auto view = dynamic_cast<QTableView*> (obj);
             if (view) {
-                m_activeSide = 1 - m_activeSide;
-                currentFilePanel()->setFocus();
+                setActiveSideWithFocus(opposite(m_activeSide));
                 return true; // Event handled
             }
         } else if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
@@ -328,14 +328,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
         else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F6) {
             if (auto* panel = panelForObject(obj)) {
-                int srcSide = sideForPanel(panel); // masz już taką funkcję
+                Side srcSide = panel->side(); // masz już taką funkcję
                 QString targetDir;
-
-                if (srcSide != -1) {
-                    int dstSide = (srcSide == LeftSide) ? RightSide : LeftSide;
-                    if (auto* dstPanel = filePanelForSide(dstSide)) {
-                        targetDir = dstPanel->currentPath;
-                    }
+                Side dstSide = opposite(srcSide);
+                if (auto* dstPanel = filePanelForSide(dstSide)) {
+                    targetDir = dstPanel->currentPath;
                 }
                 panel->renameOrMoveEntry(this, targetDir);
                 return true;
@@ -515,7 +512,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             const QString path = pane->currentPath();
 
-            auto* newPane = new FilePaneWidget(tabs);
+            auto* newPane = new FilePaneWidget(m_activeSide, tabs);
             // duplicate the same folder
             newPane->setCurrentPath(path);
 
@@ -523,34 +520,17 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             const int newIndex = tabs->insertTab(insertIndex, newPane, tabs->tabText(tabs->currentIndex()));
 
             tabs->setCurrentIndex(newIndex);
-            setActiveSide(m_activeSide); //ensure, focus and style are consistent
-            if (auto* fp = newPane->filePanel())
-                fp->setFocus();
-
             return true;
         }
     } else if (event->type() == QEvent::FocusIn) {
         if (auto* panel = panelForObject(obj)) {
-            int side = sideForPanel(panel);
-            if (side != -1) {
-                // dezaktywuj poprzedni side, jeśli chcesz mieć tylko jeden aktywny „na niebiesko”
-                if (side != m_activeSide) {
-                    if (auto* prev = currentFilePanel())
-                        prev->active(false);
-                    m_activeSide = side;
-                }
-                auto sibling = filePanelForSide(!m_activeSide);
-                if (sibling)
-                    sibling->active(false);
-                panel->active(true);
-                panel->restoreSelectionFromMemory();
-            }
+            setActiveSide(panel->side());
         }
     }
     return QMainWindow::eventFilter(obj, event);
 }
 
-void MainWindow::showFavoriteDirsMenu(int side)
+void MainWindow::showFavoriteDirsMenu(Side side)
 {
     FilePanel* panel = filePanelForSide(side);
     if (!panel)
@@ -710,10 +690,10 @@ QVector<FilePanel*> MainWindow::allFilePanels() const
 }
 
 
-FilePaneWidget* MainWindow::paneForSide(int side) const
+FilePaneWidget* MainWindow::paneForSide(Side side) const
 {
     QTabWidget* tabs = nullptr;
-    if (side == LeftSide)
+    if (side == Side::Left)
         tabs = m_leftTabs;
     else
         tabs = m_rightTabs;
@@ -724,7 +704,7 @@ FilePaneWidget* MainWindow::paneForSide(int side) const
     return qobject_cast<FilePaneWidget*>(tabs->currentWidget());
 }
 
-FilePanel* MainWindow::filePanelForSide(int side) const
+FilePanel* MainWindow::filePanelForSide(Side side) const
 {
     if (auto* pane = paneForSide(side))
         return pane->filePanel();
@@ -743,17 +723,22 @@ FilePanel* MainWindow::currentFilePanel() const
 
 FilePanel* MainWindow::oppositeFilePanel() const
 {
-    return filePanelForSide(!m_activeSide);
+    return filePanelForSide(opposite(m_activeSide));
 }
 
-void MainWindow::setActiveSide(int side)
+void MainWindow::setActiveSide(Side side)
 {
-    if (side != LeftSide && side != RightSide)
-        return;
     m_activeSide = side;
-    if (auto* panel = oppositeFilePanel())
+    if (auto* panel = filePanelForSide(opposite(side)))
         panel->rememberSelectionAndClear();
     if (auto* panel = currentFilePanel())
+        panel->restoreSelectionFromMemory();
+}
+
+void MainWindow::setActiveSideWithFocus(Side side)
+{
+    setActiveSide(side);
+    if (auto* panel = filePanelForSide(side))
         panel->setFocus();
 }
 
@@ -772,39 +757,11 @@ FilePanel* MainWindow::panelForObject(QObject* obj) const
     return nullptr;
 }
 
-int MainWindow::sideForPanel(FilePanel* panel) const
+QTabWidget* MainWindow::tabsForSide(Side side) const
 {
-    if (!panel)
-        return -1;
-
-    QWidget* w = panel;
-    QTabWidget* tabs = nullptr;
-
-    // idziemy w górę po parentach, aż znajdziemy QTabWidget
-    while (w) {
-        if (auto* tw = qobject_cast<QTabWidget*>(w)) {
-            tabs = tw;
-            break;
-        }
-        w = w->parentWidget();
-    }
-
-    if (!tabs)
-        return -1;
-
-    if (tabs == m_leftTabs)
-        return LeftSide;
-    if (tabs == m_rightTabs)
-        return RightSide;
-
-    return -1;
-}
-
-QTabWidget* MainWindow::tabsForSide(int side) const
-{
-    if (side == LeftSide)
+    if (side == Side::Left)
         return m_leftTabs;
-    if (side == RightSide)
+    if (side == Side::Right)
         return m_rightTabs;
     return nullptr;
 }
@@ -1001,18 +958,13 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel)
     QFileInfo srcInfo(srcPath);
 
     // ustalenie panelu docelowego
-    int srcSide = sideForPanel(srcPanel);
+    Side srcSide = srcPanel->side();
     FilePanel* dstPanel = nullptr;
     QString targetDir;
-
-    if (srcSide != -1) {
-        int dstSide = (srcSide == LeftSide) ? RightSide : LeftSide;
-        dstPanel = filePanelForSide(dstSide);
-        if (dstPanel)
-            targetDir = dstPanel->currentPath;
-    }
-
-    // domyślna propozycja ścieżki docelowej
+    Side dstSide = opposite(srcSide);
+    dstPanel = filePanelForSide(dstSide);
+    if (dstPanel)
+        targetDir = dstPanel->currentPath;
     QString suggested;
     if (!targetDir.isEmpty()) {
         QDir dstDir(targetDir);
