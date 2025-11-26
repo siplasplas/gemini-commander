@@ -7,7 +7,7 @@
 #include <QFileIconProvider>
 #include <QMimeDatabase>
 #include <QStyle>
-
+#include <QStyledItemDelegate>
 
 class QStandardItem;
 QT_BEGIN_NAMESPACE
@@ -58,6 +58,16 @@ enum Columns {
         COLUMN_EXT =  2,
         COLUMN_SIZE = 3,
         COLUMN_DATE = 4,
+};
+
+class MarkedItemDelegate : public QStyledItemDelegate
+{
+public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+
+    void paint(QPainter* painter,
+               const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override;
 };
 
 class FilePanel : public QTableView

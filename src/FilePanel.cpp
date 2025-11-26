@@ -30,6 +30,28 @@ QString stripLeadingDot(const QString& s)
     return s;
 }
 
+
+void MarkedItemDelegate::paint(QPainter* painter,
+                               const QStyleOptionViewItem& option,
+                               const QModelIndex& index) const
+{
+    QStyleOptionViewItem opt(option);
+    initStyleOption(&opt, index);  // takes into account QSS, selection, etc.
+
+    // Get color from Qt::ForegroundRole (e.g., red for marked)
+    QVariant fgVar = index.data(Qt::ForegroundRole);
+    if (fgVar.canConvert<QBrush>()) {
+        QBrush brush = qvariant_cast<QBrush>(fgVar);
+        QColor col = brush.color();
+
+        // Ustaw kolor tekstu zarówno dla normalnego, jak i zaznaczonego stanu
+        opt.palette.setColor(QPalette::Text, col);
+        opt.palette.setColor(QPalette::HighlightedText, col);
+    }
+
+    QStyledItemDelegate::paint(painter, opt, index);
+}
+
 void FilePanel::sortEntries() {
   // --------------------------
   // Sorting (TC-like)
@@ -353,6 +375,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     model->setHorizontalHeaderLabels(headers);
     currentPath = QDir::homePath();
     setModel(model);
+    setItemDelegate(new MarkedItemDelegate(this));
 
     hideColumn(COLUMN_ID);
     setSelectionBehavior(QAbstractItemView::SelectRows);
