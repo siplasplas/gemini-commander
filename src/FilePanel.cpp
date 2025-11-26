@@ -338,6 +338,8 @@ void FilePanel::selectEntryByName(const QString& fullName)
         QModelIndex selectIndex = matches.first();
         m_lastSelectedRow = selectIndex.row();
     }
+    if (hasFocus())
+        restoreSelectionFromMemory();
 }
 
 void FilePanel::onPanelActivated(const QModelIndex &index) {
