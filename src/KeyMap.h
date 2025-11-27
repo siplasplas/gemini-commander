@@ -1,9 +1,10 @@
 #pragma once
 
+#include <cstdint>
+#include <filesystem>
+#include <qnamespace.h>
 #include <string>
 #include <vector>
-#include <filesystem>
-#include <cstdint>
 
 // Bitmask of keyboard modifiers
 enum KeyModifier : std::uint8_t {
@@ -22,6 +23,8 @@ struct KeyBindingEntry {
 };
 
 class KeyMap {
+private:
+    static const std::vector<std::pair<Qt::Key, std::string>> keys_;
 public:
     // Parse keys TOML file and fill internal bindings.
     // Throws std::runtime_error on parse errors.
