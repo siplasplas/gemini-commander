@@ -17,18 +17,18 @@ inline std::string toLower(std::string s)
 }
 
 // Map modifier token (lower-case) to bitmask
-inline std::uint8_t modifierFromToken(const std::string& tokenLower)
+inline Qt::KeyboardModifiers modifierFromToken(const std::string& tokenLower)
 {
     if (tokenLower == "ctrl" || tokenLower == "control")
-        return Mod_Ctrl;
+        return Qt::ControlModifier;
     if (tokenLower == "shift")
-        return Mod_Shift;
+        return Qt::ShiftModifier;
     if (tokenLower == "alt")
-        return Mod_Alt;
+        return Qt::AltModifier;
     if (tokenLower == "meta" || tokenLower == "win" || tokenLower == "cmd")
-        return Mod_Meta;
+        return Qt::MetaModifier;
 
-    return Mod_None;
+    return Qt::NoModifier;
 }
 
 // Simple split by '+'
@@ -70,7 +70,7 @@ parseCombo(const std::string& combo)
         throw std::runtime_error("Empty combo string in key binding");
     }
 
-    std::uint8_t mods = Mod_None;
+    Qt::KeyboardModifiers mods = Qt::NoModifier;
     std::vector<std::string> keyTokens;
 
     for (auto& t : tokens) {
@@ -84,8 +84,8 @@ parseCombo(const std::string& combo)
             continue;
 
         std::string lower = toLower(trimmed);
-        std::uint8_t m = modifierFromToken(lower);
-        if (m != Mod_None) {
+        Qt::KeyboardModifiers m = modifierFromToken(lower);
+        if (m != Qt::NoModifier) {
             mods |= m;
         } else {
             keyTokens.push_back(trimmed);
