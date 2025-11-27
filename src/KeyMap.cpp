@@ -1,8 +1,9 @@
 #include "KeyMap.h"
-#include <toml++/toml.h>
-#include <stdexcept>
 #include <algorithm>
 #include <cctype>
+#include <iostream>
+#include <stdexcept>
+#include <toml++/toml.h>
 
 #include "FilePaneWidget.h"
 
@@ -199,4 +200,56 @@ KeyMap::entriesForWidget(const std::string& widgetName) const
     }
 
     return out;
+}
+
+std::vector<std::string> KeyMap::allHandlers() const
+{
+    // std::set keeps strings sorted alphabetically
+    std::set<std::string> handlers;
+
+    for (const auto& e : bindings_) {
+        if (e.handler != "none")
+            handlers.insert(e.handler);
+    }
+
+    // move them into a vector
+    return std::vector<std::string>(handlers.begin(), handlers.end());
+}
+
+
+void KeyMap::printHandlerDeclarations() const
+{
+    for (const auto &name : allHandlers()) {
+        std::cout
+            << "    Q_INVOKABLE bool "
+            << name
+            << "(QKeyEvent *keyEvent);\n";
+    }
+}
+
+void KeyMap::printHandlerDefinitions() const
+{
+    for (const auto &name : allHandlers()) {
+        std::cout
+            << "bool MainWindow::"
+            << name
+            << "(QKeyEvent *keyEvent) {\n"
+            << "    std::cout << \"handle "
+            << name
+            << "\" << std::flush;\n"
+            << "    return false;\n"
+            << "}\n\n";
+    }
+}
+
+void KeyMap::printInvokeCalls() const
+{
+    for (const auto &name : allHandlers()) {
+        std::cout
+            << "QMetaObject::invokeMethod(\n"
+            << "    this,\n"
+            << "    \"" << name << "\",\n"
+            << "    Q_ARG(QKeyEvent*, ev)\n"
+            << ");\n\n";
+    }
 }

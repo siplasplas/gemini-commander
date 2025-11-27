@@ -21,7 +21,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-
+#include "handlers_decl.inc"
 private:
     void setupUi();
     static Side opposite(Side side);
@@ -76,9 +76,7 @@ private:
                                 QProgressDialog& progress,
                                 quint64& bytesCopied,
                                 bool& userAbort);
-
-
-
+    bool handle(const char* handler, QKeyEvent *ev);
 private slots:
     void onOpenTerminal();
 };

@@ -31,8 +31,7 @@
 #include "SortedDirIterator.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-{
+    : QMainWindow(parent) {
     QString cfg = Config::instance().defaultConfigPath();
     Config::instance().load(cfg);
     Config::instance().setConfigPath(cfg);
@@ -48,8 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
     qApp->installEventFilter(this);
 }
 
-void MainWindow::setupUi()
-{
+void MainWindow::setupUi() {
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
@@ -1217,3 +1215,17 @@ bool MainWindow::copyDirectoryRecursive(const QString& srcRoot,
 
     return true;
 }
+
+
+bool MainWindow::handle(const char* handler, QKeyEvent* ev) {
+    bool handlerResult = true;
+    QMetaObject::invokeMethod(
+    this,
+    handler,
+    Q_RETURN_ARG(bool, handlerResult),
+    Q_ARG(QKeyEvent*, ev)
+    );
+    return handlerResult;
+}
+
+#include "handlers_impl.inc"

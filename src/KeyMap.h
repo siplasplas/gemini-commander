@@ -28,13 +28,17 @@ public:
     void load(const std::filesystem::path& filePath);
 
     // Access all parsed entries.
-    const std::vector<KeyBindingEntry>& entries() const noexcept {
+    [[nodiscard]] const std::vector<KeyBindingEntry>& entries() const noexcept {
         return bindings_;
     }
 
     // Filtered view for a given widget name.
-    std::vector<KeyBindingEntry> entriesForWidget(const std::string& widgetName) const;
-
+    [[nodiscard]] std::vector<KeyBindingEntry> entriesForWidget(const std::string& widgetName) const;
+    // Collect all unique handler names in alphabetical order
+    [[nodiscard]] std::vector<std::string> allHandlers() const;
+    void printHandlerDeclarations() const;
+    void printHandlerDefinitions() const;
+    void printInvokeCalls() const;
 private:
     std::vector<KeyBindingEntry> bindings_;
 };
