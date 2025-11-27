@@ -108,6 +108,8 @@ add_executable(${PROJECT_NAME}
         src/SearchLineEdit.h
         src/SortedDirIterator.cpp
         src/SortedDirIterator.h
+        src/KeyMap.cpp
+        src/KeyMap.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
@@ -130,7 +132,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ICU::uc ICU::i18n
  )
 
-qt_add_resources(APP_RESOURCES src/resources.qrc)
+qt_add_resources(APP_RESOURCES res/resources.qrc)
 target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
 
 enable_testing()

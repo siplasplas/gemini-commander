@@ -1,0 +1,109 @@
+# Main okno commanderowe – główne skróty klawiszowe
+[MainFrame]
+keys = [
+    { combo = "Ctrl+Down",           handler = "onJumpDownToFiles" },
+    { combo = "Ctrl+Up",             handler = "onJumpUpToDirectories" },
+
+    { combo = "Ctrl+Tab",            handler = "onGoToNextTab" },
+    { combo = "Ctrl+Shift+Tab",      handler = "onGoToPreviousTab" },
+
+    { combo = "Tab",                 handler = "onSwitchSide" },
+    # Specjalny przypadek: Shift+Tab tylko blokuje domyślne działanie QTableView
+    { combo = "Shift+Tab",           handler = "none" },
+
+    { combo = "F3",                  handler = "onView" },
+    { combo = "F4",                  handler = "onEdit" },
+    { combo = "Shift+F4",            handler = "onEditNew" },
+
+    { combo = "Ctrl+D",              handler = "onDirHotlist" },
+    { combo = "Ctrl+Shift+D",        handler = "onDirHotlistConfig" },
+
+    { combo = "Space",               handler = "onToggleMarkTotalSize" },
+    { combo = "Alt+Shift+Enter",     handler = "onTotalSizes" },
+
+    { combo = "Insert",              handler = "onToggleMarkDown" },
+
+    { combo = "Ctrl+F3",             handler = "onSortByName" },
+    { combo = "Ctrl+F4",             handler = "onSortByExt" },
+    { combo = "Ctrl+F5",             handler = "onSortByDate" },
+    { combo = "Ctrl+F6",             handler = "onSortBySize" },
+
+    { combo = "F5",                  handler = "onCopy" },
+    { combo = "Shift+F5",            handler = "onCopyInPlace" },
+
+    { combo = "F6",                  handler = "onMove" },
+    { combo = "Shift+F6",            handler = "onRename" },     # uwaga: przyjęte Shift+F6 = Rename
+
+    { combo = "F7",                  handler = "onMakeDirectory" },
+    { combo = "Shift+F7",            handler = "onMakeDirectoryOpposite" },
+
+    { combo = "F8",                  handler = "onDeleteToTrash" },
+    { combo = "Del",                 handler = "onDeleteToTrash" },
+
+    { combo = "Shift+F8",            handler = "onDeletePermanently" },
+    { combo = "Shift+Del",           handler = "onDeletePermanently" },
+
+    { combo = "Left",                handler = "onFocusCommandLine" },
+    { combo = "Right",               handler = "onFocusCommandLine" },
+
+    { combo = "Home",                handler = "onGoToFirstRow" },
+    { combo = "End",                 handler = "onGoToLastRow" },
+
+    { combo = "PageUp",              handler = "onGoUpDir" },
+
+    { combo = "Ctrl+P",              handler = "onCurrentDirToCommandLine" },
+    { combo = "Ctrl+Enter",          handler = "onCurrentNameToCommandLine" },
+    { combo = "Ctrl+Shift+Enter",    handler = "onCurrentPathToCommandLine" },
+
+    { combo = "Ctrl+T",              handler = "onAddTab" },
+    { combo = "Ctrl+W",              handler = "onRemoveTab" },
+
+    { combo = "Ctrl+S",              handler = "onLocalSearch" },
+    # 'letters' (A–Z, 0–9) do "local search init with letter" – zwykle lepiej obsłużyć w kodzie,
+    # np. jako specjalny tryb KeyPress w tabeli, niż w keys.toml.
+
+    { combo = "Alt+Enter",           handler = "onFileProperties" },
+
+    { combo = "Ctrl+A",              handler = "onSelectAll" },
+    { combo = "Ctrl+L",              handler = "onOccupiedSpace" },
+
+    { combo = "Alt+F5",              handler = "onPackFiles" },
+    { combo = "Alt+F9",              handler = "onExtractFiles" },
+    { combo = "Alt+Shift+F9",        handler = "onTestArchives" },
+
+    # Numpad / grupowe zaznaczanie
+    { combo = "NumPLus",                handler = "onSelectGroup" },               # num plus
+    { combo = "NumMinus",                handler = "onUnselectGroup" },             # num minus
+    { combo = "Ctrl+NumPLus",           handler = "onSelectAllFromNumPlus" },      # select all
+    { combo = "Ctrl+NumMinus",           handler = "onUnselectAllFromNumMinus" },   # unselect all
+    { combo = "NumMultiply",                handler = "onInvertSelection" },           # invert
+    { combo = "Alt+NumMultiply",            handler = "onSelectSameExtension" },       # same ext
+    { combo = "NumDivide",                handler = "onRestoreSelection" },          # restore selection
+
+    { combo = "Shift+F2",            handler = "onCompareDirectories" },
+
+    { combo = "Alt+F10",             handler = "onCDTree" },
+    { combo = "Alt+F7",              handler = "onSearchGlobal" },
+
+    { combo = "Alt+Left",            handler = "onGoBack" },
+    { combo = "Alt+Right",           handler = "onGoForward" },
+
+    { combo = "Ctrl+B",              handler = "onBranchViewWithSubdirs" },
+    { combo = "Ctrl+U",              handler = "onSwapPanels" },
+
+    { combo = "Ctrl+Q",              handler = "onQuickView" },
+]
+
+# CommandLine – pasek poleceń / input na dole
+[CommandLine]
+keys = [
+    { combo = "Esc",                 handler = "onReturnToPanel" },
+]
+
+# SearchEdit – lokalne szukanie (np. pasek filtrowania / wyszukiwania)
+[SearchEdit]
+keys = [
+    { combo = "Esc",                 handler = "onReturnToPanel" },
+    { combo = "Up",                  handler = "onPrevMatch" },
+    { combo = "Down",                handler = "onNextMatch" },
+]
