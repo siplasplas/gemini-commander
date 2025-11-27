@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 
 project(gemini-commander VERSION 1.0 LANGUAGES CXX)
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+    SET(GCC_COVERAGE_COMPILE_FLAGS "-Werror=return-type")
+    add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+endif()
+
 option(USE_QT5 "Use Qt5 and KF5 instead of Qt6 and KF6" OFF)
 
 if(USE_QT5)
