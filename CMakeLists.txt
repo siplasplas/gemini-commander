@@ -60,6 +60,19 @@ target_compile_options(core PRIVATE
         ${BOTAN2_CFLAGS_OTHER}
 )
 
+add_executable(toml_json_converter
+        tools/toml_json_converter.cpp
+)
+
+target_include_directories(toml_json_converter PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${TOMLPLUSPLUS_INCLUDE_DIR}
+)
+
+target_link_libraries(toml_json_converter PRIVATE
+        core
+)
+
 add_executable(${PROJECT_NAME}
         src/main.cpp
         src/MainWindow.cpp
