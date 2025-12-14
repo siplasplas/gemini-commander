@@ -31,6 +31,7 @@ class EditorFrame : public QMainWindow
 
 public:
     explicit EditorFrame(QWidget *parent = nullptr);
+#include  "EditorFrame_decl.inc"
     void extendTabContextMenu(int tabIndex, QMenu* menu);
     ~EditorFrame();
 

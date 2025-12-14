@@ -7,7 +7,7 @@
 
 #include "FilePanel.h"
 
-class SearchLineEdit;
+class SearchEdit;
 class FilePaneWidget : public QWidget
 {
   Q_OBJECT
@@ -29,7 +29,7 @@ private:
   FilePanel* m_filePanel = nullptr;
   QLabel*    m_statusLabel = nullptr;
 
-  SearchLineEdit* m_searchEdit = nullptr;
+  SearchEdit* m_searchEdit = nullptr;
 
   void updateStatusLabel();
 };

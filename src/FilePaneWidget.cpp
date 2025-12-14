@@ -1,5 +1,5 @@
 #include "FilePaneWidget.h"
-#include "SearchLineEdit.h"
+#include "SearchEdit.h"
 
 #include <QItemSelectionModel>
 #include <QStandardItemModel>
@@ -19,7 +19,7 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     m_pathEdit->setFixedHeight(h);
 
     m_filePanel = new FilePanel(side, nullptr);
-    m_searchEdit = new SearchLineEdit(this);
+    m_searchEdit = new SearchEdit(this);
     m_searchEdit->hide();
 
     m_statusLabel = new QLabel(this);
@@ -40,13 +40,13 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     connect(m_searchEdit, &QLineEdit::textChanged,
             m_filePanel,  &FilePanel::updateSearch);
 
-    connect(m_searchEdit, &SearchLineEdit::nextMatchRequested,
+    connect(m_searchEdit, &SearchEdit::nextMatchRequested,
             m_filePanel,  &FilePanel::nextMatch);
 
-    connect(m_searchEdit, &SearchLineEdit::prevMatchRequested,
+    connect(m_searchEdit, &SearchEdit::prevMatchRequested,
             m_filePanel,  &FilePanel::prevMatch);
 
-    connect(m_searchEdit, &SearchLineEdit::escapePressed,
+    connect(m_searchEdit, &SearchEdit::escapePressed,
             this, [this]() {
                 m_searchEdit->clear();
                 m_searchEdit->hide();
@@ -66,7 +66,7 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
             m_filePanel->updateSearch(m_searchEdit->text());
         });
 
-    connect(m_searchEdit, &SearchLineEdit::acceptPressed,
+    connect(m_searchEdit, &SearchEdit::acceptPressed,
             this, [this]() {
                 m_searchEdit->hide();
                 if (m_filePanel) {

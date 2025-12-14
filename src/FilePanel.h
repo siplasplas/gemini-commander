@@ -74,6 +74,7 @@ class FilePanel : public QTableView
 {
     Q_OBJECT
 public:
+#include "FilePanel_decl.inc"
     QStandardItemModel* model = nullptr;
     QString currentPath;
 

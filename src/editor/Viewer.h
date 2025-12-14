@@ -11,6 +11,7 @@ class Viewer : public BaseViewer {
     std::unique_ptr<QFile> file;
 public:
     explicit Viewer(const QString& fileName, QWidget *parent = nullptr);
+#include "Viewer_decl.inc"
 signals:
     // Emitted when user presses ESC and viewer requests closing its tab
     void closeRequested();

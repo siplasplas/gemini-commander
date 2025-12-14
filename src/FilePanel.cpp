@@ -1249,3 +1249,5 @@ void FilePanel::restoreSelectionFromMemory()
     }
     scrollTo(idx);
 }
+
+#include "FilePanel_impl.inc"

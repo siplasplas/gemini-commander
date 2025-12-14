@@ -1227,3 +1227,5 @@ bool MainWindow::handle(const char* handler, QKeyEvent* ev) {
     );
     return handlerResult;
 }
+
+#include "MainWindow_impl.inc"

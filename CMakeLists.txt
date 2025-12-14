@@ -122,11 +122,12 @@ add_executable(${PROJECT_NAME}
         src/Config.h
         src/FilePaneWidget.cpp
         src/FilePaneWidget.h
-        src/SearchLineEdit.h
+        src/SearchEdit.h
         src/SortedDirIterator.cpp
         src/SortedDirIterator.h
         src/keys/KeyMap.cpp
         src/keys/KeyMap.h
+        src/SearchEdit.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}

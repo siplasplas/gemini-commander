@@ -26,3 +26,5 @@ void Viewer::keyPressEvent(QKeyEvent* event)
 
     QWidget::keyPressEvent(event);
 }
+
+#include "Viewer_impl.inc"

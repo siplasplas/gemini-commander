@@ -600,3 +600,5 @@ void EditorFrame::closeEvent(QCloseEvent* event)
 bool EditorFrame::tryCloseAll() {
     return true;
 }
+
+#include  "EditorFrame_impl.inc"
