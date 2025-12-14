@@ -1,108 +1,119 @@
-# Main okno commanderowe – główne skróty klawiszowe
+# Panel - single panel operations (navigation, sorting, selection, view)
+[Panel]
+keys = [
+    { key = "Ctrl+Down",           handler = "onJumpDownToFiles" },
+    { key = "Ctrl+Up",             handler = "onJumpUpToDirectories" },
+
+    { key = "F3",                  handler = "onView" },
+    { key = "F4",                  handler = "onEdit" },
+    { key = "Shift+F4",            handler = "onEditNew" },
+
+    { key = "Space",               handler = "onToggleMarkTotalSize" },
+    { key = "Alt+Shift+Enter",     handler = "onTotalSizes" },
+
+    { key = "Insert",              handler = "onToggleMarkDown" },
+
+    { key = "Ctrl+F3",             handler = "onSortByName" },
+    { key = "Ctrl+F4",             handler = "onSortByExt" },
+    { key = "Ctrl+F5",             handler = "onSortByDate" },
+    { key = "Ctrl+F6",             handler = "onSortBySize" },
+
+    { key = "F7",                  handler = "onMakeDirectory" },
+
+    { key = "F8",                  handler = "onDeleteToTrash" },
+    { key = "Delete",              handler = "onDeleteToTrash" },
+
+    { key = "Shift+F8",            handler = "onDeletePermanently" },
+    { key = "Shift+Delete",        handler = "onDeletePermanently" },
+
+    { key = "Left",                handler = "onFocusCommandLine" },
+    { key = "Right",               handler = "onFocusCommandLine" },
+
+    { key = "Home",                handler = "onGoToFirstRow" },
+    { key = "End",                 handler = "onGoToLastRow" },
+
+    { key = "PageUp",              handler = "onGoUpDir" },
+
+    { key = "Ctrl+P",              handler = "onCurrentDirToCommandLine" },
+    { key = "Ctrl+Enter",          handler = "onCurrentNameToCommandLine" },
+    { key = "Ctrl+Shift+Enter",    handler = "onCurrentPathToCommandLine" },
+
+    { key = "Ctrl+S",              handler = "onLocalSearch" },
+    { key = "LETTERS",             handler = "onLocalSearch" },
+    { key = "DIGITS",              handler = "onLocalSearch" },
+
+    { key = "Alt+Enter",           handler = "onFileProperties" },
+
+    { key = "Ctrl+A",              handler = "onSelectAll" },
+    { key = "Ctrl+L",              handler = "onOccupiedSpace" },
+
+    { key = "Num+Plus",            handler = "onSelectGroup" },
+    { key = "Num+Minus",           handler = "onUnselectGroup" },
+    { key = "Ctrl+Num+Plus",       handler = "onSelectAll" },
+    { key = "Ctrl+Num+Minus",      handler = "onUnselectAll" },
+    { key = "Num+Asterisk",        handler = "onInvertSelection" },
+    { key = "Alt+Num+Asterisk",    handler = "onSelectSameExtension" },
+    { key = "Num+Slash",           handler = "onRestoreSelection" },
+
+    { key = "Alt+F10",             handler = "onCDTree" },
+
+    { key = "Alt+Left",            handler = "onGoBack" },
+    { key = "Alt+Right",           handler = "onGoForward" },
+
+    { key = "Ctrl+B",              handler = "onBranchViewWithSubdirs" },
+
+    { key = "Ctrl+Q",              handler = "onQuickView" },
+]
+
+# TabWidget - tab operations (Ctrl+Tab switches tabs)
+[TabWidget]
+keys = [
+    { key = "Ctrl+Tab",            handler = "onGoToNextTab" },
+    { key = "Ctrl+Shift+Tab",      handler = "onGoToPreviousTab" },
+
+    { key = "Ctrl+T",              handler = "onAddTab" },
+    { key = "Ctrl+W",              handler = "onRemoveTab" },
+]
+
+# MainFrame - dual panel operations (Tab switches panels)
 [MainFrame]
 keys = [
-    { combo = "Ctrl+Down",           handler = "onJumpDownToFiles" },
-    { combo = "Ctrl+Up",             handler = "onJumpUpToDirectories" },
-
-    { combo = "Ctrl+Tab",            handler = "onGoToNextTab" },
-    { combo = "Ctrl+Shift+Tab",      handler = "onGoToPreviousTab" },
-
-    { combo = "Tab",                 handler = "onSwitchSide" },
+    { key = "Tab",                 handler = "onSwitchSide" },
     # Special case: Shift+Tab only blocks the default behavior of QTableView
-    { combo = "Shift+Tab",           handler = "none" },
+    { key = "Shift+Tab",           handler = "none" },
 
-    { combo = "F3",                  handler = "onView" },
-    { combo = "F4",                  handler = "onEdit" },
-    { combo = "Shift+F4",            handler = "onEditNew" },
+    { key = "Ctrl+D",              handler = "onDirHotlist" },
+    { key = "Ctrl+Shift+D",        handler = "onDirHotlistConfig" },
 
-    { combo = "Ctrl+D",              handler = "onDirHotlist" },
-    { combo = "Ctrl+Shift+D",        handler = "onDirHotlistConfig" },
+    { key = "F5",                  handler = "onCopy" },
+    { key = "Shift+F5",            handler = "onCopyInPlace" },
 
-    { combo = "Space",               handler = "onToggleMarkTotalSize" },
-    { combo = "Alt+Shift+Enter",     handler = "onTotalSizes" },
+    { key = "F6",                  handler = "onMove" },
+    { key = "Shift+F6",            handler = "onRename" },
 
-    { combo = "Insert",              handler = "onToggleMarkDown" },
+    { key = "Shift+F7",            handler = "onMakeDirectoryOpposite" },
 
-    { combo = "Ctrl+F3",             handler = "onSortByName" },
-    { combo = "Ctrl+F4",             handler = "onSortByExt" },
-    { combo = "Ctrl+F5",             handler = "onSortByDate" },
-    { combo = "Ctrl+F6",             handler = "onSortBySize" },
+    { key = "Alt+F5",              handler = "onPackFiles" },
+    { key = "Alt+F9",              handler = "onExtractFiles" },
+    { key = "Alt+Shift+F9",        handler = "onTestArchives" },
 
-    { combo = "F5",                  handler = "onCopy" },
-    { combo = "Shift+F5",            handler = "onCopyInPlace" },
+    { key = "Shift+F2",            handler = "onCompareDirectories" },
 
-    { combo = "F6",                  handler = "onMove" },
-    { combo = "Shift+F6",            handler = "onRename" },
+    { key = "Alt+F7",              handler = "onSearchGlobal" },
 
-    { combo = "F7",                  handler = "onMakeDirectory" },
-    { combo = "Shift+F7",            handler = "onMakeDirectoryOpposite" },
-
-    { combo = "F8",                  handler = "onDeleteToTrash" },
-    { combo = "Delete",                 handler = "onDeleteToTrash" },
-
-    { combo = "Shift+F8",            handler = "onDeletePermanently" },
-    { combo = "Shift+Delete",           handler = "onDeletePermanently" },
-
-    { combo = "Left",                handler = "onFocusCommandLine" },
-    { combo = "Right",               handler = "onFocusCommandLine" },
-
-    { combo = "Home",                handler = "onGoToFirstRow" },
-    { combo = "End",                 handler = "onGoToLastRow" },
-
-    { combo = "PageUp",              handler = "onGoUpDir" },
-
-    { combo = "Ctrl+P",              handler = "onCurrentDirToCommandLine" },
-    { combo = "Ctrl+Enter",          handler = "onCurrentNameToCommandLine" },
-    { combo = "Ctrl+Shift+Enter",    handler = "onCurrentPathToCommandLine" },
-
-    { combo = "Ctrl+T",              handler = "onAddTab" },
-    { combo = "Ctrl+W",              handler = "onRemoveTab" },
-
-    { combo = "Ctrl+S",              handler = "onLocalSearch" },
-    { combo = "LETTERS",             handler = "onLocalSearch" },
-    { combo = "DIGITS",             handler = "onLocalSearch" },
-
-    { combo = "Alt+Enter",           handler = "onFileProperties" },
-
-    { combo = "Ctrl+A",              handler = "onSelectAll" },
-    { combo = "Ctrl+L",              handler = "onOccupiedSpace" },
-
-    { combo = "Alt+F5",              handler = "onPackFiles" },
-    { combo = "Alt+F9",              handler = "onExtractFiles" },
-    { combo = "Alt+Shift+F9",        handler = "onTestArchives" },
-
-    { combo = "Num+Plus",                handler = "onSelectGroup" },
-    { combo = "Num+Minus",               handler = "onUnselectGroup" },
-    { combo = "Ctrl+Num+Plus",           handler = "onSelectAll" },
-    { combo = "Ctrl+Num+Minus",           handler = "onUnselectAll" },
-    { combo = "Num+Asterisk",             handler = "onInvertSelection" },
-    { combo = "Alt+Num+Asterisk",         handler = "onSelectSameExtension" },
-    { combo = "Num+Slash",                handler = "onRestoreSelection" },
-
-    { combo = "Shift+F2",            handler = "onCompareDirectories" },
-
-    { combo = "Alt+F10",             handler = "onCDTree" },
-    { combo = "Alt+F7",              handler = "onSearchGlobal" },
-
-    { combo = "Alt+Left",            handler = "onGoBack" },
-    { combo = "Alt+Right",           handler = "onGoForward" },
-
-    { combo = "Ctrl+B",              handler = "onBranchViewWithSubdirs" },
-    { combo = "Ctrl+U",              handler = "onSwapPanels" },
-
-    { combo = "Ctrl+Q",              handler = "onQuickView" },
+    { key = "Ctrl+U",              handler = "onSwapPanels" },
 ]
 
-# CommandLine – command bar / input at the bottom
+# CommandLine - command bar at the bottom
 [CommandLine]
 keys = [
-    { combo = "Escape",            handler = "onReturnToPanel" },
+    { key = "Escape",              handler = "onReturnToPanel" },
 ]
 
-# SearchEdit – local search (e.g., filter/search bar)
+# SearchEdit - local search filter
 [SearchEdit]
 keys = [
-    { combo = "Escape",              handler = "onReturnToPanel" },
-    { combo = "Up",                  handler = "onPrevMatch" },
-    { combo = "Down",                handler = "onNextMatch" },
+    { key = "Escape",              handler = "onReturnToPanel" },
+    { key = "Up",                  handler = "onPrevMatch" },
+    { key = "Down",                handler = "onNextMatch" },
 ]
