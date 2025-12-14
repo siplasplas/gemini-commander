@@ -8,7 +8,7 @@ keys = [
     { combo = "Ctrl+Shift+Tab",      handler = "onGoToPreviousTab" },
 
     { combo = "Tab",                 handler = "onSwitchSide" },
-    # Specjalny przypadek: Shift+Tab tylko blokuje domyślne działanie QTableView
+    # Special case: Shift+Tab only blocks the default behavior of QTableView
     { combo = "Shift+Tab",           handler = "none" },
 
     { combo = "F3",                  handler = "onView" },
@@ -32,16 +32,16 @@ keys = [
     { combo = "Shift+F5",            handler = "onCopyInPlace" },
 
     { combo = "F6",                  handler = "onMove" },
-    { combo = "Shift+F6",            handler = "onRename" },     # uwaga: przyjęte Shift+F6 = Rename
+    { combo = "Shift+F6",            handler = "onRename" },
 
     { combo = "F7",                  handler = "onMakeDirectory" },
     { combo = "Shift+F7",            handler = "onMakeDirectoryOpposite" },
 
     { combo = "F8",                  handler = "onDeleteToTrash" },
-    { combo = "Del",                 handler = "onDeleteToTrash" },
+    { combo = "Delete",                 handler = "onDeleteToTrash" },
 
     { combo = "Shift+F8",            handler = "onDeletePermanently" },
-    { combo = "Shift+Del",           handler = "onDeletePermanently" },
+    { combo = "Shift+Delete",           handler = "onDeletePermanently" },
 
     { combo = "Left",                handler = "onFocusCommandLine" },
     { combo = "Right",               handler = "onFocusCommandLine" },
@@ -59,8 +59,8 @@ keys = [
     { combo = "Ctrl+W",              handler = "onRemoveTab" },
 
     { combo = "Ctrl+S",              handler = "onLocalSearch" },
-    # 'letters' (A–Z, 0–9) do "local search init with letter" – zwykle lepiej obsłużyć w kodzie,
-    # np. jako specjalny tryb KeyPress w tabeli, niż w keys.toml.
+    { combo = "LETTERS",             handler = "onLocalSearch" },
+    { combo = "DIGITS",             handler = "onLocalSearch" },
 
     { combo = "Alt+Enter",           handler = "onFileProperties" },
 
@@ -71,14 +71,13 @@ keys = [
     { combo = "Alt+F9",              handler = "onExtractFiles" },
     { combo = "Alt+Shift+F9",        handler = "onTestArchives" },
 
-    # Numpad / grupowe zaznaczanie
-    { combo = "NumPLus",                handler = "onSelectGroup" },               # num plus
-    { combo = "NumMinus",                handler = "onUnselectGroup" },             # num minus
-    { combo = "Ctrl+NumPLus",           handler = "onSelectAllFromNumPlus" },      # select all
-    { combo = "Ctrl+NumMinus",           handler = "onUnselectAllFromNumMinus" },   # unselect all
-    { combo = "NumMultiply",                handler = "onInvertSelection" },           # invert
-    { combo = "Alt+NumMultiply",            handler = "onSelectSameExtension" },       # same ext
-    { combo = "NumDivide",                handler = "onRestoreSelection" },          # restore selection
+    { combo = "Num+Plus",                handler = "onSelectGroup" },
+    { combo = "Num+Minus",               handler = "onUnselectGroup" },
+    { combo = "Ctrl+Num+Plus",           handler = "onSelectAll" },
+    { combo = "Ctrl+Num+Minus",           handler = "onUnselectAll" },
+    { combo = "Num+Asterisk",             handler = "onInvertSelection" },
+    { combo = "Alt+Num+Asterisk",         handler = "onSelectSameExtension" },
+    { combo = "Num+Slash",                handler = "onRestoreSelection" },
 
     { combo = "Shift+F2",            handler = "onCompareDirectories" },
 
@@ -94,16 +93,16 @@ keys = [
     { combo = "Ctrl+Q",              handler = "onQuickView" },
 ]
 
-# CommandLine – pasek poleceń / input na dole
+# CommandLine – command bar / input at the bottom
 [CommandLine]
 keys = [
-    { combo = "Esc",                 handler = "onReturnToPanel" },
+    { combo = "Escape",            handler = "onReturnToPanel" },
 ]
 
-# SearchEdit – lokalne szukanie (np. pasek filtrowania / wyszukiwania)
+# SearchEdit – local search (e.g., filter/search bar)
 [SearchEdit]
 keys = [
-    { combo = "Esc",                 handler = "onReturnToPanel" },
+    { combo = "Escape",              handler = "onReturnToPanel" },
     { combo = "Up",                  handler = "onPrevMatch" },
     { combo = "Down",                handler = "onNextMatch" },
 ]
