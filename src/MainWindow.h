@@ -9,6 +9,7 @@
 #include <QProgressDialog>
 
 #include "editor/EditorFrame.h"
+#include "keys/KeyMap.h"
 
 class ViewerFrame;
 class FilePanel;
@@ -60,6 +61,7 @@ private:
     void createMountsToolbar();
     QStringList listMountPoints() const;
     void copyFromPanel(FilePanel* srcPanel);
+    KeyMap keyMap;
 
     struct CopyStats {
         quint64 totalBytes = 0;

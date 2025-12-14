@@ -30,6 +30,7 @@
 
 #include "SortedDirIterator.h"
 #include "editor/ViewerFrame.h"
+#include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -47,7 +48,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
-    qApp->installEventFilter(this);
+    keyMap.load(":/config/keys.toml");
+    KeyRouter::instance().setKeyMap(&keyMap);
+    KeyRouter::instance().installOn(qApp, this);
 }
 
 void MainWindow::setupUi() {

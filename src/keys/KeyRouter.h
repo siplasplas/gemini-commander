@@ -25,7 +25,7 @@ public:
     static KeyRouter& instance();
 
     // Install event filter on application (only once)
-    void installOn(QCoreApplication* app);
+    void installOn(QCoreApplication* app, QObject* owner);
 
     // Assign key map that resolves (widget, key, modifiers) → handler
     void setKeyMap(KeyMap* map) { keyMap_ = map; }
@@ -39,6 +39,7 @@ private:
     explicit KeyRouter(QObject* parent = nullptr);
     Q_DISABLE_COPY(KeyRouter)
 
+    QObject* owner_ = nullptr;
     bool installed_ = false;
     KeyMap* keyMap_ = nullptr;
 };

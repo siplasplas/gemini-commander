@@ -1,6 +1,9 @@
 # Panel - single panel operations (navigation, sorting, selection, view)
 [Panel]
 keys = [
+    { key = "Down",           handler = "default" },
+    { key = "Up",             handler = "default" },
+
     { key = "Ctrl+Down",           handler = "doJumpDownToFiles" },
     { key = "Ctrl+Up",             handler = "doJumpUpToDirectories" },
 

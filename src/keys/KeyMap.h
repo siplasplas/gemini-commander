@@ -7,19 +7,10 @@
 #include <string>
 #include <vector>
 
-// Bitmask of keyboard modifiers
-enum KeyModifier : std::uint8_t {
-    Mod_None  = 0,
-    Mod_Ctrl  = 1 << 0,
-    Mod_Shift = 1 << 1,
-    Mod_Alt   = 1 << 2,
-    Mod_Meta  = 1 << 3
-};
-
 struct KeyBindingEntry {
     std::string widget;     // e.g. "MainFrame", "CommandLine", "SearchEdit"
     std::string key;        // e.g. "F5", "Tab", "NumPlus", "Left"
-    std::uint8_t modifiers; // bitmask from KeyModifier
+    Qt::KeyboardModifiers modifiers; // KeyModifier
     std::string handler;    // e.g. "onCopy", "onMove"
 };
 

@@ -62,7 +62,7 @@ std::vector<std::string> splitCombo(const std::string& combo)
 // - The last non-modifier token is used as key
 //
 // If no non-modifier token is found, throws std::runtime_error.
-std::pair<std::string, std::uint8_t>
+std::pair<std::string, Qt::KeyboardModifiers>
 parseCombo(const std::string& combo)
 {
     auto tokens = splitCombo(combo);
@@ -699,13 +699,6 @@ QString KeyMap::keyToString(int qtKey) const
 
 QString KeyMap::handlerFor(int qtKey, Qt::KeyboardModifiers mods, const QString& widgetName) const
 {
-    // Convert Qt modifiers to our uint8_t format
-    std::uint8_t modMask = 0;
-    if (mods & Qt::ControlModifier) modMask |= Mod_Ctrl;
-    if (mods & Qt::ShiftModifier)   modMask |= Mod_Shift;
-    if (mods & Qt::AltModifier)     modMask |= Mod_Alt;
-    if (mods & Qt::MetaModifier)    modMask |= Mod_Meta;
-
     QString keyStr = keyToString(qtKey);
     std::string widgetStd = widgetName.toStdString();
     std::string keyStd = keyStr.toStdString();
@@ -715,7 +708,7 @@ QString KeyMap::handlerFor(int qtKey, Qt::KeyboardModifiers mods, const QString&
         for (const auto& e : bindings_) {
             if (e.widget == widgetStd &&
                 e.key == keyToFind &&
-                e.modifiers == modMask) {
+                e.modifiers == mods) {
                 return QString::fromStdString(e.handler);
             }
         }

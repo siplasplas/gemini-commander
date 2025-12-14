@@ -20,8 +20,9 @@ KeyRouter::KeyRouter(QObject* parent)
 {
 }
 
-void KeyRouter::installOn(QCoreApplication* app)
+void KeyRouter::installOn(QCoreApplication* app, QObject* owner)
 {
+    owner_ = owner;
     if (installed_ || !app)
         return;
 
@@ -33,7 +34,7 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
 {
     // Only process key press events
     if (!keyMap_ || event->type() != QEvent::KeyPress)
-        return QObject::eventFilter(obj, event);
+        return owner_->eventFilter(obj, event);
 
     auto* keyEvent = static_cast<QKeyEvent*>(event);
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
