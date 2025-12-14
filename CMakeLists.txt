@@ -78,7 +78,7 @@ target_link_libraries(toml_json_converter PRIVATE
 )
 
 add_executable(placeholder_generator
-        tools/placeholder_generator.cpp
+        tools/stub_generator.cpp
 )
 
 target_include_directories(placeholder_generator PRIVATE
