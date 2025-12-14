@@ -23,6 +23,7 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     m_filePanel = new FilePanel(side, nullptr);
     ObjectRegistry::add(m_filePanel, "Panel");
     m_searchEdit = new SearchEdit(this);
+    ObjectRegistry::add(m_searchEdit, "SearchEdit");
     m_searchEdit->hide();
 
     m_statusLabel = new QLabel(this);
