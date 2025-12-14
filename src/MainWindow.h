@@ -21,7 +21,6 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-#include "handlers_decl.inc"
 private:
     void setupUi();
     static Side opposite(Side side);
