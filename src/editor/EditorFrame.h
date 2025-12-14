@@ -63,8 +63,6 @@ private:
     QAction *m_viewFileAction;
     QAction *m_closeAction;
     QAction *m_exitAction;
-    QAction *m_buildAction;
-    QAction *m_runAction;
     QAction *m_aboutAction;
 
     void viewFileInEditor(const QString& filePath);

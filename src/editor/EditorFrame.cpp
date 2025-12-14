@@ -67,9 +67,6 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::extendTabContextMenu);
 
     createActions();
-    m_mainHeader->setupMenus(m_openFileAction, m_viewFileAction, m_closeAction,
-                         m_exitAction, m_buildAction, m_runAction, m_aboutAction);
-    m_mainHeader->setupToolBar(m_buildAction, m_runAction);
 
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
@@ -132,12 +129,7 @@ void EditorFrame::createActions()
     m_exitAction = new QAction(tr("E&xit"), this);
     m_exitAction->setShortcut(QKeySequence::Quit);
     connect(m_exitAction, &QAction::triggered, this, &QWidget::close);
-    //-----------
-    m_buildAction = new QAction(QIcon(":/icons/hammer.svg"), tr("Build"), this);
-    m_buildAction->setEnabled(false);
-    //-----------
-    m_runAction = new QAction(QIcon(":/icons/run.svg"), tr("&Run"), this);
-    //-----------
+
     m_aboutAction = new QAction(tr("&About"), this);
     connect(m_aboutAction, &QAction::triggered, this, &EditorFrame::onAboutTriggered);
 }
