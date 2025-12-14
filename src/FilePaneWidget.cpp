@@ -51,11 +51,10 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
 
     connect(m_searchEdit, &SearchEdit::escapePressed,
             this, [this]() {
+                if (m_filePanel)
+                    m_filePanel->rememberSelection();
                 m_searchEdit->clear();
                 m_searchEdit->hide();
-                if (m_filePanel)
-                    m_filePanel->setFocus();
-                // opcjonalnie: m_filePanel->cancelSearch();
             });
 
     connect(m_filePanel, &FilePanel::searchRequested,
