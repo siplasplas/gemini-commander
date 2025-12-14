@@ -125,8 +125,8 @@ add_executable(${PROJECT_NAME}
         src/SearchLineEdit.h
         src/SortedDirIterator.cpp
         src/SortedDirIterator.h
-        src/KeyMap.cpp
-        src/KeyMap.h
+        src/keys/KeyMap.cpp
+        src/keys/KeyMap.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}

@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <toml++/toml.h>
 
-#include "FilePaneWidget.h"
+#include "../FilePaneWidget.h"
 
 namespace {
 
