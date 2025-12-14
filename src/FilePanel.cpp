@@ -1219,13 +1219,11 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow)
     }
 }
 
-void FilePanel::rememberSelectionAndClear()
+void FilePanel::rememberSelection()
 {
     QModelIndex idx = currentIndex();
     if (idx.isValid())
         m_lastSelectedRow = idx.row();
-    clearSelection();
-    setCurrentIndex(QModelIndex());
 }
 
 void FilePanel::restoreSelectionFromMemory()

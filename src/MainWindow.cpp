@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     for (auto* panel : allFilePanels())
         panel->loadDirectory();
-    setActiveSideWithFocus(Side::Left);
+    filePanelForSide(Side::Left)->setFocus();
 
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
@@ -167,7 +167,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         // Ctrl+Shift+Tab
         if (modifiers == (Qt::ControlModifier | Qt::ShiftModifier)
             && keyEvent->key() == Qt::Key_Backtab) {
-            if (auto* panel = panelForObject(obj)) {
+            if (panel) {
                 goToPreviousTab(tabsForSide(m_activeSide));
                 return true;
             }
@@ -176,7 +176,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         if (keyEvent->key() == Qt::Key_Tab) {
             auto view = dynamic_cast<QTableView*> (obj);
             if (view) {
-                setActiveSideWithFocus(opposite(m_activeSide));
+                auto new_panel = oppositeFilePanel();
+                if (new_panel) new_panel->setFocus();
                 return true; // Event handled
             }
         } else if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
@@ -511,7 +512,19 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         }
     } else if (event->type() == QEvent::FocusIn) {
         if (auto* panel = panelForObject(obj)) {
-            setActiveSide(panel->side());
+            Side newSide = panel->side();
+            if (m_activeSide != newSide) {
+                // Change side - visually clear the old panel
+                if (auto* oldPanel = filePanelForSide(m_activeSide))
+                    oldPanel->clearSelection();
+                m_activeSide = newSide;
+            }
+            // Restore selection (whether changing side or returning from the editor)
+            panel->restoreSelectionFromMemory();
+        }
+    } else if (event->type() == QEvent::FocusOut) {
+        if (auto* panel = panelForObject(obj)) {
+            panel->rememberSelection();
         }
     }
     return QMainWindow::eventFilter(obj, event);
@@ -712,23 +725,6 @@ FilePanel* MainWindow::oppositeFilePanel() const
 {
     return filePanelForSide(opposite(m_activeSide));
 }
-
-void MainWindow::setActiveSide(Side side)
-{
-    m_activeSide = side;
-    if (auto* panel = filePanelForSide(opposite(side)))
-        panel->rememberSelectionAndClear();
-    if (auto* panel = currentFilePanel())
-        panel->restoreSelectionFromMemory();
-}
-
-void MainWindow::setActiveSideWithFocus(Side side)
-{
-    setActiveSide(side);
-    if (auto* panel = filePanelForSide(side))
-        panel->setFocus();
-}
-
 
 FilePanel* MainWindow::panelForObject(QObject* obj) const
 {

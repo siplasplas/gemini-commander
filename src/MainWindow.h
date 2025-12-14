@@ -40,18 +40,13 @@ private:
     void reloadAllPanels();
     void showFavoriteDirsMenu();
     QVector<FilePanel*> allFilePanels() const;
-    // Zwróć aktywną stronę
-    void setActiveSide(Side side);
-    void setActiveSideWithFocus(Side side);
     FilePanel *panelForObject(QObject *obj) const;
-    //int sideForPanel(FilePanel *panel) const;
 
-    // Dostęp do aktualnego FilePaneWidget na aktywnej stronie
     FilePaneWidget* currentPane() const;
     FilePanel* currentFilePanel() const;
+
     FilePanel* oppositeFilePanel() const;
 
-    // Dostęp do panelu po stronie (left/right)
     FilePaneWidget* paneForSide(Side side) const;
     FilePanel* filePanelForSide(Side side) const;
 

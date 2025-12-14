@@ -94,7 +94,7 @@ public:
     void renameOrMoveEntry(QWidget* dialogParent = nullptr,
                        const QString& defaultTargetDir = QString());
     void toggleMarkOnCurrent(bool advanceRow);
-    void rememberSelectionAndClear();
+    void rememberSelection();
     void restoreSelectionFromMemory();
     std::pair<PanelEntry*, int> currentEntryRow();
     void updateColumn(int row, PanelEntry& entry);
