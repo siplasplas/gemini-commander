@@ -39,9 +39,6 @@ public:
     [[nodiscard]] std::vector<KeyBindingEntry> entriesForWidget(const std::string& widgetName) const;
     // Collect all unique handler names in alphabetical order
     [[nodiscard]] std::vector<std::string> allHandlers() const;
-    void printHandlerDeclarations() const;
-    void printHandlerDefinitions() const;
-    void printInvokeCalls() const;
 private:
     std::vector<KeyBindingEntry> bindings_;
 };

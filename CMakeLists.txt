@@ -77,6 +77,19 @@ target_link_libraries(toml_json_converter PRIVATE
         core
 )
 
+add_executable(placeholder_generator
+        tools/placeholder_generator.cpp
+)
+
+target_include_directories(placeholder_generator PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${TOMLPLUSPLUS_INCLUDE_DIR}
+)
+
+target_link_libraries(placeholder_generator PRIVATE
+        core
+)
+
 add_executable(${PROJECT_NAME}
         src/main.cpp
         src/MainWindow.cpp
