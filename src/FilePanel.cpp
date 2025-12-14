@@ -423,7 +423,6 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
         onPanelActivated(index);
     });
 
-    initSearchEdit();
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::DragOnly);
 }
@@ -431,27 +430,6 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
 FilePanel::~FilePanel() {
     delete dir;
     delete model;
-}
-
-void FilePanel::initSearchEdit()
-{
-    searchEdit = new QLineEdit(this);
-    searchEdit->hide();
-    searchEdit->setPlaceholderText("Search...");
-    searchEdit->setClearButtonEnabled(true);
-
-    // Make it visually distinct and compact
-    QFont f = font();
-    f.setPointSizeF(f.pointSizeF() - 1);
-    searchEdit->setFont(f);
-
-    searchEdit->setFrame(true);
-
-    // We will manually position it in resizeEvent()
-    searchEdit->installEventFilter(this);
-
-    connect(searchEdit, &QLineEdit::textChanged,
-            this, &FilePanel::onSearchTextChanged);
 }
 
 QString FilePanel::normalizeForSearch(const QString& s) const
@@ -503,88 +481,6 @@ QString FilePanel::normalizeForSearch(const QString& s) const
     return QString::fromUtf8(utf8.data(), static_cast<int>(utf8.size()));
 }
 
-bool FilePanel::findAndSelectPattern(const QString& pattern,
-                                     bool forward,
-                                     bool wrap,
-                                     int startRow)
-{
-    if (!model || model->rowCount() == 0)
-        return false;
-
-    const QString normPattern = normalizeForSearch(pattern);
-    if (normPattern.isEmpty())
-        return false;
-
-    const int rows = model->rowCount();
-    if (rows <= 0)
-        return false;
-
-    // Determine search direction
-    int step = forward ? 1 : -1;
-
-    auto nextRow = [rows, wrap](int row, int step) -> int {
-        int nr = row + step;
-        if (wrap) {
-            if (nr < 0)
-                nr = rows - 1;
-            else if (nr >= rows)
-                nr = 0;
-        }
-        return nr;
-    };
-
-    int row = startRow;
-    // Start from "next" row, not the current one
-    row = nextRow(row, step);
-
-    for (int i = 0; i < rows; ++i) {
-        if (row < 0 || row >= rows)
-            break;
-
-        QString fullName = getRowName(row);
-        if (!fullName.isEmpty()) {
-            QString normName = normalizeForSearch(fullName);
-            if (normName.startsWith(normPattern)) {
-                QModelIndex idx = model->index(row, COLUMN_NAME);
-                setCurrentIndex(idx);
-                scrollTo(idx);
-                return true;
-            }
-        }
-
-        row = nextRow(row, step);
-    }
-
-    return false;
-}
-
-void FilePanel::onSearchTextChanged(const QString& text)
-{
-    // Remember current text as candidate
-    QString newText = text;
-
-    if (newText.isEmpty()) {
-        lastSearchText.clear();
-        return;
-    }
-
-    int startRow = currentIndex().isValid() ? currentIndex().row() : -1;
-
-    // Try to find match from current position
-    if (findAndSelectPattern(newText, /*forward*/true, /*wrap*/true, startRow)) {
-        lastSearchText = newText;
-    } else {
-        // No match: revert to previous text and restore cursor position
-        // (blocks further typing that would lead to "no matches")
-        searchEdit->blockSignals(true);
-        searchEdit->setText(lastSearchText);
-        searchEdit->blockSignals(false);
-
-        // Optional: beep to indicate failure
-        // QApplication::beep();
-    }
-}
-
 void FilePanel::keyPressEvent(QKeyEvent* event) {
     // Ctrl+S: explicit search start, empty pattern
     if (event->key() == Qt::Key_S &&
@@ -607,40 +503,6 @@ void FilePanel::keyPressEvent(QKeyEvent* event) {
 
     // Default behavior for other keys (navigation, F-keys, etc.)
     QTableView::keyPressEvent(event);
-}
-
-
-
-bool FilePanel::eventFilter(QObject* obj, QEvent* ev)
-{
-    if (obj == searchEdit && ev->type() == QEvent::KeyPress) {
-        auto* ke = static_cast<QKeyEvent*>(ev);
-
-        if (ke->key() == Qt::Key_Escape) {
-            // ESC: close search bar
-            searchEdit->hide();
-            searchEdit->clear();
-            lastSearchText.clear();
-            setFocus();
-            return true;
-        }
-
-        if (ke->key() == Qt::Key_Down || ke->key() == Qt::Key_Up) {
-            if (!lastSearchText.isEmpty()) {
-                int startRow = currentIndex().isValid()
-                               ? currentIndex().row()
-                               : -1;
-                bool forward = (ke->key() == Qt::Key_Down);
-                findAndSelectPattern(lastSearchText,
-                                     forward,
-                                     /*wrap*/true,
-                                     startRow);
-            }
-            return true; // do not move cursor in QLineEdit
-        }
-    }
-
-    return QTableView::eventFilter(obj, ev);
 }
 
 void FilePanel::onHeaderSectionClicked(int logicalIndex)

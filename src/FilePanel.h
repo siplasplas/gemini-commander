@@ -104,12 +104,10 @@ public:
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
     void keyPressEvent(QKeyEvent* event) override;
-    bool eventFilter(QObject* obj, QEvent* ev) override;
 
 private slots:
     void onPanelActivated(const QModelIndex &index);
     void onHeaderSectionClicked(int logicalIndex);
-    void onSearchTextChanged(const QString& text);
 public slots:
     void updateSearch(const QString& text);
     void nextMatch();
@@ -134,20 +132,12 @@ private:
     EntryContentState ensureContentState(PanelEntry&entry)const;
     bool mixedHidden = true;//filenames with dot, are between others
     // Search UI and logic
-    QLineEdit* searchEdit = nullptr;
-    QString lastSearchText;
     QList<PanelEntry> entries;
     QDir *dir = nullptr;
     void sortEntries();
     void addFirstEntry(bool isRoot);
     void addEntries();
-    void initSearchEdit();
-    void updateSearchGeometry();
     QString normalizeForSearch(const QString& s) const;
-    bool findAndSelectPattern(const QString& pattern,
-                              bool forward,
-                              bool wrap,
-                              int startRow);
 };
 
 #endif //PANEL_H
