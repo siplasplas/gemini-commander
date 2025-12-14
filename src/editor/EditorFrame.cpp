@@ -67,6 +67,9 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::extendTabContextMenu);
 
     createActions();
+    m_mainHeader->setupMenus(m_openFileAction, m_viewFileAction, m_closeAction,
+                             m_exitAction, m_aboutAction);
+
 
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
@@ -285,9 +288,7 @@ void EditorFrame::onAboutTriggered()
 #else
     QString version = QStringLiteral("unknown");
 #endif
-    aboutText += "\n" + tr("Eudaimonia IDE\nVersion ") + version;
-
-    QMessageBox::about(this, tr("About Eudaimonia"), aboutText);
+    QMessageBox::about(this, tr("About"), aboutText);
 }
 
 /**

@@ -26,7 +26,7 @@ void MainHeader::setupUi()
 }
 
 void MainHeader::setupMenus(QAction* openFile, QAction* viewFile, QAction* closeFile,
-                             QAction* exitApp, QAction* buildProject, QAction* runProject, QAction* aboutApp)
+                             QAction* exitApp, QAction* aboutApp)
 {
     QMenu* fileMenu = m_menuBar->addMenu(tr("&File"));
     fileMenu->addAction(openFile);
@@ -35,12 +35,6 @@ void MainHeader::setupMenus(QAction* openFile, QAction* viewFile, QAction* close
     fileMenu->addAction(closeFile);
     fileMenu->addSeparator();
     fileMenu->addAction(exitApp);
-
-    QMenu* buildMenu = m_menuBar->addMenu(tr("&Build"));
-    buildMenu->addAction(buildProject);
-
-    QMenu* runMenu = m_menuBar->addMenu(tr("&Run"));
-    runMenu->addAction(runProject);
 
     QMenu* helpMenu = m_menuBar->addMenu(tr("&Help"));
     helpMenu->addAction(aboutApp);

@@ -34,7 +34,7 @@ public:
      * @param aboutApp Action for about dialog
      */
     void setupMenus(QAction* openFile, QAction* viewFile, QAction* closeFile,
-                    QAction* exitApp, QAction* buildProject, QAction* runProject, QAction* aboutApp);
+                    QAction* exitApp, QAction* aboutApp);
 
     /**
      * @brief Configures toolbar buttons
