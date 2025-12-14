@@ -176,34 +176,22 @@ void EditorFrame::openFileInEditor(const QString& fileName)
         return;
     }
 
-    KTextEditor::Document* doc = app->findUrl(fileUrl);
-    bool needsOpening = (doc == nullptr);
-
-    if (needsOpening)
+    KTextEditor::Document* doc = KTextEditor::Editor::instance()->createDocument(nullptr);
+    if (doc)
     {
-        qDebug() << "Document not found by KTE Application, manually creating new Document for:" << fileUrl;
-        doc = KTextEditor::Editor::instance()->createDocument(nullptr);
-
-        if (doc)
+        if (!doc->openUrl(fileUrl))
         {
-            if (!doc->openUrl(fileUrl))
-            {
-                qWarning() << "Manual openUrl on Document failed for:" << fileUrl;
-                QMessageBox::warning(this, tr("Error"), tr("Could not open document for:\n%1").arg(fileName));
-                delete doc; // Clean up
-                return;
-            }
-        }
-        else
-        {
-            qWarning() << "Failed to create KTextEditor::Document manually!";
-            QMessageBox::warning(this, tr("Error"), tr("Could not create document for:\n%1").arg(fileName));
+            qWarning() << "Manual openUrl on Document failed for:" << fileUrl;
+            QMessageBox::warning(this, tr("Error"), tr("Could not open document for:\n%1").arg(fileName));
+            delete doc; // Clean up
             return;
         }
     }
     else
     {
-        qDebug() << "Found existing document for:" << fileUrl;
+        qWarning() << "Failed to create KTextEditor::Document manually!";
+        QMessageBox::warning(this, tr("Error"), tr("Could not create document for:\n%1").arg(fileName));
+        return;
     }
 
     Editor* newEditor = new Editor(doc, m_editorTabWidget);
@@ -212,14 +200,6 @@ void EditorFrame::openFileInEditor(const QString& fileName)
     int removedCount = m_editorTabWidget->enforceTabLimit();
     m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
     qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view()->setFocus();
-    if (needsOpening)
-    {
-        qDebug() << "Manually opened file" << fileName << "in new tab (" << newIndex << ") with title:" << tabTitle;
-    }
-    else
-    {
-        qDebug() << "Created new tab (" << newIndex << ") for existing KTE document:" << fileName;
-    }
 }
 
 
