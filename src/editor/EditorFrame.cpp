@@ -9,13 +9,9 @@
 #include <QString>
 #include <QDebug>
 #include <QtGlobal>
-#include <QSplitter>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QTreeView>
-#include <QGraphicsDropShadowEffect>
 #include <QShortcut>
-#include <QStandardItemModel>
 #include <QClipboard>
 
 // KTextEditor Includes
@@ -57,16 +53,8 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainHeader = new MainHeader(this);
     m_mainLayout->addWidget(m_mainHeader);
 
-    // --- Main Splitter for content ---
-    m_mainSplitter = new QSplitter(Qt::Vertical, this);
-
-    m_topSplitter = new QSplitter(Qt::Horizontal, m_mainSplitter);
-
-    m_projectTree = new QTreeView(m_topSplitter);
-    connect(m_projectTree, &QTreeView::doubleClicked,
-            this, &EditorFrame::onProjectTreeActivated);
-
-    m_editorTabWidget = new MruTabWidget(m_topSplitter);
+    // --- Editor Tab Widget ---
+    m_editorTabWidget = new MruTabWidget(this);
     m_editorTabWidget->setTabLimit(3); // Small value for tests
     m_editorTabWidget->setTabsClosable(true);
     m_editorTabWidget->setMovable(true);
@@ -75,34 +63,19 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::cleanupBeforeTabClose);
     connect(m_editorTabWidget, &MruTabWidget::tabAboutToClose,
             this, &EditorFrame::tabAboutToClose);
-
     connect(m_editorTabWidget, &MruTabWidget::tabContextMenuRequested,
-        this, &EditorFrame::extendTabContextMenu);
-
-    m_topSplitter->addWidget(m_projectTree);
-    m_topSplitter->addWidget(m_editorTabWidget);
-    m_topSplitter->setStretchFactor(0, 1);
-    m_topSplitter->setStretchFactor(1, 3);
-    m_topSplitter->setSizes({200, 600});
-
-    m_mainSplitter->addWidget(m_topSplitter);
-
-    m_mainSplitter->setStretchFactor(0, 4);
-    m_mainSplitter->setStretchFactor(1, 1);
-    m_mainSplitter->setSizes({600, 150});
+            this, &EditorFrame::extendTabContextMenu);
 
     createActions();
     m_mainHeader->setupMenus(m_openFileAction, m_viewFileAction, m_closeAction,
                          m_exitAction, m_buildAction, m_runAction, m_aboutAction);
     m_mainHeader->setupToolBar(m_buildAction, m_runAction);
 
-    m_mainLayout->addWidget(m_mainSplitter);
+    m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
 
     // --- Finish setup ---
     setMinimumSize(600, 400);
-
-    qApp->installEventFilter(this);
 }
 
 void EditorFrame::extendTabContextMenu(int tabIndex, QMenu* menu) {
@@ -317,41 +290,6 @@ void EditorFrame::onViewFileTriggered()
         viewFileInEditor(fileName);
 }
 
-void EditorFrame::onTreeItemExpanded(const QModelIndex& index)
-{
-    QStandardItem* item = m_projectModel->itemFromIndex(index);
-    if (!item)
-        return;
-
-    // Jeśli dzieci są prawdziwe (nie placeholder), już załadowane
-    if (item->rowCount() > 0 && item->child(0)->data(Qt::UserRole + 1).isValid())
-        return;
-
-    // Usuwamy placeholdery
-    item->removeRows(0, item->rowCount());
-
-    QString path = item->data(Qt::UserRole + 1).toString();
-    QDir dir(path);
-    QFileInfoList entries = dir.entryInfoList(
-        QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files,
-        QDir::Name
-    );
-
-    for (const QFileInfo& entry : entries)
-    {
-        QStandardItem* child = new QStandardItem(entry.fileName());
-        child->setEditable(false);
-        child->setData(entry.absoluteFilePath(), Qt::UserRole + 1);
-
-        if (entry.isDir())
-        {
-            child->appendRow(new QStandardItem()); // Placeholder dla folderu
-        }
-
-        item->appendRow(child);
-    }
-}
-
 void EditorFrame::onCloseCurrentTabTriggered()
 {
     m_editorTabWidget->closeTab(m_editorTabWidget-> currentIndex());
@@ -510,72 +448,6 @@ QString EditorFrame::generateUniqueTabTitle(const QString& filePath)
         }
     }
     return uniqueTitle;
-}
-
-void EditorFrame::onProjectTreeKeyPressed(QKeyEvent* event)
-{
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
-    {
-        QModelIndex current = m_projectTree->currentIndex();
-        if (current.isValid())
-            onProjectTreeActivated(current);
-    }
-}
-
-bool EditorFrame::eventFilter(QObject *obj, QEvent *event)
-{
-    if (obj == m_projectTree && event->type() == QEvent::KeyPress)
-    {
-        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-        onProjectTreeKeyPressed(keyEvent);
-        return true;
-    }
-    QObject *testObj = obj;
-    while (testObj) {
-        if (
-            qobject_cast<KTextEditor::View*>(testObj)) {
-            if (event->type() == QEvent::KeyPress) {
-                auto keyEvent = dynamic_cast<QKeyEvent*>(event);
-                if (keyEvent->key() == Qt::Key_Tab && keyEvent->modifiers() == Qt::ControlModifier)
-                {
-                    QKeyEvent *newEvent = new QKeyEvent(
-                       event->type(),
-                       keyEvent->key(),
-                       keyEvent->modifiers(),
-                       keyEvent->text(),
-                       keyEvent->isAutoRepeat(),
-                       keyEvent->count()
-                   );
-                    QApplication::postEvent(m_editorTabWidget, newEvent);
-                    return true;
-                }
-            }
-            }
-        testObj = testObj->parent();
-    }
-    return false;
-}
-
-void EditorFrame::onProjectTreeActivated(const QModelIndex& index)
-{
-    QString path = index.data(Qt::UserRole + 1).toString();
-    if (path.isEmpty())
-        return;
-
-    QFileInfo info(path);
-
-    if (info.isDir())
-    {
-        if (m_projectTree->isExpanded(index))
-            m_projectTree->collapse(index);
-        else
-            m_projectTree->expand(index);
-    }
-    else if (info.isFile())
-    {
-        // Otwieranie pliku jak w File->Open File
-        openFileInEditor(path);
-    }
 }
 
 void EditorFrame::closeEvent(QCloseEvent* event)
