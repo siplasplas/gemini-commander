@@ -29,6 +29,7 @@
 #include <QStorageInfo>
 
 #include "SortedDirIterator.h"
+#include "editor/ViewerFrame.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
@@ -200,18 +201,20 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 return true;
             }
 
-            if (!editorFrame)
-                editorFrame = new EditorFrame(this);
-
-            if (keyEvent->key() == Qt::Key_F3)
-                editorFrame->openFileInViewer(fullPath);
-            else
-                editorFrame->openFileInEditor(fullPath);
-
-            editorFrame->show();
-            editorFrame->raise();
-            editorFrame->activateWindow();
-
+            if (keyEvent->key() == Qt::Key_F3) {
+                if (!viewerFrame)
+                    viewerFrame = new ViewerFrame(fullPath);
+                viewerFrame->show();
+                viewerFrame->raise();
+                viewerFrame->activateWindow();
+            } else {
+                if (!editorFrame)
+                    editorFrame = new EditorFrame(this);
+                editorFrame->openFile(fullPath);
+                editorFrame->show();
+                editorFrame->raise();
+                editorFrame->activateWindow();
+            }
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
             showFavoriteDirsMenu(m_activeSide);

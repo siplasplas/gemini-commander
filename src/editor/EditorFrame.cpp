@@ -25,7 +25,6 @@
 
 #include "EditorFrame.h"
 #include "editor.h"
-#include "Viewer.h"
 #include "../widgets/mrutabwidget.h"
 
 // Helper function to get KTextEditor::EditorFrame (can be nullptr if not embedded)
@@ -67,7 +66,7 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::extendTabContextMenu);
 
     createActions();
-    m_mainHeader->setupMenus(m_openFileAction, m_viewFileAction, m_closeAction,
+    m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
                              m_exitAction, m_aboutAction);
 
 
@@ -122,9 +121,6 @@ void EditorFrame::createActions()
     m_openFileAction->setShortcut(QKeySequence::Open);
     connect(m_openFileAction, &QAction::triggered, this, &EditorFrame::onOpenFileTriggered);
 
-    m_viewFileAction = new QAction(tr("&View File..."), this);
-    connect(m_viewFileAction, &QAction::triggered, this, &EditorFrame::onViewFileTriggered);
-
     m_closeAction = new QAction(tr("&Close"), this);
     m_closeAction->setShortcut(QKeySequence::Close);
     connect(m_closeAction, &QAction::triggered, this, &EditorFrame::onCloseCurrentTabTriggered);
@@ -137,27 +133,13 @@ void EditorFrame::createActions()
     connect(m_aboutAction, &QAction::triggered, this, &EditorFrame::onAboutTriggered);
 }
 
-void EditorFrame::openFileInViewer(const QString& fileName)
-{
-    auto* viewer = new Viewer(fileName, m_editorTabWidget);
-
-    // Add tab normally
-    const QString baseName = QFileInfo(fileName).fileName();
-    int newIndex = m_editorTabWidget->addTab(viewer, baseName);
-
-    // If you have MRU/limit logic, keep it:
-    int removedCount = m_editorTabWidget->enforceTabLimit();
-    m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
-    viewer->setFocus();
-}
-
 /**
  * @brief Opens file in editor tab
  * @param filePath Full path to file
  *
  * Reuses existing tabs for already open files
  */
-void EditorFrame::openFileInEditor(const QString& fileName)
+void EditorFrame::openFile(const QString& fileName)
 {
     KTextEditor::Editor* kate = KTextEditor::Editor::instance(); // Singleton KTE Editor
     // Download Application interface from singleton Editor
@@ -205,24 +187,6 @@ void EditorFrame::openFileInEditor(const QString& fileName)
     qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view()->setFocus();
 }
 
-
-void EditorFrame::viewFileInEditor(const QString& fileName) {
-    int existingTabIndex = findTabByPath(fileName);
-    if (existingTabIndex >= 0)
-    {
-        m_editorTabWidget->setCurrentIndex(existingTabIndex);
-        qDebug() << "Activated existing tab for:" << fileName;
-        return;
-    }
-
-    auto newViewer = new Viewer(fileName, m_editorTabWidget);
-    QString tabTitle = generateUniqueTabTitle(newViewer->filePath());
-    int newIndex = m_editorTabWidget->addTab(newViewer, tabTitle);
-    int removedCount = m_editorTabWidget->enforceTabLimit();
-    m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
-    newViewer->setFocus();
-}
-
 /**
  * @brief Handles file open action
  *
@@ -243,26 +207,7 @@ void EditorFrame::onOpenFileTriggered()
         return;
     }
     for (const QString& fileName : fileNames)
-        openFileInEditor(fileName);
-}
-
-
-void EditorFrame::onViewFileTriggered()
-{
-    QStringList fileNames = QFileDialog::getOpenFileNames(this,
-                                                          tr("Open File(s)"),
-                                                          QString(),
-                                                          tr(
-                                                              "All Files (*.*);;Text Files (*.txt);;C++ Files (*.cpp *.h)"),
-                                                          nullptr,
-                                                          QFileDialog::DontUseNativeDialog);
-
-    if (fileNames.isEmpty())
-    {
-        return;
-    }
-    for (const QString& fileName : fileNames)
-        viewFileInEditor(fileName);
+        openFile(fileName);
 }
 
 void EditorFrame::onCloseCurrentTabTriggered()

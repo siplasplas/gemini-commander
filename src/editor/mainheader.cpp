@@ -25,12 +25,11 @@ void MainHeader::setupUi()
     m_layout->addWidget(m_toolBar, 0, 2);
 }
 
-void MainHeader::setupMenus(QAction* openFile, QAction* viewFile, QAction* closeFile,
+void MainHeader::setupMenus(QAction* openFile, QAction* closeFile,
                              QAction* exitApp, QAction* aboutApp)
 {
     QMenu* fileMenu = m_menuBar->addMenu(tr("&File"));
     fileMenu->addAction(openFile);
-    fileMenu->addAction(viewFile);
     fileMenu->addSeparator();
     fileMenu->addAction(closeFile);
     fileMenu->addSeparator();

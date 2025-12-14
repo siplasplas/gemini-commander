@@ -4,11 +4,13 @@
 #include "FilePaneWidget.h"
 
 #include <QMainWindow>
+#include <QPointer>
 #include <QTableView>
 #include <QProgressDialog>
 
 #include "editor/EditorFrame.h"
 
+class ViewerFrame;
 class FilePanel;
 QT_BEGIN_NAMESPACE
 class QSplitter;
@@ -34,6 +36,7 @@ private:
     void goToPreviousTab(QTabWidget *tabWidget);
     QLineEdit *commandLineEdit;
     EditorFrame *editorFrame = nullptr;
+    QPointer<ViewerFrame> viewerFrame;
     int numberForWidget(QTableView* widget);
     void showFavoriteDirsMenu(Side side);
 

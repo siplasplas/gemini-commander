@@ -9,6 +9,8 @@ Viewer::Viewer(const QString& fileName, QWidget *parent):BaseViewer(parent) {
         qDebug() << "error open file";
         return;
     }
+    if (file->size()==0)
+        return;
     uchar *addr = file->map(0, file->size());
     widget = new wid::TextViewer((char *) addr, file->size(), this);
     auto mainLayout = new QVBoxLayout;

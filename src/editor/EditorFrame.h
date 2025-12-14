@@ -39,7 +39,7 @@ public:
     bool cleanupBeforeTabClose(int index);
 
     void tabAboutToClose(int index, bool &allow_close);
-    void openFileInEditor(const QString& filePath);
+    void openFile(const QString& filePath);
     void openFileInViewer(const QString &fileName);
 
 protected:
