@@ -4,6 +4,8 @@
 #include <QKeyEvent>
 #include <QVBoxLayout>
 
+#include "keys/ObjectRegistry.h"
+
 ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
     : QDialog(parent)
 {
@@ -15,6 +17,7 @@ ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
     m_layout->setContentsMargins(0, 0, 0, 0);
 
     m_viewer = new Viewer(filePath, this);
+    ObjectRegistry::add(m_viewer, "Viewer");
     m_layout->addWidget(m_viewer);
 }
 

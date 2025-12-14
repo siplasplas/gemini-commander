@@ -30,9 +30,11 @@
 
 #include "SortedDirIterator.h"
 #include "editor/ViewerFrame.h"
+#include "keys/ObjectRegistry.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
+    ObjectRegistry::add(this, "MainFrame");
     QString cfg = Config::instance().defaultConfigPath();
     Config::instance().load(cfg);
     Config::instance().setConfigPath(cfg);
@@ -55,7 +57,9 @@ void MainWindow::setupUi() {
     auto* splitter = new QSplitter(Qt::Horizontal, centralWidget);
 
     m_leftTabs = new QTabWidget(splitter);
+    ObjectRegistry::add(m_leftTabs, "Tabs");
     m_rightTabs = new QTabWidget(splitter);
+    ObjectRegistry::add(m_rightTabs, "Tabs");
     auto tuneTabBar = [](QTabWidget* tabs) {
         QTabBar* bar = tabs->tabBar();
         QFontMetrics fm(bar->font());
@@ -74,6 +78,7 @@ void MainWindow::setupUi() {
     splitter->setStretchFactor(1, 1);
 
     commandLineEdit = new QLineEdit(centralWidget);
+    ObjectRegistry::add(commandLineEdit, "CommandLine");
 
     auto* leftPane  = new FilePaneWidget(Side::Left, m_leftTabs);
     auto* rightPane = new FilePaneWidget(Side::Right, m_rightTabs);

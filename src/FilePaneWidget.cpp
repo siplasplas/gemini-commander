@@ -5,6 +5,8 @@
 #include <QStandardItemModel>
 #include <QVBoxLayout>
 
+#include "keys/ObjectRegistry.h"
+
 FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     : m_side(side), QWidget(parent)
 {
@@ -19,6 +21,7 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     m_pathEdit->setFixedHeight(h);
 
     m_filePanel = new FilePanel(side, nullptr);
+    ObjectRegistry::add(m_filePanel, "Panel");
     m_searchEdit = new SearchEdit(this);
     m_searchEdit->hide();
 
