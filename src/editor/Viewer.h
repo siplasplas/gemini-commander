@@ -12,11 +12,6 @@ class Viewer : public BaseViewer {
 public:
     explicit Viewer(const QString& fileName, QWidget *parent = nullptr);
 #include "Viewer_decl.inc"
-signals:
-    // Emitted when user presses ESC and viewer requests closing its tab
-    void closeRequested();
-protected:
-    void keyPressEvent(QKeyEvent* event) override;
 };
 
 #endif //VIEWER_H

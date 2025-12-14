@@ -16,15 +16,4 @@ Viewer::Viewer(const QString& fileName, QWidget *parent):BaseViewer(parent) {
     setLayout(mainLayout);
 }
 
-void Viewer::keyPressEvent(QKeyEvent* event)
-{
-    if (event->key() == Qt::Key_Escape) {
-        emit closeRequested();
-        // Do not pass ESC further – viewer handled it
-        return;
-    }
-
-    QWidget::keyPressEvent(event);
-}
-
 #include "Viewer_impl.inc"

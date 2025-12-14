@@ -173,16 +173,6 @@ void EditorFrame::openFileInViewer(const QString& fileName)
 {
     auto* viewer = new Viewer(fileName, m_editorTabWidget);
 
-    // ESC inside viewer should close only this tab, not the whole app
-    connect(viewer, &Viewer::closeRequested, this, [this, viewer]() {
-        int idx = m_editorTabWidget->indexOf(viewer);
-        if (idx >= 0) {
-            m_editorTabWidget->removeTab(idx);
-            viewer->deleteLater();
-        }
-        close();
-    });
-
     // Add tab normally
     const QString baseName = QFileInfo(fileName).fileName();
     int newIndex = m_editorTabWidget->addTab(viewer, baseName);
