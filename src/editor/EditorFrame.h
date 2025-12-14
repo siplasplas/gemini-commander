@@ -48,7 +48,6 @@ protected:
 
 private slots:
     void onOpenFileTriggered();
-    void onViewFileTriggered();
     void onCloseCurrentTabTriggered();
     void onAboutTriggered();
 

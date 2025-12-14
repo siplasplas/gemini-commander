@@ -103,7 +103,7 @@ void writeDeclarations(const std::string& className, const std::set<std::string>
     out << "// Handler declarations for " << className << "\n\n";
 
     for (const auto& name : handlers) {
-        out << "    Q_INVOKABLE bool " << name << "(QKeyEvent *keyEvent);\n";
+        out << "    Q_INVOKABLE bool " << name << "(QObject *obj, QKeyEvent *keyEvent);\n";
     }
 
     out.close();
@@ -122,7 +122,8 @@ void writeImplementations(const std::string& className, const std::set<std::stri
     out << "// Handler stub implementations for " << className << "\n\n";
 
     for (const auto& name : handlers) {
-        out << "bool " << className << "::" << name << "(QKeyEvent *keyEvent) {\n";
+        out << "bool " << className << "::" << name << "(QObject *obj, QKeyEvent *keyEvent) {\n";
+        out << "    Q_UNUSED(obj);\n";
         out << "    Q_UNUSED(keyEvent);\n";
         out << "    qDebug() << \"handler: " << name << "\";\n";
         out << "    return false;\n";

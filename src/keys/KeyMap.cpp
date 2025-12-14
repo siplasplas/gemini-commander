@@ -638,15 +638,15 @@ void KeyMap::load(const std::filesystem::path& filePath)
             auto* keyTable = item.as_table();
             if (!keyTable) continue;
 
-            auto comboNode   = keyTable->get("combo");
+            auto keyNode     = keyTable->get("key");
             auto handlerNode = keyTable->get("handler");
-            if (!comboNode || !handlerNode) continue;
+            if (!keyNode || !handlerNode) continue;
 
-            auto comboOpt   = comboNode->value<std::string>();
+            auto keyOpt     = keyNode->value<std::string>();
             auto handlerOpt = handlerNode->value<std::string>();
-            if (!comboOpt || !handlerOpt) continue;
+            if (!keyOpt || !handlerOpt) continue;
 
-            auto [key, mods] = parseCombo(*comboOpt);
+            auto [key, mods] = parseCombo(*keyOpt);
 
             KeyBindingEntry e;
             e.widget    = widgetName.str();
@@ -686,4 +686,60 @@ std::vector<std::string> KeyMap::allHandlers() const
 
     // move them into a vector
     return std::vector<std::string>(handlers.begin(), handlers.end());
+}
+
+QString KeyMap::keyToString(int qtKey) const
+{
+    for (const auto& [key, name] : keys_) {
+        if (key == qtKey)
+            return QString::fromStdString(name);
+    }
+    return {};
+}
+
+QString KeyMap::handlerFor(int qtKey, Qt::KeyboardModifiers mods, const QString& widgetName) const
+{
+    // Convert Qt modifiers to our uint8_t format
+    std::uint8_t modMask = 0;
+    if (mods & Qt::ControlModifier) modMask |= Mod_Ctrl;
+    if (mods & Qt::ShiftModifier)   modMask |= Mod_Shift;
+    if (mods & Qt::AltModifier)     modMask |= Mod_Alt;
+    if (mods & Qt::MetaModifier)    modMask |= Mod_Meta;
+
+    QString keyStr = keyToString(qtKey);
+    std::string widgetStd = widgetName.toStdString();
+    std::string keyStd = keyStr.toStdString();
+
+    // Helper to find binding
+    auto findBinding = [&](const std::string& keyToFind) -> QString {
+        for (const auto& e : bindings_) {
+            if (e.widget == widgetStd &&
+                e.key == keyToFind &&
+                e.modifiers == modMask) {
+                return QString::fromStdString(e.handler);
+            }
+        }
+        return {};
+    };
+
+    // Try exact key match first
+    QString handler = findBinding(keyStd);
+    if (!handler.isEmpty())
+        return handler;
+
+    // Try LETTERS for A-Z (only without modifiers or with shift only)
+    if (qtKey >= Qt::Key_A && qtKey <= Qt::Key_Z) {
+        handler = findBinding("LETTERS");
+        if (!handler.isEmpty())
+            return handler;
+    }
+
+    // Try DIGITS for 0-9 (only without modifiers or with shift only)
+    if (qtKey >= Qt::Key_0 && qtKey <= Qt::Key_9) {
+        handler = findBinding("DIGITS");
+        if (!handler.isEmpty())
+            return handler;
+    }
+
+    return {};
 }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <qnamespace.h>
+#include <QString>
 #include <string>
 #include <vector>
 
@@ -39,6 +40,14 @@ public:
     [[nodiscard]] std::vector<KeyBindingEntry> entriesForWidget(const std::string& widgetName) const;
     // Collect all unique handler names in alphabetical order
     [[nodiscard]] std::vector<std::string> allHandlers() const;
+
+    // Find handler for given key, modifiers, and widget name.
+    // Returns handler name, "none", "default", or empty string if not found.
+    // Supports LETTERS (A-Z) and DIGITS (0-9) pseudo-keys.
+    [[nodiscard]] QString handlerFor(int qtKey, Qt::KeyboardModifiers mods, const QString& widgetName) const;
+
 private:
+    // Convert Qt::Key to string key name
+    QString keyToString(int qtKey) const;
     std::vector<KeyBindingEntry> bindings_;
 };

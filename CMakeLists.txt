@@ -130,6 +130,8 @@ add_executable(${PROJECT_NAME}
         src/keys/KeyMap.cpp
         src/keys/KeyMap.h
         src/SearchEdit.cpp
+        src/keys/KeyRouter.cpp
+        src/keys/ObjectRegistry.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
