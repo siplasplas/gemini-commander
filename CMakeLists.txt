@@ -77,16 +77,16 @@ target_link_libraries(toml_json_converter PRIVATE
         core
 )
 
-add_executable(placeholder_generator
+add_executable(stub_generator
         tools/stub_generator.cpp
 )
 
-target_include_directories(placeholder_generator PRIVATE
+target_include_directories(stub_generator PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${TOMLPLUSPLUS_INCLUDE_DIR}
 )
 
-target_link_libraries(placeholder_generator PRIVATE
+target_link_libraries(stub_generator PRIVATE
         core
 )
 
