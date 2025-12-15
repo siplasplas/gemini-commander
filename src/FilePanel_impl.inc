@@ -18,15 +18,111 @@ bool FilePanel::doCDTree(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doDeletePermanently";
-    return false;
+    QModelIndex idx = currentIndex();
+    if (!idx.isValid())
+        return true;
+
+    QString name = getRowName(idx.row());
+    if (name.isEmpty())
+        return true;
+
+    QDir dir(currentPath);
+    QString fullPath = dir.absoluteFilePath(name);
+    QFileInfo info(fullPath);
+    if (!info.exists())
+        return true;
+
+    QString question = tr("PERMANENTLY delete '%1'? This cannot be undone!").arg(name);
+    auto reply = QMessageBox::warning(
+        window(), tr("Permanent Delete"), question,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No
+    );
+    if (reply != QMessageBox::Yes)
+        return true;
+
+    bool ok = false;
+    if (info.isDir()) {
+        QDir d(fullPath);
+        ok = d.removeRecursively();
+    } else {
+        ok = QFile::remove(fullPath);
+    }
+
+    if (!ok) {
+        QMessageBox::warning(window(), tr("Error"),
+            tr("Could not delete '%1'").arg(name));
+    } else {
+        int rowToSelect = idx.row();
+        loadDirectory();
+        // Select same index or last row if we deleted the last item
+        int maxRow = model->rowCount() - 1;
+        if (maxRow >= 0) {
+            selectRow(qMin(rowToSelect, maxRow));
+        }
+    }
+    return true;
 }
 
 bool FilePanel::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doDeleteToTrash";
-    return false;
+    QModelIndex idx = currentIndex();
+    if (!idx.isValid())
+        return true;
+
+    QString name = getRowName(idx.row());
+    if (name.isEmpty())
+        return true;
+
+    QDir dir(currentPath);
+    QString fullPath = dir.absoluteFilePath(name);
+    QFileInfo info(fullPath);
+    if (!info.exists())
+        return true;
+
+    QString question;
+    bool useTrash = true;
+
+    if (info.isDir()) {
+        QDir d(fullPath);
+        bool empty = d.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+        if (empty) {
+            question = tr("Delete selected empty dir '%1'?").arg(name);
+            useTrash = false;
+        } else {
+            question = tr("Delete selected non empty dir '%1' into trashcan?").arg(name);
+        }
+    } else {
+        question = tr("Delete selected '%1' into trashcan?").arg(name);
+    }
+
+    auto reply = QMessageBox::question(
+        window(), tr("Delete"), question,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+    );
+    if (reply != QMessageBox::Yes)
+        return true;
+
+    bool ok = false;
+    if (info.isDir() && !useTrash) {
+        ok = dir.rmdir(name);
+    } else {
+        ok = QFile::moveToTrash(fullPath);
+    }
+
+    if (!ok) {
+        QMessageBox::warning(window(), tr("Error"),
+            tr("Could not delete '%1'").arg(name));
+    } else {
+        int rowToSelect = idx.row();
+        loadDirectory();
+        // Select same index or last row if we deleted the last item
+        int maxRow = model->rowCount() - 1;
+        if (maxRow >= 0) {
+            selectRow(qMin(rowToSelect, maxRow));
+        }
+    }
+    return true;
 }
 
 bool FilePanel::doDirUp(QObject *obj, QKeyEvent *keyEvent) {
@@ -118,8 +214,8 @@ bool FilePanel::doJumpUpToDirectories(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doMakeDirectory";
-    return false;
+    createNewDirectory(window());
+    return true;
 }
 
 bool FilePanel::doOccupiedSpace(QObject *obj, QKeyEvent *keyEvent) {
@@ -231,8 +327,8 @@ bool FilePanel::doSortBySize(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doToggleMarkDown";
-    return false;
+    toggleMarkOnCurrent(true);
+    return true;
 }
 
 bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {

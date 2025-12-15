@@ -1,7 +1,9 @@
 #include "KeyRouter.h"
 
+#include <QApplication>
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDialog>
 #include <QEvent>
 #include <QKeyEvent>
 #include <QMetaMethod>
@@ -35,6 +37,22 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
     // Only process key press events
     if (!keyMap_ || event->type() != QEvent::KeyPress)
         return owner_->eventFilter(obj, event);
+
+    // Skip routing for modal dialogs (QInputDialog, QMessageBox, etc.)
+    // Let them handle their own key events
+    QWidget* modalWidget = QApplication::activeModalWidget();
+    if (modalWidget && qobject_cast<QDialog*>(modalWidget)) {
+        // Check if event source is inside the modal dialog
+        QObject* check = obj;
+        while (check) {
+            if (check == modalWidget) {
+                // Event is for modal dialog - let it handle natively
+                return false;
+            }
+            check = check->parent();
+        }
+    }
+
     qDebug() << "-------------------";
     qDebug()<<obj;
     qDebug()<<"name obj = " << ObjectRegistry::name(obj);

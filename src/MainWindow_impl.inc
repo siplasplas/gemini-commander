@@ -70,8 +70,11 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doCopy";
-    return false;
+    FilePanel* panel = currentFilePanel();
+    if (panel) {
+        copyFromPanel(panel);
+    }
+    return true;
 }
 
 bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
@@ -192,8 +195,17 @@ bool MainWindow::doMakeDirectoryOpposite(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doMove";
-    return false;
+    FilePanel* panel = currentFilePanel();
+    if (panel) {
+        Side srcSide = panel->side();
+        QString targetDir;
+        Side dstSide = opposite(srcSide);
+        if (auto* dstPanel = filePanelForSide(dstSide)) {
+            targetDir = dstPanel->currentPath;
+        }
+        panel->renameOrMoveEntry(this, targetDir);
+    }
+    return true;
 }
 
 bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
@@ -292,6 +304,136 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
     viewerFrame->show();
     viewerFrame->raise();
     viewerFrame->activateWindow();
+    return true;
+}
+
+bool MainWindow::doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    FilePanel* panel = currentFilePanel();
+    if (panel) {
+        panel->toggleMarkOnCurrent(true);
+    }
+    return true;
+}
+
+bool MainWindow::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    FilePanel* panel = currentFilePanel();
+    if (panel) {
+        panel->createNewDirectory(this);
+    }
+    return true;
+}
+
+bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return true;
+
+    QModelIndex currentIndex = panel->currentIndex();
+    if (!currentIndex.isValid())
+        return true;
+
+    QString name = panel->getRowName(currentIndex.row());
+    if (name.isEmpty())
+        return true;
+
+    QDir dir(panel->currentPath);
+    QString fullPath = dir.absoluteFilePath(name);
+    QFileInfo info(fullPath);
+    if (!info.exists())
+        return true;
+
+    QString question;
+    bool useTrash = true;
+
+    if (info.isDir()) {
+        QDir d(fullPath);
+        bool empty = d.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+
+        if (empty) {
+            question = tr("Delete selected empty dir '%1'?").arg(name);
+            useTrash = false;
+        } else {
+            question = tr("Delete selected non empty dir '%1' into trashcan?").arg(name);
+        }
+    } else {
+        question = tr("Delete selected '%1' into trashcan?").arg(name);
+    }
+
+    auto reply = QMessageBox::question(
+        this, tr("Delete"), question,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+    );
+
+    if (reply != QMessageBox::Yes)
+        return true;
+
+    bool ok = false;
+    if (info.isDir() && !useTrash) {
+        ok = dir.rmdir(name);
+    } else {
+        ok = QFile::moveToTrash(fullPath);
+    }
+
+    if (!ok) {
+        QMessageBox::warning(this, tr("Error"),
+            tr("Could not delete '%1'").arg(name));
+    } else {
+        panel->loadDirectory();
+    }
+    return true;
+}
+
+bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return true;
+
+    QModelIndex currentIndex = panel->currentIndex();
+    if (!currentIndex.isValid())
+        return true;
+
+    QString name = panel->getRowName(currentIndex.row());
+    if (name.isEmpty())
+        return true;
+
+    QDir dir(panel->currentPath);
+    QString fullPath = dir.absoluteFilePath(name);
+    QFileInfo info(fullPath);
+    if (!info.exists())
+        return true;
+
+    QString question = tr("PERMANENTLY delete '%1'? This cannot be undone!").arg(name);
+
+    auto reply = QMessageBox::warning(
+        this, tr("Permanent Delete"), question,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No
+    );
+
+    if (reply != QMessageBox::Yes)
+        return true;
+
+    bool ok = false;
+    if (info.isDir()) {
+        QDir d(fullPath);
+        ok = d.removeRecursively();
+    } else {
+        ok = QFile::remove(fullPath);
+    }
+
+    if (!ok) {
+        QMessageBox::warning(this, tr("Error"),
+            tr("Could not delete '%1'").arg(name));
+    } else {
+        panel->loadDirectory();
+    }
     return true;
 }
 
