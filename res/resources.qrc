@@ -3,6 +3,7 @@
         <file>icons/folder_yellow.svg</file>
         <file>icons/folder_blue.svg</file>
         <file>icons/folder_white.svg</file>
+        <file>icons/search.svg</file>
     </qresource>
     <qresource>
         <file>config/keys.toml</file>

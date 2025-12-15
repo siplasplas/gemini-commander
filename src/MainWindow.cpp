@@ -131,14 +131,23 @@ void MainWindow::setupUi() {
     setCentralWidget(centralWidget);
 
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    QMenu* commandsMenu = menuBar()->addMenu(tr("&Commands"));
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
 
-    // Na razie tylko proste akcje, można rozwinąć później
+    // File menu
     QAction* quitAction = new QAction(tr("Quit"), this);
     quitAction->setShortcut(QKeySequence::Quit);
     connect(quitAction, &QAction::triggered, this, &QWidget::close);
     fileMenu->addAction(quitAction);
+
+    // Commands menu - Search action (no shortcut here, managed by KeyRouter/TOML)
+    m_searchAction = new QAction(tr("Search files..."), this);
+    m_searchAction->setIcon(QIcon(":/icons/search.svg"));
+    connect(m_searchAction, &QAction::triggered, this, [this]() {
+        doSearchGlobal(nullptr, nullptr);
+    });
+    commandsMenu->addAction(m_searchAction);
 
     // --- TOOLBAR ---
     m_mainToolBar = addToolBar(tr("Main toolbar"));
@@ -150,6 +159,7 @@ void MainWindow::setupUi() {
             this, &MainWindow::onOpenTerminal);
 
     m_mainToolBar->addAction(m_openTerminalAction);
+    m_mainToolBar->addAction(m_searchAction);
 
     addToolBarBreak(Qt::TopToolBarArea);
     createMountsToolbar();
