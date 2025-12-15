@@ -396,7 +396,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     setShowGrid(false);
     verticalHeader()->hide();
 
-    QFont f("Ubuntu", 10);
+    QFont f("Ubuntu", 11);
     f.setStyleHint(QFont::SansSerif);  // fallback if Ubuntu unavailable
     setFont(f);
 
