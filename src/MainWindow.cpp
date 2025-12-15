@@ -235,62 +235,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 panel->toggleMarkOnCurrent(true);
                 return true;
             }
-        }
-        else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F3) {
-            FilePanel* panel =  currentFilePanel();
-            if (panel->sortColumn == COLUMN_NAME) {
-                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
-                        ? Qt::DescendingOrder
-                        : Qt::AscendingOrder;
-            } else {
-                panel->sortColumn = COLUMN_NAME;
-                panel->sortOrder = Qt::AscendingOrder;
-            }
-            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->addAllEntries();
-            return true;
-
-        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F4) {
-            FilePanel* panel =  currentFilePanel();
-            if (panel->sortColumn == COLUMN_EXT) {
-                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
-                        ? Qt::DescendingOrder
-                        : Qt::AscendingOrder;
-            } else {
-                panel->sortColumn = COLUMN_EXT;
-                panel->sortOrder = Qt::AscendingOrder;
-            }
-            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->addAllEntries();
-            return true;
-
-        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F6) {
-            FilePanel* panel =  currentFilePanel();
-            if (panel->sortColumn == COLUMN_SIZE) {
-                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
-                        ? Qt::DescendingOrder
-                        : Qt::AscendingOrder;
-            } else {
-                panel->sortColumn = COLUMN_SIZE;
-                panel->sortOrder = Qt::AscendingOrder;
-            }
-            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->addAllEntries();
-            return true;
-
-        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_F5) {
-            FilePanel* panel = currentFilePanel();
-            if (panel->sortColumn == COLUMN_DATE) {
-                panel->sortOrder = (panel->sortOrder == Qt::AscendingOrder)
-                        ? Qt::DescendingOrder
-                        : Qt::AscendingOrder;
-            } else {
-                panel->sortColumn = COLUMN_DATE;
-                panel->sortOrder = Qt::AscendingOrder;
-            }
-            panel->horizontalHeader()->setSortIndicator(panel->sortColumn, panel->sortOrder);
-            panel->addAllEntries();
-            return true;
 
         } else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_F7) {
             if (auto* panel = panelForObject(obj)) {

@@ -174,29 +174,65 @@ bool FilePanel::doSelectSameExtension(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doSortByDate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSortByDate";
-    return false;
+    if (sortColumn == COLUMN_DATE) {
+        sortOrder = (sortOrder == Qt::AscendingOrder)
+                ? Qt::DescendingOrder
+                : Qt::AscendingOrder;
+    } else {
+        sortColumn = COLUMN_DATE;
+        sortOrder = Qt::AscendingOrder;
+    }
+    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    addAllEntries();
+    return true;
 }
 
 bool FilePanel::doSortByExt(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSortByExt";
-    return false;
+    if (sortColumn == COLUMN_EXT) {
+        sortOrder = (sortOrder == Qt::AscendingOrder)
+                ? Qt::DescendingOrder
+                : Qt::AscendingOrder;
+    } else {
+        sortColumn = COLUMN_EXT;
+        sortOrder = Qt::AscendingOrder;
+    }
+    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    addAllEntries();
+    return true;
 }
 
 bool FilePanel::doSortByName(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSortByName";
-    return false;
+    if (sortColumn == COLUMN_NAME) {
+        sortOrder = (sortOrder == Qt::AscendingOrder)
+                ? Qt::DescendingOrder
+                : Qt::AscendingOrder;
+    } else {
+        sortColumn = COLUMN_NAME;
+        sortOrder = Qt::AscendingOrder;
+    }
+    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    addAllEntries();
+    return true;
 }
 
 bool FilePanel::doSortBySize(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSortBySize";
-    return false;
+    if (sortColumn == COLUMN_SIZE) {
+        sortOrder = (sortOrder == Qt::AscendingOrder)
+                ? Qt::DescendingOrder
+                : Qt::AscendingOrder;
+    } else {
+        sortColumn = COLUMN_SIZE;
+        sortOrder = Qt::AscendingOrder;
+    }
+    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    addAllEntries();
+    return true;
 }
 
 bool FilePanel::doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent) {

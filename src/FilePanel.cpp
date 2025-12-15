@@ -124,7 +124,9 @@ void FilePanel::sortEntries() {
                               return cmpNames(asc);
                           }
 
-                          // 3) both have no calculated size → sort only by name
+                          if (c.info.size() != d.info.size())
+                              return asc ? (c.info.size() < d.info.size())
+                                         : (c.info.size() > d.info.size());
                           return cmpNames(asc);
                       } else if (!aDir && !bDir) {
                           if (a.size() != b.size())
