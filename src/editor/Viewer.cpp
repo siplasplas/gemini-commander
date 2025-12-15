@@ -1,5 +1,6 @@
 #include "Viewer.h"
 
+#include <QDialog>
 #include <QVBoxLayout>
 
 Viewer::Viewer(const QString& fileName, QWidget *parent):BaseViewer(parent) {
