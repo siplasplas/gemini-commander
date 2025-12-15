@@ -46,7 +46,7 @@ set(TOMLPLUSPLUS_INCLUDE_DIR
 )
 
 add_library(core
-        src/fileutils.cpp
+        src/utils.cpp
         src/SizeFormat.cpp
 )
 
