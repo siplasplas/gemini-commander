@@ -188,7 +188,7 @@ void SearchResultsModel::updateSortedIndices()
     for (int i = 0; i < m_results.size(); ++i)
         m_sortedIndices[i] = i;
 
-    // So1rt indices based on column data
+    // Sort indices based on column data
     std::sort(m_sortedIndices.begin(), m_sortedIndices.end(),
         [this](int a, int b) {
             // Bounds check - protect against invalid indices
@@ -412,6 +412,15 @@ void SearchDialog::createAdvancedTab()
     sizeLayout->addRow(tr("Maximum (bytes):"), m_maxSizeEdit);
 
     layout->addWidget(sizeGroup);
+
+    // Search type
+    auto* typeGroup = new QGroupBox(tr("Search type:"), m_advancedTab);
+    auto* typeLayout = new QVBoxLayout(typeGroup);
+
+    m_directoriesOnlyCheck = new QCheckBox(tr("Directories only"), typeGroup);
+    typeLayout->addWidget(m_directoriesOnlyCheck);
+
+    layout->addWidget(typeGroup);
     layout->addStretch();
 }
 
@@ -483,6 +492,7 @@ void SearchDialog::onStartSearch()
         criteria.maxSize = m_maxSizeEdit->text().toLongLong(&ok);
         if (!ok) criteria.maxSize = -1;
     }
+    criteria.directoriesOnly = m_directoriesOnlyCheck->isChecked();
 
     // Create worker and thread
     m_searchThread = new QThread(this);

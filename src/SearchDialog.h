@@ -100,6 +100,7 @@ private:
     QWidget* m_advancedTab;
     QLineEdit* m_minSizeEdit;
     QLineEdit* m_maxSizeEdit;
+    QCheckBox* m_directoriesOnlyCheck;
 
     // Results tab
     QWidget* m_resultsTab;

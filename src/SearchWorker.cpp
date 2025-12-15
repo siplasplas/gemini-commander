@@ -61,6 +61,10 @@ void SearchWorker::startSearch()
         if (searchedFiles % 1000 == 0)
             emit progressUpdate(searchedFiles, foundFiles);
 
+        // Directories only filter
+        if (m_criteria.directoriesOnly && !isDir)
+            continue;
+
         // Check file/directory name pattern
         if (!matchesFileName(info.fileName()))
             continue;

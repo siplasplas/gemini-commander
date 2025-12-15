@@ -15,6 +15,7 @@ struct SearchCriteria {
     bool wholeWords = false;
     qint64 minSize = -1;          // -1 means no limit
     qint64 maxSize = -1;          // -1 means no limit
+    bool directoriesOnly = false; // search only directories
 };
 
 class SearchWorker : public QObject {
