@@ -3,6 +3,21 @@
 
 #include "utils.h"
 
+
+bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    goToNextTab(tabsForSide(m_activeSide));
+    return true;
+}
+
+bool MainWindow::doPreviousTab(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    goToPreviousTab(tabsForSide(m_activeSide));
+    return true;
+}
+
 bool MainWindow::doActivate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -18,8 +33,31 @@ bool MainWindow::doActivate(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doAddTab(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doAddTab";
-    return false;
+    // Ctrl+T: duplicate current tab on active side
+    QTabWidget* tabs = tabsForSide(m_activeSide);
+    FilePaneWidget* pane = currentPane();
+    if (!tabs || !pane)
+        return true;
+
+    const QString path = pane->currentPath();
+
+    auto* newPane = new FilePaneWidget(m_activeSide, tabs);
+    // duplicate the same folder - force load even if path matches default
+    newPane->filePanel()->currentPath.clear();
+    newPane->setCurrentPath(path);
+    // Select first row
+    newPane->filePanel()->selectRow(0);
+
+    // Connect directoryChanged signal for the new panel
+    connect(newPane->filePanel(), &FilePanel::directoryChanged,
+            this, &MainWindow::updateCurrentPathLabel);
+
+    const int insertIndex = tabs->currentIndex() + 1;
+    const int newIndex = tabs->insertTab(insertIndex, newPane, tabs->tabText(tabs->currentIndex()));
+
+    tabs->setCurrentIndex(newIndex);
+    newPane->filePanel()->setFocus();
+    return true;
 }
 
 bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {

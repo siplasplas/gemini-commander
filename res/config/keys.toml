@@ -73,8 +73,9 @@ keys = [
 
 [Tabs]
 keys = [
-    { key = "Ctrl+Tab",            handler = "default" },
-    { key = "Ctrl+Shift+Tab",      handler = "default" },
+    { key = "Ctrl+Tab",            handler = "doNextTab" },
+    { key = "Ctrl+Shift+Tab",      handler = "doPreviousTab" },
+    { key = "Ctrl+Shift+Backtab",   handler = "doPreviousTab" },
 
     { key = "Ctrl+T",              handler = "doAddTab" },
     { key = "Ctrl+W",              handler = "doRemoveTab" },

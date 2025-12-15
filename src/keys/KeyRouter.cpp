@@ -35,34 +35,38 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
     // Only process key press events
     if (!keyMap_ || event->type() != QEvent::KeyPress)
         return owner_->eventFilter(obj, event);
+    qDebug() << "-------------------";
     qDebug()<<obj;
+    qDebug()<<"name obj = " << ObjectRegistry::name(obj);
     auto* keyEvent = static_cast<QKeyEvent*>(event);
+    qDebug() << "key =" << keyEvent->key();
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
-    if (keyEvent->key()==Qt::Key_PageUp)
-        qDebug() << "Key_Tab";
-
     QObject* dataObj = obj;
     QString handlerName;
     QString widgetName;
     while (dataObj) {
         widgetName = ObjectRegistry::name(dataObj);
+        qDebug() << "  walk:" << dataObj << "name=" << widgetName;
         if (!widgetName.isEmpty()) {
             handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetName);
+            qDebug() << "    handlerFor(" << keyEvent->key() << "," << mods << "," << widgetName << ") =" << handlerName;
             if (!handlerName.isEmpty())
                 break;
         }
         dataObj = dataObj->parent();
     }
     if (!dataObj || handlerName.isEmpty())
-        return QObject::eventFilter(obj, event);
+        return owner_->eventFilter(obj, event);
 
     // "none" = consume event, do nothing
     if (handlerName == QStringLiteral("none")) {
+        qDebug() << "return none";
         return true;
     }
 
     // "default" = allow Qt default behavior
     if (handlerName == QStringLiteral("default")) {
+        qDebug() << "return default";
         return false;
     }
 
@@ -91,8 +95,8 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
         return true;
     }
 
-    // No binding found in hierarchy - allow Qt to process normally
-    return QObject::eventFilter(obj, event);
+    // No binding found in hierarchy - delegate to owner
+    return owner_->eventFilter(obj, event);
 }
 
 HandlerCallResult KeyRouter::invokeHandler(QObject* target,

@@ -190,35 +190,14 @@ Side MainWindow::opposite(Side side){
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+
     if (event->type() == QEvent::KeyPress) {
+
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
 
         FilePanel* panel = panelForObject(obj);
-        if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Tab) {
-            if (auto* panel = panelForObject(obj)) {
-                // here you can be sure that the event came from the FilePanel / its viewport
-                // e.g., switch the tab in the active QTabWidget
-                // switchTab(+1);
-                goToNextTab(tabsForSide(m_activeSide));
-                return true; // IMPORTANT: we do not let you pass any further
-            }
-        }
-
-        // Ctrl+Shift+Tab
-        if (modifiers == (Qt::ControlModifier | Qt::ShiftModifier)
-            && keyEvent->key() == Qt::Key_Backtab) {
-            if (panel) {
-                goToPreviousTab(tabsForSide(m_activeSide));
-                return true;
-            }
-            }
-
-        if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
-            showFavoriteDirsMenu(m_activeSide);
-            return true;
-        }
-         else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Insert) {
+         if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Insert) {
             if (auto* panel = panelForObject(obj)) {
                 panel->toggleMarkOnCurrent(true);
                 return true;
@@ -329,29 +308,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 return true; // Event handled
             }
         }             // Plain Enter: Let default handling (activated signal) proceed
-         else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_T) {
-            // Ctrl+T: duplicate current tab on active side
-            QTabWidget* tabs = tabsForSide(m_activeSide);
-            FilePaneWidget* pane = currentPane();
-            if (!tabs || !pane)
-                return true;
 
-            const QString path = pane->currentPath();
-
-            auto* newPane = new FilePaneWidget(m_activeSide, tabs);
-            // duplicate the same folder
-            newPane->setCurrentPath(path);
-
-            // Connect directoryChanged signal for the new panel
-            connect(newPane->filePanel(), &FilePanel::directoryChanged,
-                    this, &MainWindow::updateCurrentPathLabel);
-
-            const int insertIndex = tabs->currentIndex() + 1;
-            const int newIndex = tabs->insertTab(insertIndex, newPane, tabs->tabText(tabs->currentIndex()));
-
-            tabs->setCurrentIndex(newIndex);
-            return true;
-        }
     } else if (event->type() == QEvent::FocusIn) {
         if (auto* panel = panelForObject(obj)) {
             Side newSide = panel->side();

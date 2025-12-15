@@ -498,30 +498,6 @@ QString FilePanel::normalizeForSearch(const QString& s) const
     return QString::fromUtf8(utf8.data(), static_cast<int>(utf8.size()));
 }
 
-void FilePanel::keyPressEvent(QKeyEvent* event) {
-    // Ctrl+S: explicit search start, empty pattern
-    if (event->key() == Qt::Key_S &&
-    (event->modifiers() & Qt::ControlModifier)) {
-        emit searchRequested(QString{});  // puste – użytkownik zaczyna pisać
-        event->accept();
-        return;
-    }
-
-    // Printable char without modifiers: start / continue search
-    if (event->modifiers() == Qt::NoModifier &&
-        !event->text().isEmpty()) {
-        const QChar ch = event->text().at(0);
-        if (!ch.isSpace()) {
-            emit searchRequested(QString(ch));
-            event->accept();
-            return;
-            }
-        }
-
-    // Default behavior for other keys (navigation, F-keys, etc.)
-    QTableView::keyPressEvent(event);
-}
-
 void FilePanel::onHeaderSectionClicked(int logicalIndex)
 {
     if (sortColumn == logicalIndex) {

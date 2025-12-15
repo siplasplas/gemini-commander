@@ -282,6 +282,7 @@ void SearchDialog::setupUi()
 
     // Tab widget
     m_tabWidget = new QTabWidget(this);
+    ObjectRegistry::add(m_tabWidget, "Tabs");
     createStandardTab();
     createAdvancedTab();
     createResultsTab();

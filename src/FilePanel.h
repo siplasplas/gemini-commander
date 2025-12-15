@@ -119,7 +119,6 @@ public:
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
-    void keyPressEvent(QKeyEvent* event) override;
 
 private slots:
     void onHeaderSectionClicked(int logicalIndex);
