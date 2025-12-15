@@ -5,6 +5,21 @@
 #include <string>
 
 namespace fileutils {
+
+// Escapes a file path for safe use in shell commands.
+//
+// Rules:
+//   - No special chars (space, \, ", ') -> returns unchanged
+//   - Has ' but no " -> wraps in double quotes, escapes \ $ `
+//   - Otherwise -> wraps in single quotes, escapes ' as '\''
+//
+// Examples:
+//   "laola.sh"      -> "laola.sh"
+//   "la ola.sh"     -> "'la ola.sh'"
+//   "la'ola.sh"     -> "\"la'ola.sh\""
+//   "l\"a'ola.sh"   -> "'l\"a'\\''ola.sh'"
+//
+std::string escapePathForShell(const std::string& path);
 std::string makeTempPartPath(const std::string& path, bool pathIsDir);
 
 using HashProgressCallback = std::function<void(std::uintmax_t total_bytes,
@@ -37,4 +52,9 @@ inline std::string compute_file_sha256(const std::filesystem::path& file_path,
 {
     return compute_file_hash(file_path, buffer_size, "SHA-256", std::move(progress_cb));
 }
+
+std::string trimLeft(const std::string &str);
+std::string trimRight(const std::string &str);
+std::string trim(const std::string &str);
+
 }

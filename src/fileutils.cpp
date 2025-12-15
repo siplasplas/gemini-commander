@@ -19,6 +19,44 @@
 #endif
 
 namespace fileutils {
+
+namespace {
+void replaceAll(std::string& str, const std::string& from, const std::string& to)
+{
+    std::size_t pos = 0;
+    while ((pos = str.find(from, pos)) != std::string::npos) {
+        str.replace(pos, from.length(), to);
+        pos += to.length();
+    }
+}
+} // anonymous namespace
+
+std::string escapePathForShell(const std::string& path)
+{
+    bool hasSpace = path.find(' ') != std::string::npos;
+    bool hasBackslash = path.find('\\') != std::string::npos;
+    bool hasDoubleQuote = path.find('"') != std::string::npos;
+    bool hasSingleQuote = path.find('\'') != std::string::npos;
+
+    // No special chars - return unchanged
+    if (!hasSpace && !hasBackslash && !hasDoubleQuote && !hasSingleQuote) {
+        return path;
+    }
+
+    // Has ' but no " - use double quotes (simpler)
+    if (hasSingleQuote && !hasDoubleQuote) {
+        std::string escaped = path;
+        replaceAll(escaped, "\\", "\\\\");
+        replaceAll(escaped, "$", "\\$");
+        replaceAll(escaped, "`", "\\`");
+        return "\"" + escaped + "\"";
+    }
+
+    // Otherwise: use single quotes, escape ' as '\''
+    std::string escaped = path;
+    replaceAll(escaped, "'", "'\\''");
+    return "'" + escaped + "'";
+}
 std::string makeTempPartPath(const std::string& path, bool pathIsDir)
 {
     static std::atomic<uint32_t> g_seq{0};
@@ -133,4 +171,20 @@ std::string compute_file_hash(const std::filesystem::path& file_path,
     const std::string hex = Botan::hex_encode(digest, false /*lowercase*/);
     return hex;
 }
+
+std::string trimLeft(const std::string &str) {
+    const auto strBegin = str.find_first_not_of(" \t");
+    return str.substr(strBegin, str.length() - strBegin);
+}
+
+
+std::string trimRight(const std::string &str) {
+    const auto strEnd = str.find_last_not_of(" \t\r");
+    return str.substr(0, strEnd + 1);
+}
+
+std::string trim(const std::string &str) {
+    return trimLeft(trimRight(str));
+}
+
 }

@@ -77,6 +77,8 @@ private:
                                 quint64& bytesCopied,
                                 bool& userAbort);
     bool handle(const char* handler, QKeyEvent *ev);
+    QString currentPanelName();
+    QString currentPanelPath();
 private slots:
     void onOpenTerminal();
 };

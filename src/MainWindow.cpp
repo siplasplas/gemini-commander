@@ -147,21 +147,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
-        // we check if it's a file event (viewport or FilePanel itself)
-        if (auto* panel = panelForObject(obj)) {
 
-            // CTRL + DOWN
-            if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Down) {
-                panel->jumpWithControl(+1);
-                return true;
-            }
-
-            // CTRL + UP
-            if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Up) {
-                panel->jumpWithControl(-1);
-                return true;
-            }
-        }
         FilePanel* panel = panelForObject(obj);
         if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_Tab) {
             if (auto* panel = panelForObject(obj)) {
@@ -182,14 +168,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
             }
 
-        if (keyEvent->key() == Qt::Key_Tab) {
-            auto view = dynamic_cast<QTableView*> (obj);
-            if (view) {
-                auto new_panel = oppositeFilePanel();
-                if (new_panel) new_panel->setFocus();
-                return true; // Event handled
-            }
-        } else if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
+        if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
             QModelIndex currentIndex = currentFilePanel()->currentIndex();
             if (!currentIndex.isValid()) {
                 return true;
@@ -210,18 +189,9 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
 
             if (keyEvent->key() == Qt::Key_F3) {
-                if (!viewerFrame)
-                    viewerFrame = new ViewerFrame(fullPath);
-                viewerFrame->show();
-                viewerFrame->raise();
-                viewerFrame->activateWindow();
+
             } else {
-                if (!editorFrame)
-                    editorFrame = new EditorFrame(this);
-                editorFrame->openFile(fullPath);
-                editorFrame->show();
-                editorFrame->raise();
-                editorFrame->activateWindow();
+
             }
             return true;
         } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
@@ -426,83 +396,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 commandLineEdit->selectAll();
                 return true; // Event handled
             }
-        } else if (obj==commandLineEdit && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) && modifiers == Qt::NoModifier) {
-            if (auto* panel = panelForObject(obj)) {
-                currentFilePanel()->setFocus();
-                return true; // Event handled
-            }
-        }
-        else if (keyEvent->key() == Qt::Key_Home && modifiers == Qt::NoModifier) {
-            if (auto* panel = panelForObject(obj)) {
-                int rows = panel->model->rowCount();
-                if (rows > 0) {
-                    QModelIndex idx = panel->model->index(0, COLUMN_NAME);
-                    panel->setCurrentIndex(idx);
-                    panel->scrollTo(idx, QAbstractItemView::PositionAtTop);
-                }
-                return true;
-            }
-        } else if (keyEvent->key() == Qt::Key_End && modifiers == Qt::NoModifier) {
-            if (auto* panel = panelForObject(obj)) {
-                int rows = panel->model->rowCount();
-                if (rows > 0) {
-                    QModelIndex idx = panel->model->index(rows - 1, COLUMN_NAME);
-                    panel->setCurrentIndex(idx);
-                    panel->scrollTo(idx, QAbstractItemView::PositionAtBottom);
-                }
-                return true;
-            }
-        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageUp) {
-            FilePanel* panel = currentFilePanel();
-            QDir dir(panel->currentPath);
-
-            // If we are in the root directory – do nothing
-            if (dir.isRoot()) {
-                return true;
-            }
-
-            // Remember the name of the current directory (as in onPanelActivated)
-            QString selectedName = dir.dirName();
-
-            // Go up one directory
-            dir.cdUp();
-            panel->currentPath = dir.absolutePath();
-
-            // Reload panel content
-            panel->loadDirectory();
-            panel->selectEntryByName(selectedName);
-
-            return true;
-        } else if (keyEvent->key() == Qt::Key_P && modifiers == Qt::ControlModifier) {
-            // Ctrl + P: Set current directory to commandLineEdit
-            QString currentPath = currentFilePanel()->currentPath;
-            commandLineEdit->setText(commandLineEdit->text() + currentPath);
-            return true; // Event handled
-        } else if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
-            if (modifiers == Qt::ControlModifier) {
-                // Ctrl + Enter: Set selected item name to commandLineEdit
-                QModelIndex currentIndex = currentFilePanel()->currentIndex();
-                if (currentIndex.isValid()) {
-                    QString name = currentFilePanel()->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
-                    commandLineEdit->setText(commandLineEdit->text() + name);
-                    return true; // Event handled
-                }
-            } else if (modifiers == (Qt::ControlModifier | Qt::ShiftModifier)) {
-                // Shift + Ctrl + Enter: Set full path of selected item to commandLineEdit
-                QModelIndex currentIndex = currentFilePanel()->currentIndex();
-                if (currentIndex.isValid()) {
-                    QString name = currentFilePanel()->model->data(currentIndex.sibling(currentIndex.row(), 0)).toString();
-                    if (name == "[..]") {
-                        name = "..";
-                    }
-                    QDir dir(currentFilePanel()->currentPath);
-                    QString fullPath = dir.absoluteFilePath(name);
-                    commandLineEdit->setText(commandLineEdit->text() + fullPath);
-                    return true; // Event handled
-                }
-            }
-            // Plain Enter: Let default handling (activated signal) proceed
-        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_T) {
+        }             // Plain Enter: Let default handling (activated signal) proceed
+         else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_T) {
             // Ctrl+T: duplicate current tab on active side
             QTabWidget* tabs = tabsForSide(m_activeSide);
             FilePaneWidget* pane = currentPane();
@@ -1233,6 +1128,22 @@ bool MainWindow::handle(const char* handler, QKeyEvent* ev) {
     Q_ARG(QKeyEvent*, ev)
     );
     return handlerResult;
+}
+
+QString MainWindow::currentPanelName() {
+    QModelIndex currentIndex = currentFilePanel()->currentIndex();
+    if (!currentIndex.isValid()) {
+        return QString{};
+    }
+    return currentFilePanel()->getRowName(currentIndex.row());
+}
+
+QString MainWindow::currentPanelPath() {
+    auto name = currentPanelName();
+    if (name.isEmpty())
+        return currentFilePanel()->currentPath;
+    QDir dir(currentFilePanel()->currentPath);
+    return dir.absoluteFilePath(name);
 }
 
 #include "MainWindow_impl.inc"

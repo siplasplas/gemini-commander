@@ -15,27 +15,6 @@ bool FilePanel::doCDTree(QObject *obj, QKeyEvent *keyEvent) {
     return false;
 }
 
-bool FilePanel::doCurrentDirToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doCurrentDirToCommandLine";
-    return false;
-}
-
-bool FilePanel::doCurrentNameToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doCurrentNameToCommandLine";
-    return false;
-}
-
-bool FilePanel::doCurrentPathToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doCurrentPathToCommandLine";
-    return false;
-}
-
 bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -50,31 +29,30 @@ bool FilePanel::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     return false;
 }
 
-bool FilePanel::doEdit(QObject *obj, QKeyEvent *keyEvent) {
+bool FilePanel::doDirUp(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doEdit";
-    return false;
+    QDir dir(currentPath);
+    // If we are in the root directory – do nothing
+    if (dir.isRoot()) {
+        return true;
+    }
+    // Remember the name of the current directory (as in onPanelActivated)
+    QString selectedName = dir.dirName();
+    // Go up one directory
+    dir.cdUp();
+    currentPath = dir.absolutePath();
+    // Reload panel content
+    loadDirectory();
+    selectEntryByName(selectedName);
+    return true;
 }
 
-bool FilePanel::doEditNew(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doEditNew";
-    return false;
-}
 
 bool FilePanel::doFileProperties(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     qDebug() << "handler: doFileProperties";
-    return false;
-}
-
-bool FilePanel::doFocusCommandLine(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doFocusCommandLine";
     return false;
 }
 
@@ -95,22 +73,25 @@ bool FilePanel::doGoForward(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doGoToFirstRow(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doGoToFirstRow";
-    return false;
+    int rows = model->rowCount();
+    if (rows > 0) {
+        QModelIndex idx = model->index(0, COLUMN_NAME);
+        setCurrentIndex(idx);
+        scrollTo(idx, QAbstractItemView::PositionAtTop);
+    }
+    return true;
 }
 
 bool FilePanel::doGoToLastRow(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doGoToLastRow";
-    return false;
-}
-
-bool FilePanel::doGoUpDir(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doGoUpDir";
-    return false;
+    int rows = model->rowCount();
+    if (rows > 0) {
+        QModelIndex idx = model->index(rows - 1, COLUMN_NAME);
+        setCurrentIndex(idx);
+        scrollTo(idx, QAbstractItemView::PositionAtBottom);
+    }
+    return true;
 }
 
 bool FilePanel::doInvertSelection(QObject *obj, QKeyEvent *keyEvent) {
@@ -123,15 +104,15 @@ bool FilePanel::doInvertSelection(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doJumpDownToFiles(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doJumpDownToFiles";
-    return false;
+    jumpWithControl(+1);
+    return true;
 }
 
 bool FilePanel::doJumpUpToDirectories(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doJumpUpToDirectories";
-    return false;
+    jumpWithControl(-1);
+    return true;
 }
 
 bool FilePanel::doLocalSearch(QObject *obj, QKeyEvent *keyEvent) {
@@ -252,11 +233,3 @@ bool FilePanel::doUnselectGroup(QObject *obj, QKeyEvent *keyEvent) {
     qDebug() << "handler: doUnselectGroup";
     return false;
 }
-
-bool FilePanel::doView(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doView";
-    return false;
-}
-

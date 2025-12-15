@@ -38,40 +38,43 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
 
     auto* keyEvent = static_cast<QKeyEvent*>(event);
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
+    if (keyEvent->key()==Qt::Key_PageUp)
+        qDebug() << "Key_Tab";
 
-    // Search for handler starting from obj, then parent, grandparent, etc.
-    // When found, call handler with original obj as first parameter.
-    QObject* current = obj;
-    while (current) {
-        QString widgetName = ObjectRegistry::name(current);
-        if (widgetName.isEmpty()) {
-            current = current->parent();
-            continue;
+    QObject* dataObj = obj;
+    QString handlerName;
+    QString widgetName;
+    while (dataObj) {
+        widgetName = ObjectRegistry::name(dataObj);
+        if (!widgetName.isEmpty()) {
+            handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetName);
+            if (!handlerName.isEmpty())
+                break;
         }
+        dataObj = dataObj->parent();
+    }
+    if (!dataObj || handlerName.isEmpty())
+        return QObject::eventFilter(obj, event);
 
-        QString handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetName);
-        if (handlerName.isEmpty()) {
-            current = current->parent();
-            continue;
-        }
+    // "none" = consume event, do nothing
+    if (handlerName == QStringLiteral("none")) {
+        return true;
+    }
 
-        // "none" = consume event, do nothing
-        if (handlerName == QStringLiteral("none")) {
-            return true;
-        }
+    // "default" = allow Qt default behavior
+    if (handlerName == QStringLiteral("default")) {
+        return false;
+    }
 
-        // "default" = allow Qt default behavior
-        if (handlerName == QStringLiteral("default")) {
-            return false;
-        }
-
+    QObject* codeObj = dataObj;
+    while (codeObj) {
         // Try to call the handler on 'current' with 'obj' as first parameter
-        auto r = invokeHandler(current, obj, handlerName, keyEvent);
+        auto r = invokeHandler(codeObj, dataObj, handlerName, keyEvent);
 
         if (!r.called) {
             // Handler defined in keymap but not found on this object
             // Continue searching in parent
-            current = current->parent();
+            codeObj = codeObj->parent();
             continue;
         }
 

@@ -3,20 +3,14 @@
 
     Q_INVOKABLE bool doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCDTree(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doCurrentDirToCommandLine(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doCurrentNameToCommandLine(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doCurrentPathToCommandLine(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doDeletePermanently(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doEdit(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doEditNew(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doDirUp(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doFileProperties(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doFocusCommandLine(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doGoBack(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doGoForward(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doGoToFirstRow(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doGoToLastRow(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doGoUpDir(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doInvertSelection(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doJumpDownToFiles(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doJumpUpToDirectories(QObject *obj, QKeyEvent *keyEvent);
@@ -37,4 +31,4 @@
     Q_INVOKABLE bool doTotalSizes(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doUnselectAll(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doUnselectGroup(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doView(QObject *obj, QKeyEvent *keyEvent);
+

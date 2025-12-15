@@ -88,7 +88,10 @@ public:
 
     QString getRowName(int row) const;
     void selectEntryByName(const QString& fullName);
+    void trigger(const QString &name);
+    void activate(const QString &name);
     void addAllEntries();
+    void trigger(const QModelIndex &index);
     void triggerCurrentEntry();
     void createNewDirectory(QWidget*dialogParent);
     void renameOrMoveEntry(QWidget* dialogParent = nullptr,
@@ -106,7 +109,6 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private slots:
-    void onPanelActivated(const QModelIndex &index);
     void onHeaderSectionClicked(int logicalIndex);
 public slots:
     void updateSearch(const QString& text);

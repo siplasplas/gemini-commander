@@ -1,6 +1,8 @@
 # Panel - single panel operations (navigation, sorting, selection, view)
 [Panel]
 keys = [
+    { key = "Escape",              handler = "doClearAndReturnToPanel" },
+
     { key = "Down",           handler = "default" },
     { key = "Up",             handler = "default" },
 
@@ -12,7 +14,7 @@ keys = [
     { key = "Shift+F4",            handler = "doEditNew" },
 
     { key = "Space",               handler = "doToggleMarkTotalSize" },
-    { key = "Alt+Shift+Enter",     handler = "doTotalSizes" },
+    { key = "Alt+Shift+Return",     handler = "doTotalSizes" },
 
     { key = "Insert",              handler = "doToggleMarkDown" },
 
@@ -29,23 +31,19 @@ keys = [
     { key = "Shift+F8",            handler = "doDeletePermanently" },
     { key = "Shift+Delete",        handler = "doDeletePermanently" },
 
-    { key = "Left",                handler = "doFocusCommandLine" },
-    { key = "Right",               handler = "doFocusCommandLine" },
-
     { key = "Home",                handler = "doGoToFirstRow" },
     { key = "End",                 handler = "doGoToLastRow" },
 
-    { key = "PageUp",              handler = "doGoUpDir" },
+    { key = "PageUp",              handler = "default" },
+    { key = "PageDown",            handler = "default" },
 
-    { key = "Ctrl+P",              handler = "doCurrentDirToCommandLine" },
-    { key = "Ctrl+Enter",          handler = "doCurrentNameToCommandLine" },
-    { key = "Ctrl+Shift+Enter",    handler = "doCurrentPathToCommandLine" },
+    { key = "Ctrl+PageUp",         handler = "doDirUp" },
 
     { key = "Ctrl+S",              handler = "doLocalSearch" },
     { key = "LETTERS",             handler = "doLocalSearch" },
     { key = "DIGITS",              handler = "doLocalSearch" },
 
-    { key = "Alt+Enter",           handler = "doFileProperties" },
+    { key = "Alt+Return",           handler = "doFileProperties" },
 
     { key = "Ctrl+A",              handler = "doSelectAll" },
     { key = "Ctrl+L",              handler = "doOccupiedSpace" },
@@ -80,9 +78,18 @@ keys = [
 # MainFrame - dual panel operations (Tab switches panels)
 [MainFrame]
 keys = [
+    { key = "Return",                 handler = "doActivate" },
+
     { key = "Tab",                 handler = "doSwitchSide" },
     # Special case: Shift+Tab only blocks the default behavior of QTableView
     { key = "Shift+Tab",           handler = "none" },
+
+    { key = "Ctrl+P",              handler = "doCurrentDirToCommandLine" },
+    { key = "Ctrl+Return",         handler = "doCurrentNameToCommandLine" },
+    { key = "Ctrl+Shift+Return",   handler = "doCurrentPathToCommandLine" },
+
+    { key = "Left",                handler = "doFocusCommandLine" },
+    { key = "Right",               handler = "doFocusCommandLine" },
 
     { key = "Ctrl+D",              handler = "doDirHotlist" },
     { key = "Ctrl+Shift+D",        handler = "doDirHotlistConfig" },
@@ -109,7 +116,12 @@ keys = [
 # CommandLine - command bar at the bottom
 [CommandLine]
 keys = [
-    { key = "Escape",              handler = "doReturnToPanel" },
+    { key = "Escape",              handler = "doClearAndReturnToPanel" },
+    { key = "Up",                  handler = "doReturnToPanel" },
+    { key = "Down",                handler = "doReturnToPanel" },
+    { key = "Tab",                 handler = "doReturnToPanel" },
+    { key = "Left",                handler = "default" },
+    { key = "Right",               handler = "default" },
 ]
 
 # SearchEdit - local search filter

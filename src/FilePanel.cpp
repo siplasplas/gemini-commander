@@ -286,9 +286,14 @@ void FilePanel::addAllEntries() {
     selectEntryByName(selectedName);
 }
 
+void FilePanel::trigger(const QModelIndex &index) {
+    if (!index.isValid()) return;
+    trigger(getRowName(index.row()));
+}
+
 void FilePanel::triggerCurrentEntry() {
     auto rows = selectionModel()->selectedRows();
-    onPanelActivated(rows.first());
+    trigger(rows.first());
 }
 
 void FilePanel::loadDirectory()
@@ -342,13 +347,9 @@ void FilePanel::selectEntryByName(const QString& fullName)
         restoreSelectionFromMemory();
 }
 
-void FilePanel::onPanelActivated(const QModelIndex &index) {
-    if (!index.isValid()) return;
-
-    QString name = getRowName(index.row());
-    QDir dir(currentPath);
+void FilePanel::trigger(const QString &name) {
     QString selectedName;
-
+    QDir dir(currentPath);
     if (name.isEmpty()) {
         // Going up: select the previous directory name after load
         selectedName = dir.dirName(); // basename of current path
@@ -362,13 +363,21 @@ void FilePanel::onPanelActivated(const QModelIndex &index) {
             selectedName = ""; // select parent entry when going down
         } else {
             // Regular file: open with system default application
-            const QString absPath = info.absoluteFilePath();
-            QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
-            return; // do not reload directory
+            activate(name);
         }
     }
     loadDirectory();
     selectEntryByName(selectedName);
+}
+
+void FilePanel::activate(const QString &name) {
+    assert(!name.isEmpty());
+    QDir dir(currentPath);
+    QFileInfo info(dir.absoluteFilePath(name));
+    const QString absPath = info.absoluteFilePath();
+    QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
+    loadDirectory();
+    selectEntryByName(name);
 }
 
 FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(parent) {
@@ -420,7 +429,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
             this, &FilePanel::onHeaderSectionClicked);
 
     connect(this, &QTableView::activated, [this](const QModelIndex &index) {
-        onPanelActivated(index);
+        trigger(index);
     });
 
     setDragEnabled(true);
