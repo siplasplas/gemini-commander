@@ -363,6 +363,7 @@ void FilePanel::trigger(const QString &name) {
             selectedName = ""; // select parent entry when going down
         } else {
             // Regular file: open with system default application
+            selectedName = name;
             activate(name);
         }
     }
