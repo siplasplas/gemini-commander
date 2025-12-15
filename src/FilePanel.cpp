@@ -394,7 +394,11 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setShowGrid(false);
     verticalHeader()->hide();
-    
+
+    QFont f("Ubuntu", 10);
+    f.setStyleHint(QFont::SansSerif);  // fallback if Ubuntu unavailable
+    setFont(f);
+
     QFontMetrics fm(font());
     int rowHeight = fm.height();
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
