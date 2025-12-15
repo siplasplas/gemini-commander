@@ -345,7 +345,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         if (info.isDir()) {
             // ponowne, bieżące sprawdzenie pustego katalogu
             QDir d(fullPath);
-            bool empty = d.isEmpty();
+            bool empty = d.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
 
             if (empty) {
                 question = tr("Delete selected empty dir '%1'?").arg(name);

@@ -896,7 +896,7 @@ EntryContentState FilePanel::ensureContentState(PanelEntry& entry) const
     }
 
     QDir dir(entry.info.absoluteFilePath());
-    entry.contentState = dir.isEmpty()
+    entry.contentState = dir.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden)
         ? EntryContentState::DirEmpty
         : EntryContentState::DirNotEmpty;
 
