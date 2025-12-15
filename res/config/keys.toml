@@ -66,6 +66,11 @@ keys = [
     { key = "Ctrl+Q",              handler = "doQuickView" },
 ]
 
+[Menu]
+keys = [
+    { key = "Return",             handler = "default" },
+]
+
 [Tabs]
 keys = [
     { key = "Ctrl+Tab",            handler = "default" },

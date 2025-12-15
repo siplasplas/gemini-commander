@@ -214,33 +214,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
             }
 
-        if ((keyEvent->key() == Qt::Key_F3||keyEvent->key() == Qt::Key_F4) && modifiers == Qt::NoModifier) {
-            QModelIndex currentIndex = currentFilePanel()->currentIndex();
-            if (!currentIndex.isValid()) {
-                return true;
-            }
-
-            QString name = currentFilePanel()->getRowName(currentIndex.row());
-            if (name == "") {
-                return true;
-            }
-
-            QDir dir(currentFilePanel()->currentPath);
-            QString fullPath = dir.absoluteFilePath(name);
-
-            QFileInfo info(fullPath);
-            if (!info.isFile()) {
-                // selected is directory - nothing
-                return true;
-            }
-
-            if (keyEvent->key() == Qt::Key_F3) {
-
-            } else {
-
-            }
-            return true;
-        } else if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
+        if (modifiers == Qt::ControlModifier && keyEvent->key() == Qt::Key_D) {
             showFavoriteDirsMenu(m_activeSide);
             return true;
         }
@@ -507,6 +481,7 @@ void MainWindow::showFavoriteDirsMenu(Side side)
 
     // Popup position: above the active panel
     QPoint panelPos = panel->mapToGlobal(QPoint(panel->width() / 2, panel->height()/2));
+    ObjectRegistry::add(&menu, "Menu");
     QAction* chosen = menu.exec(panelPos);
     if (!chosen)
         return;

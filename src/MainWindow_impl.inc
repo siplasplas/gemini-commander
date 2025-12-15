@@ -68,8 +68,8 @@ bool MainWindow::doCurrentPathToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doDirHotlist(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doDirHotlist";
-    return false;
+    showFavoriteDirsMenu(m_activeSide);
+    return true;
 }
 
 bool MainWindow::doDirHotlistConfig(QObject *obj, QKeyEvent *keyEvent) {

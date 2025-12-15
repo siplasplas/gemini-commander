@@ -35,7 +35,7 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
     // Only process key press events
     if (!keyMap_ || event->type() != QEvent::KeyPress)
         return owner_->eventFilter(obj, event);
-
+    qDebug()<<obj;
     auto* keyEvent = static_cast<QKeyEvent*>(event);
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
     if (keyEvent->key()==Qt::Key_PageUp)
