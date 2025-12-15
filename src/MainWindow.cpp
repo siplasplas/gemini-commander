@@ -8,11 +8,13 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSplitter>
 #include <QStandardItemModel>
 #include <QTableView>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QWidget>
 
 #include <QHeaderView>
@@ -42,9 +44,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUi();
 
-    for (auto* panel : allFilePanels())
+    for (auto* panel : allFilePanels()) {
         panel->loadDirectory();
+        // Connect directoryChanged to update the label
+        connect(panel, &FilePanel::directoryChanged,
+                this, &MainWindow::updateCurrentPathLabel);
+    }
     filePanelForSide(Side::Left)->setFocus();
+
+    updateCurrentPathLabel();  // initial update
+
+    this->setStyleSheet(
+        "QMainWindow {"
+        "  background-color: #f4f4f4;"
+        "  padding: 0px 0px;"
+        "}"
+    );
 
     setWindowTitle("Gemini Commander");
     resize(1024, 768);
@@ -80,18 +95,37 @@ void MainWindow::setupUi() {
     splitter->setStretchFactor(0, 1);
     splitter->setStretchFactor(1, 1);
 
-    commandLineEdit = new QLineEdit(centralWidget);
-    ObjectRegistry::add(commandLineEdit, "CommandLine");
-
     auto* leftPane  = new FilePaneWidget(Side::Left, m_leftTabs);
     auto* rightPane = new FilePaneWidget(Side::Right, m_rightTabs);
     m_leftTabs->addTab(leftPane,  "Left");
     m_rightTabs->addTab(rightPane, "Right");
 
+    // Bottom line: currentPath label (3/4 of left panel) + command line (rest)
+    auto* bottomLayout = new QHBoxLayout();
+    bottomLayout->setContentsMargins(0, 0, 0, 0);
+    bottomLayout->setSpacing(0);
+
+    currentPathLabel = new QLabel(centralWidget);
+    currentPathLabel->setStyleSheet(
+        "QLabel {"
+        "  background-color: #f4f4f4;"
+        "  padding: 0px 4px;"
+        "}"
+    );
+    currentPathLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    currentPathLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    commandLineEdit = new QLineEdit(centralWidget);
+    commandLineEdit->setStyleSheet("QLineEdit { background-color: white; }");
+    ObjectRegistry::add(commandLineEdit, "CommandLine");
+
+    // Label: 3 units (3/4 of first panel), CommandLine: 5 units (1/4 + full second panel)
+    bottomLayout->addWidget(currentPathLabel, 3);
+    bottomLayout->addWidget(commandLineEdit, 5);
+
     mainLayout->addWidget(splitter);
-    mainLayout->addWidget(commandLineEdit);
+    mainLayout->addLayout(bottomLayout);
     mainLayout->setStretchFactor(splitter, 1);
-    mainLayout->setStretchFactor(commandLineEdit, 0);
 
     setCentralWidget(centralWidget);
 
@@ -322,6 +356,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             // duplicate the same folder
             newPane->setCurrentPath(path);
 
+            // Connect directoryChanged signal for the new panel
+            connect(newPane->filePanel(), &FilePanel::directoryChanged,
+                    this, &MainWindow::updateCurrentPathLabel);
+
             const int insertIndex = tabs->currentIndex() + 1;
             const int newIndex = tabs->insertTab(insertIndex, newPane, tabs->tabText(tabs->currentIndex()));
 
@@ -340,6 +378,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             // Restore selection (whether changing side or returning from the editor)
             panel->restoreSelectionFromMemory();
             panel->styleActive();
+            updateCurrentPathLabel();
         }
     } else if (event->type() == QEvent::FocusOut) {
         if (auto* panel = panelForObject(obj)) {
@@ -945,6 +984,25 @@ QString MainWindow::currentPanelPath() {
         return currentFilePanel()->currentPath;
     QDir dir(currentFilePanel()->currentPath);
     return dir.absoluteFilePath(name);
+}
+
+void MainWindow::updateCurrentPathLabel() {
+    if (!currentPathLabel)
+        return;
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel) {
+        currentPathLabel->clear();
+        return;
+    }
+
+    QString path = panel->currentPath;
+    QFontMetrics fm(currentPathLabel->font());
+    int availableWidth = currentPathLabel->width() - 12;  // accounting for padding
+
+    // Elide text if too long
+    QString displayPath = fm.elidedText(path, Qt::ElideLeft, availableWidth);
+    currentPathLabel->setText(displayPath);
 }
 
 #include "MainWindow_impl.inc"

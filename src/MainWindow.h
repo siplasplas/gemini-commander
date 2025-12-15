@@ -35,6 +35,7 @@ private:
     QTabWidget* tabsForSide(Side side) const;
     void goToNextTab(QTabWidget *tabWidget);
     void goToPreviousTab(QTabWidget *tabWidget);
+    QLabel *currentPathLabel;
     QLineEdit *commandLineEdit;
     EditorFrame *editorFrame = nullptr;
     QPointer<ViewerFrame> viewerFrame;
@@ -66,6 +67,7 @@ private:
     bool handle(const char* handler, QKeyEvent *ev);
     QString currentPanelName();
     QString currentPanelPath();
+    void updateCurrentPathLabel();
 private slots:
     void onOpenTerminal();
 };
