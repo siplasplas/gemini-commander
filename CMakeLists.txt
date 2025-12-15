@@ -95,6 +95,10 @@ add_executable(${PROJECT_NAME}
         src/MainWindow.cpp
         src/FilePanel.cpp
         src/FilePanel.h
+        src/SearchDialog.cpp
+        src/SearchDialog.h
+        src/SearchWorker.cpp
+        src/SearchWorker.h
         src/editor/editor.cpp
         src/editor/editor.h
         src/editor/EditorFrame.cpp

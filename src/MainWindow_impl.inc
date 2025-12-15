@@ -197,8 +197,14 @@ bool MainWindow::doClearAndReturnToPanel(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSearchGlobal";
-    return false;
+
+    QString startPath = currentFilePanel()->currentPath;
+
+    SearchDialog* dialog = new SearchDialog(startPath, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+
+    return true;
 }
 
 bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {

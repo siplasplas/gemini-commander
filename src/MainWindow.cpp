@@ -31,6 +31,7 @@
 #include <QStorageInfo>
 
 #include "SortedDirIterator.h"
+#include "SearchDialog.h"
 #include "editor/ViewerFrame.h"
 #include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"

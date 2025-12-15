@@ -137,6 +137,11 @@ keys = [
     { key = "Return",              handler = "doAccept" },
 ]
 
+[SearchGlobal]
+keys = [
+    { key = "Return",              handler = "default" },
+    { key = "Tab",                 handler = "default" },
+]
 
 [EditorTabs]
 keys = [
