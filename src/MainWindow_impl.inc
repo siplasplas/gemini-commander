@@ -206,8 +206,18 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doRemoveTab(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doRemoveTab";
-    return false;
+    QTabWidget* tabs = tabsForSide(m_activeSide);
+    if (!tabs || tabs->count() <= 1)
+        return true;  // Don't close last tab
+
+    int index = tabs->currentIndex();
+    QWidget* w = tabs->widget(index);
+    tabs->removeTab(index);
+    w->deleteLater();
+
+    // Focus on the new current panel
+    currentFilePanel()->setFocus();
+    return true;
 }
 
 bool MainWindow::doRename(QObject *obj, QKeyEvent *keyEvent) {
