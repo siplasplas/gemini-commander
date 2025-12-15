@@ -99,6 +99,8 @@ public:
     void toggleMarkOnCurrent(bool advanceRow);
     void rememberSelection();
     void restoreSelectionFromMemory();
+    void styleActive();
+    void styleInactive();
     std::pair<PanelEntry*, int> currentEntryRow();
     void updateColumn(int row, PanelEntry& entry);
     QList<QStandardItem*> entryToRow(PanelEntry& entry);

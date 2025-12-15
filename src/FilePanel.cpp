@@ -1119,4 +1119,27 @@ void FilePanel::restoreSelectionFromMemory()
     scrollTo(idx);
 }
 
+void FilePanel::styleActive() {
+    setStyleSheet(
+        "QTableView::item {"
+        "    background-color: white;"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: #3584E4;"
+        "}"
+    );
+}
+
+void FilePanel::styleInactive() {
+    setStyleSheet(
+        "QTableView::item {"
+        "    background-color: white;"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: #d0d0d0;"
+        "}"
+    );
+}
+
+
 #include "FilePanel_impl.inc"

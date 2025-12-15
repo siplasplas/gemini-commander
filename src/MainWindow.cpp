@@ -427,10 +427,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
             // Restore selection (whether changing side or returning from the editor)
             panel->restoreSelectionFromMemory();
+            panel->styleActive();
         }
     } else if (event->type() == QEvent::FocusOut) {
         if (auto* panel = panelForObject(obj)) {
             panel->rememberSelection();
+            panel->styleInactive();
         }
     }
     return QMainWindow::eventFilter(obj, event);
