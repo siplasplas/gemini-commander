@@ -16,6 +16,7 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QProgressDialog>
+#include <QRegularExpression>
 #include <QStandardItemModel>
 #include <QStorageInfo>
 #include <QUrl>

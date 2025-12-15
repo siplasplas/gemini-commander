@@ -27,6 +27,8 @@ inline Qt::KeyboardModifiers modifierFromToken(const std::string& tokenLower)
         return Qt::AltModifier;
     if (tokenLower == "meta" || tokenLower == "win" || tokenLower == "cmd")
         return Qt::MetaModifier;
+    if (tokenLower == "num" || tokenLower == "keypad")
+        return Qt::KeypadModifier;
 
     return Qt::NoModifier;
 }

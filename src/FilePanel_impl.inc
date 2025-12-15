@@ -193,8 +193,14 @@ bool FilePanel::doGoToLastRow(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doInvertSelection(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doInvertSelection";
-    return false;
+    const bool isRoot = dir && dir->isRoot();
+    const int offset = isRoot ? 0 : 1;
+
+    for (int i = 0; i < entries.size(); ++i) {
+        entries[i].isMarked = !entries[i].isMarked;
+        updateRowMarking(i + offset, entries[i].isMarked);
+    }
+    return true;
 }
 
 bool FilePanel::doJumpDownToFiles(QObject *obj, QKeyEvent *keyEvent) {
@@ -242,15 +248,47 @@ bool FilePanel::doRestoreSelection(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doSelectAll(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSelectAll";
-    return false;
+    const bool isRoot = dir && dir->isRoot();
+    const int offset = isRoot ? 0 : 1;
+
+    for (int i = 0; i < entries.size(); ++i) {
+        entries[i].isMarked = true;
+        updateRowMarking(i + offset, true);
+    }
+    return true;
 }
 
 bool FilePanel::doSelectGroup(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSelectGroup";
-    return false;
+
+    bool ok = false;
+    QString pattern = QInputDialog::getText(
+        window(),
+        tr("Select Group"),
+        tr("Select files matching pattern:"),
+        QLineEdit::Normal,
+        "*",
+        &ok
+    );
+    if (!ok || pattern.isEmpty())
+        return true;
+
+    QRegularExpression regex(
+        QRegularExpression::wildcardToRegularExpression(pattern),
+        QRegularExpression::CaseInsensitiveOption
+    );
+
+    const bool isRoot = dir && dir->isRoot();
+    const int offset = isRoot ? 0 : 1;
+
+    for (int i = 0; i < entries.size(); ++i) {
+        if (regex.match(entries[i].info.fileName()).hasMatch()) {
+            entries[i].isMarked = true;
+            updateRowMarking(i + offset, true);
+        }
+    }
+    return true;
 }
 
 bool FilePanel::doSelectSameExtension(QObject *obj, QKeyEvent *keyEvent) {
@@ -375,13 +413,45 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doUnselectAll(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doUnselectAll";
-    return false;
+    const bool isRoot = dir && dir->isRoot();
+    const int offset = isRoot ? 0 : 1;
+
+    for (int i = 0; i < entries.size(); ++i) {
+        entries[i].isMarked = false;
+        updateRowMarking(i + offset, false);
+    }
+    return true;
 }
 
 bool FilePanel::doUnselectGroup(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doUnselectGroup";
-    return false;
+
+    bool ok = false;
+    QString pattern = QInputDialog::getText(
+        window(),
+        tr("Unselect Group"),
+        tr("Unselect files matching pattern:"),
+        QLineEdit::Normal,
+        "*",
+        &ok
+    );
+    if (!ok || pattern.isEmpty())
+        return true;
+
+    QRegularExpression regex(
+        QRegularExpression::wildcardToRegularExpression(pattern),
+        QRegularExpression::CaseInsensitiveOption
+    );
+
+    const bool isRoot = dir && dir->isRoot();
+    const int offset = isRoot ? 0 : 1;
+
+    for (int i = 0; i < entries.size(); ++i) {
+        if (regex.match(entries[i].info.fileName()).hasMatch()) {
+            entries[i].isMarked = false;
+            updateRowMarking(i + offset, false);
+        }
+    }
+    return true;
 }
