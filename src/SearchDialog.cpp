@@ -10,8 +10,241 @@
 #include <QMessageBox>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QLocale>
+#include <algorithm>
 
 #include "keys/ObjectRegistry.h"
+
+// ============================================================================
+// SearchResultsModel implementation
+// ============================================================================
+
+SearchResultsModel::SearchResultsModel(QObject* parent)
+    : QAbstractTableModel(parent)
+{
+}
+
+int SearchResultsModel::rowCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+        return 0;
+    return m_isSorted ? m_sortedIndices.size() : m_results.size();
+}
+
+int SearchResultsModel::columnCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+        return 0;
+    return ColumnCount;
+}
+
+QVariant SearchResultsModel::data(const QModelIndex& index, int role) const
+{
+    if (!index.isValid() || index.row() >= rowCount() || index.column() >= ColumnCount)
+        return QVariant();
+
+    // Get actual result index (sorted or direct)
+    int resultIndex = m_isSorted ? m_sortedIndices[index.row()] : index.row();
+
+    // Bounds check for resultIndex
+    if (resultIndex < 0 || resultIndex >= m_results.size())
+        return QVariant();
+
+    const SearchResult& result = m_results[resultIndex];
+
+    if (role == Qt::DisplayRole) {
+        switch (index.column()) {
+            case ColumnPath:
+                return result.path;
+            case ColumnSize:
+                return formatSize(result.size);
+            case ColumnModified:
+                return formatDateTime(result.modifiedTimestamp);
+        }
+    }
+
+    return QVariant();
+}
+
+QVariant SearchResultsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role != Qt::DisplayRole)
+        return QVariant();
+
+    if (orientation == Qt::Horizontal) {
+        switch (section) {
+            case ColumnPath: return tr("Path");
+            case ColumnSize: return tr("Size");
+            case ColumnModified: return tr("Modified");
+        }
+    }
+
+    return QVariant();
+}
+
+void SearchResultsModel::sort(int column, Qt::SortOrder order)
+{
+    if (m_results.isEmpty())
+        return;
+
+    // Optimization: if same column, just reverse the order instead of re-sorting
+    bool sameColumn = (m_sortColumn == column && m_isSorted);
+    bool justReverse = sameColumn && (m_sortOrder != order);
+
+    // Store persistent indices and map them to actual data indices BEFORE sorting
+    QModelIndexList oldPersistentIndexes = persistentIndexList();
+    QVector<int> oldDataIndices;  // Map to actual data indices
+
+    // Only process persistent indices if there are any (optimization for large datasets)
+    if (!oldPersistentIndexes.isEmpty()) {
+        oldDataIndices.reserve(oldPersistentIndexes.size());
+        for (const QModelIndex& idx : oldPersistentIndexes) {
+            int row = idx.row();
+            if (row >= 0 && row < rowCount()) {
+                // Get the actual data index BEFORE we modify m_sortedIndices
+                int dataIndex = m_isSorted ? m_sortedIndices[row] : row;
+                oldDataIndices.append(dataIndex);
+            } else {
+                oldDataIndices.append(-1);  // Invalid
+            }
+        }
+    }
+
+    emit layoutAboutToBeChanged();
+
+    m_sortColumn = column;
+    m_sortOrder = order;
+
+    // Fast path: just reverse if same column, different order
+    if (justReverse) {
+        std::reverse(m_sortedIndices.begin(), m_sortedIndices.end());
+    } else {
+        updateSortedIndices();
+    }
+
+    // Update persistent indices only if there are any
+    if (!oldPersistentIndexes.isEmpty()) {
+        // Create reverse map: dataIndex -> newRow (for fast lookup)
+        QHash<int, int> dataIndexToNewRow;
+        dataIndexToNewRow.reserve(m_sortedIndices.size());
+        for (int newRow = 0; newRow < m_sortedIndices.size(); ++newRow) {
+            dataIndexToNewRow[m_sortedIndices[newRow]] = newRow;
+        }
+
+        // Update persistent indices to reflect new positions
+        QModelIndexList newPersistentIndexes;
+        newPersistentIndexes.reserve(oldPersistentIndexes.size());
+
+        for (int i = 0; i < oldPersistentIndexes.size(); ++i) {
+            const QModelIndex& oldIdx = oldPersistentIndexes[i];
+            int dataIndex = oldDataIndices[i];
+
+            if (dataIndex < 0 || dataIndex >= m_results.size())
+                continue;
+
+            // Find where this data item is in the NEW sorted order (O(1) lookup)
+            auto it = dataIndexToNewRow.find(dataIndex);
+            if (it != dataIndexToNewRow.end()) {
+                int newRow = it.value();
+                newPersistentIndexes.append(index(newRow, oldIdx.column()));
+            }
+        }
+
+        changePersistentIndexList(oldPersistentIndexes, newPersistentIndexes);
+    }
+
+    emit layoutChanged();
+}
+
+void SearchResultsModel::addResult(const QString& path, qint64 size, qint64 modifiedTimestamp)
+{
+    // Add to raw data without sorting - just append
+    int newRow = m_results.size();
+    beginInsertRows(QModelIndex(), newRow, newRow);
+    m_results.append({path, size, modifiedTimestamp});
+    endInsertRows();
+}
+
+void SearchResultsModel::clear()
+{
+    beginResetModel();
+    m_results.clear();
+    m_sortedIndices.clear();
+    m_sortColumn = -1;
+    m_isSorted = false;
+    endResetModel();
+}
+
+const SearchResult& SearchResultsModel::resultAt(int row) const
+{
+    int resultIndex = m_isSorted ? m_sortedIndices[row] : row;
+    return m_results[resultIndex];
+}
+
+void SearchResultsModel::updateSortedIndices()
+{
+    // Initialize indices array (0, 1, 2, ...)
+    m_sortedIndices.resize(m_results.size());
+    for (int i = 0; i < m_results.size(); ++i)
+        m_sortedIndices[i] = i;
+
+    // So1rt indices based on column data
+    std::sort(m_sortedIndices.begin(), m_sortedIndices.end(),
+        [this](int a, int b) {
+            // Bounds check - protect against invalid indices
+            if (a < 0 || a >= m_results.size() || b < 0 || b >= m_results.size()) {
+                return a < b;  // Fallback comparison
+            }
+
+            const SearchResult& ra = m_results[a];
+            const SearchResult& rb = m_results[b];
+
+            bool less = false;
+            switch (m_sortColumn) {
+                case ColumnPath:
+                    less = ra.path < rb.path;
+                    break;
+                case ColumnSize:
+                    less = ra.size < rb.size;
+                    break;
+                case ColumnModified:
+                    less = ra.modifiedTimestamp < rb.modifiedTimestamp;
+                    break;
+                default:
+                    return a < b;  // Stable fallback
+            }
+
+            return m_sortOrder == Qt::AscendingOrder ? less : !less;
+        });
+
+    m_isSorted = true;
+}
+
+QString SearchResultsModel::formatSize(qint64 size) const
+{
+    // Format with thousands separators: 123'456'789
+    QString numStr = QString::number(size);
+    QString result;
+    int count = 0;
+
+    // Iterate from right to left, add separator every 3 digits
+    for (int i = numStr.length() - 1; i >= 0; --i) {
+        if (count == 3) {
+            result.prepend('\'');
+            count = 0;
+        }
+        result.prepend(numStr[i]);
+        count++;
+    }
+
+    return result;
+}
+
+QString SearchResultsModel::formatDateTime(qint64 timestamp) const
+{
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch(timestamp);
+    return dt.toString("yyyy-MM-dd hh:mm:ss");
+}
 
 SearchDialog::SearchDialog(const QString& startPath, QWidget* parent)
     : QDialog(parent)
@@ -23,6 +256,9 @@ SearchDialog::SearchDialog(const QString& startPath, QWidget* parent)
     ObjectRegistry::add(this, "SearchGlobal");
     setWindowTitle(tr("Find Files"));
     resize(700, 500);
+
+    // Create model
+    m_resultsModel = new SearchResultsModel(this);
 
     setupUi();
 
@@ -77,8 +313,9 @@ void SearchDialog::setupUi()
     connect(m_stopButton, &QPushButton::clicked, this, &SearchDialog::onStopSearch);
     connect(m_closeButton, &QPushButton::clicked, this, &QDialog::accept);
 
-    connect(m_resultsTable, &QTableWidget::cellDoubleClicked,
-            this, &SearchDialog::onResultDoubleClicked);
+    connect(m_resultsView, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
+        onResultDoubleClicked(index.row(), index.column());
+    });
 }
 
 void SearchDialog::createStandardTab()
@@ -183,21 +420,22 @@ void SearchDialog::createResultsTab()
     m_resultsTab = new QWidget();
     auto* layout = new QVBoxLayout(m_resultsTab);
 
-    // Results table
-    m_resultsTable = new QTableWidget(m_resultsTab);
-    m_resultsTable->setColumnCount(3);
-    m_resultsTable->setHorizontalHeaderLabels({tr("Path"), tr("Size"), tr("Modified")});
-    m_resultsTable->horizontalHeader()->setStretchLastSection(true);
-    m_resultsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_resultsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_resultsTable->setSortingEnabled(true);
+    // Results view with model
+    m_resultsView = new QTableView(m_resultsTab);
+    m_resultsView->setModel(m_resultsModel);
+    m_resultsView->horizontalHeader()->setStretchLastSection(true);
+    m_resultsView->horizontalHeader()->setSortIndicatorShown(true);
+    m_resultsView->horizontalHeader()->setSectionsClickable(true);
+    m_resultsView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_resultsView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_resultsView->setSortingEnabled(true);  // Allow user to sort by clicking headers
 
     // Set column widths
-    m_resultsTable->setColumnWidth(0, 400);
-    m_resultsTable->setColumnWidth(1, 100);
-    m_resultsTable->setColumnWidth(2, 150);
+    m_resultsView->setColumnWidth(0, 400);
+    m_resultsView->setColumnWidth(1, 100);
+    m_resultsView->setColumnWidth(2, 150);
 
-    layout->addWidget(m_resultsTable);
+    layout->addWidget(m_resultsView);
 
     // Status label
     m_statusLabel = new QLabel(tr("Ready"), m_resultsTab);
@@ -220,7 +458,7 @@ void SearchDialog::onStartSearch()
     }
 
     // Clear previous results
-    m_resultsTable->setRowCount(0);
+    m_resultsModel->clear();
     m_foundCount = 0;
 
     // Prepare search criteria
@@ -282,24 +520,8 @@ void SearchDialog::onStopSearch()
 
 void SearchDialog::onResultFound(const QString& path, qint64 size, const QDateTime& modified)
 {
-    int row = m_resultsTable->rowCount();
-    m_resultsTable->insertRow(row);
-
-    // Path
-    m_resultsTable->setItem(row, 0, new QTableWidgetItem(path));
-
-    // Size - store numeric value for proper sorting
-    auto* sizeItem = new QTableWidgetItem();
-    sizeItem->setData(Qt::DisplayRole, QString::number(size));
-    sizeItem->setData(Qt::UserRole, size);  // Store as qint64 for numeric sorting
-    sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_resultsTable->setItem(row, 1, sizeItem);
-
-    // Modified date - store as timestamp for proper sorting
-    auto* dateItem = new QTableWidgetItem();
-    dateItem->setData(Qt::DisplayRole, modified.toString("yyyy-MM-dd hh:mm:ss"));
-    dateItem->setData(Qt::UserRole, modified);  // Store as QDateTime for sorting
-    m_resultsTable->setItem(row, 2, dateItem);
+    // Add result to model - just raw data, no sorting yet
+    m_resultsModel->addResult(path, size, modified.toMSecsSinceEpoch());
 }
 
 void SearchDialog::onProgressUpdate(int searchedFiles, int foundFiles)
@@ -312,8 +534,8 @@ void SearchDialog::onSearchFinished()
     m_startButton->setEnabled(true);
     m_stopButton->setEnabled(false);
 
-    // Get final count from table
-    int finalCount = m_resultsTable->rowCount();
+    // Get final count from model
+    int finalCount = m_resultsModel->resultCount();
     m_statusLabel->setText(tr("Search finished. Found %1 file(s).").arg(finalCount));
 
     m_searchWorker = nullptr;
@@ -324,15 +546,15 @@ void SearchDialog::onResultDoubleClicked(int row, int column)
 {
     Q_UNUSED(column);
 
-    QTableWidgetItem* item = m_resultsTable->item(row, 0);
-    if (!item)
+    if (row < 0 || row >= m_resultsModel->resultCount())
         return;
 
-    QString filePath = item->text();
-    QFileInfo info(filePath);
+    // Get file path from model
+    const SearchResult& result = m_resultsModel->resultAt(row);
+    QFileInfo info(result.path);
 
     if (info.exists()) {
         // Open file with default application
-        QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+        QDesktopServices::openUrl(QUrl::fromLocalFile(result.path));
     }
 }

@@ -1,15 +1,65 @@
 #pragma once
 
-#include <QDialog>
-#include <QLineEdit>
 #include <QCheckBox>
-#include <QPushButton>
-#include <QTableWidget>
-#include <QTabWidget>
+#include <QDialog>
 #include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QTabWidget>
+#include <QTableView>
 #include <QThread>
+#include <QAbstractTableModel>
+#include <QVector>
 
 class SearchWorker;
+
+// Raw search result data
+struct SearchResult {
+    QString path;
+    qint64 size;
+    qint64 modifiedTimestamp;  // QDateTime as msecsSinceEpoch for efficient sorting
+};
+
+// Custom model for search results - memory efficient, sortable
+class SearchResultsModel : public QAbstractTableModel {
+    Q_OBJECT
+
+public:
+    enum Column {
+        ColumnPath = 0,
+        ColumnSize = 1,
+        ColumnModified = 2,
+        ColumnCount = 3
+    };
+
+    explicit SearchResultsModel(QObject* parent = nullptr);
+
+    // QAbstractTableModel interface
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+    // Sorting support
+    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+
+    // Data management
+    void addResult(const QString& path, qint64 size, qint64 modifiedTimestamp);
+    void clear();
+    int resultCount() const { return m_results.size(); }
+    const SearchResult& resultAt(int row) const;
+
+private:
+    QVector<SearchResult> m_results;
+    QVector<int> m_sortedIndices;  // Indices into m_results (for sorting without moving data)
+    int m_sortColumn = -1;
+    Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
+    bool m_isSorted = false;
+
+    void updateSortedIndices();
+    QString formatSize(qint64 size) const;
+    QString formatDateTime(qint64 timestamp) const;
+};
 
 class SearchDialog : public QDialog {
     Q_OBJECT
@@ -53,7 +103,8 @@ private:
 
     // Results tab
     QWidget* m_resultsTab;
-    QTableWidget* m_resultsTable;
+    QTableView* m_resultsView;
+    SearchResultsModel* m_resultsModel;
     QLabel* m_statusLabel;
 
     // Control buttons
