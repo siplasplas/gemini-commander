@@ -128,8 +128,13 @@ keys = [
 [SearchEdit]
 keys = [
     { key = "Escape",              handler = "doReturnToPanel" },
+    { key = "LETTERS",             handler = "default" },
+    { key = "DIGITS",              handler = "default" },
     { key = "Up",                  handler = "doPrevMatch" },
+    { key = "PageUp",              handler = "doPrevMatch" },
     { key = "Down",                handler = "doNextMatch" },
+    { key = "PageDown",            handler = "doNextMatch" },
+    { key = "Return",              handler = "doAccept" },
 ]
 
 

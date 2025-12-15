@@ -63,19 +63,6 @@ private:
     void copyFromPanel(FilePanel* srcPanel);
     KeyMap keyMap;
 
-    struct CopyStats {
-        quint64 totalBytes = 0;
-        quint64 totalFiles = 0;
-        quint64 totalDirs  = 0;
-    };
-
-    void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok);
-    bool copyDirectoryRecursive(const QString& srcRoot,
-                                const QString& dstRoot,
-                                const CopyStats& stats,
-                                QProgressDialog& progress,
-                                quint64& bytesCopied,
-                                bool& userAbort);
     bool handle(const char* handler, QKeyEvent *ev);
     QString currentPanelName();
     QString currentPanelPath();

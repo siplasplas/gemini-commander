@@ -19,6 +19,8 @@ public:
   void setCurrentPath(const QString& path);
   QString currentPath() const;
 
+   Q_INVOKABLE bool doLocalSearch(QObject *obj, QKeyEvent *keyEvent);
+
 public slots:
   void onDirectoryChanged(const QString& path);
 void onSelectionChanged();

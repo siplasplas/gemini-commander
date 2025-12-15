@@ -198,39 +198,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             showFavoriteDirsMenu(m_activeSide);
             return true;
         }
-        else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Space) {
-            if (auto* panel = panelForObject(obj)) {
-                auto p = panel->currentEntryRow();
-                PanelEntry* entry = p.first;
-                int row = p.second;
-
-                // brak wpisu albo [..]
-                if (!entry) {
-                    panel->toggleMarkOnCurrent(false);
-                    return true;
-                }
-
-                // tylko katalogi liczymy; plik -> zachowanie jak wcześniej
-                if (entry->info.isDir()) {
-                    if (entry->hasTotalSize != TotalSizeStatus::Has) {
-                        CopyStats stats;
-                        bool ok = false;
-                        entry->hasTotalSize = TotalSizeStatus::InPogress;
-                        panel->updateColumn(row, *entry);
-                        collectCopyStats(entry->info.absoluteFilePath(), stats, ok);
-                        if (ok) {
-                            entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
-                            entry->hasTotalSize = TotalSizeStatus::Has;
-                            panel->updateColumn(row, *entry);
-                        } else
-                            entry->hasTotalSize = TotalSizeStatus::Unknown;
-                    }
-                }
-
-                panel->toggleMarkOnCurrent(false);
-                return true;
-            }
-        } else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Insert) {
+         else if (modifiers == Qt::NoModifier && keyEvent->key() == Qt::Key_Insert) {
             if (auto* panel = panelForObject(obj)) {
                 panel->toggleMarkOnCurrent(true);
                 return true;
@@ -902,9 +870,9 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel)
             }
         }
 
-        CopyStats stats;
+        FilePanel::CopyStats stats;
         bool statsOk = false;
-        collectCopyStats(srcPath, stats, statsOk);
+        FilePanel::collectCopyStats(srcPath, stats, statsOk);
         if (!statsOk || stats.totalFiles == 0) {
             QMessageBox::warning(
                 this,
@@ -931,7 +899,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel)
         bool userAbort = false;
 
         const bool okCopy =
-            copyDirectoryRecursive(srcPath, dstRoot, stats, progress, bytesCopied, userAbort);
+            FilePanel::copyDirectoryRecursive(srcPath, dstRoot, stats, progress, bytesCopied, userAbort);
 
         if (!okCopy && userAbort) {
             return;
@@ -951,119 +919,6 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel)
 
     // inne typy – na razie ignorujemy
 }
-
-void MainWindow::collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok)
-{
-    ok = true;
-
-    QFileInfo rootInfo(srcPath);
-    if (!rootInfo.exists() || !rootInfo.isDir()) {
-        ok = false;
-        return;
-    }
-
-    // liczymy katalog root też
-    stats.totalDirs += 1;
-
-    SortedDirIterator it(srcPath,
-                    QDir::AllEntries | QDir::NoDotAndDotDot);
-
-    while (it.hasNext()) {
-        it.next();
-        const QFileInfo fi = it.fileInfo();
-
-        if (fi.isDir()) {
-            stats.totalDirs += 1;
-        } else if (fi.isFile()) {
-            stats.totalFiles += 1;
-            stats.totalBytes += static_cast<quint64>(fi.size());
-        }
-        // inne typy (symlinki itp.) na razie pomijamy
-    }
-}
-
-bool MainWindow::copyDirectoryRecursive(const QString& srcRoot,
-                                        const QString& dstRoot,
-                                        const CopyStats& stats,
-                                        QProgressDialog& progress,
-                                        quint64& bytesCopied,
-                                        bool& userAbort)
-{
-    if (userAbort)
-        return false;
-
-    QFileInfo srcInfo(srcRoot);
-    if (!srcInfo.exists() || !srcInfo.isDir())
-        return false;
-
-    QDir dstDir;
-    if (!dstDir.mkpath(dstRoot)) {
-        QMessageBox::warning(this, tr("Error"),
-                             tr("Failed to create directory:\n%1").arg(dstRoot));
-        return false;
-    }
-
-    QDir dir(srcRoot);
-    const QFileInfoList entries =
-        dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::NoSort);
-
-    for (const QFileInfo& fi : entries) {
-        if (userAbort)
-            return false;
-
-        // obsługa Cancel
-        if (progress.wasCanceled()) {
-            auto reply = QMessageBox::question(
-                this,
-                tr("Cancel copy"),
-                tr("Do you really want to cancel the copy operation?"),
-                QMessageBox::Yes | QMessageBox::No,
-                QMessageBox::Yes
-            );
-            if (reply == QMessageBox::Yes) {
-                userAbort = true;
-                return false;
-            } else {
-                // dalej kopiujemy; Cancel przestanie być używany
-            }
-        }
-
-        const QString srcPath = fi.absoluteFilePath();
-        const QString dstPath = QDir(dstRoot).filePath(fi.fileName());
-
-        if (fi.isDir()) {
-            if (!copyDirectoryRecursive(srcPath, dstPath,
-                                        stats, progress, bytesCopied, userAbort))
-                return false;
-        } else if (fi.isFile()) {
-            // jeśli istniał – nadpisujemy
-            if (QFileInfo::exists(dstPath))
-                QFile::remove(dstPath);
-
-            if (!QFile::copy(srcPath, dstPath)) {
-                QMessageBox::warning(
-                    this,
-                    tr("Error"),
-                    tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath)
-                );
-                return false;
-            }
-
-            bytesCopied += static_cast<quint64>(fi.size());
-
-            if (stats.totalBytes > 0) {
-                const int value = static_cast<int>(
-                    qMin<quint64>(bytesCopied, stats.totalBytes));
-                progress.setValue(value);
-            }
-
-            qApp->processEvents();
-        }
-    }
-
-    return true;
-}
-
 
 bool MainWindow::handle(const char* handler, QKeyEvent* ev) {
     bool handlerResult = true;

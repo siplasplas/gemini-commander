@@ -14,7 +14,4 @@ signals:
   void nextMatchRequested();
   void prevMatchRequested();
   void acceptPressed();
-
-protected:
-  void keyPressEvent(QKeyEvent* event) override;
 };

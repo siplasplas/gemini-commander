@@ -115,13 +115,6 @@ bool FilePanel::doJumpUpToDirectories(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
-bool FilePanel::doLocalSearch(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doLocalSearch";
-    return false;
-}
-
 bool FilePanel::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -245,8 +238,35 @@ bool FilePanel::doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doToggleMarkTotalSize";
-    return false;
+    auto p = currentEntryRow();
+    PanelEntry* entry = p.first;
+    int row = p.second;
+
+    // no entry or [..]
+    if (!entry) {
+        toggleMarkOnCurrent(false);
+        return true;
+    }
+
+    // only directories are counted; file -> behavior as before
+    if (entry->info.isDir()) {
+        if (entry->hasTotalSize != TotalSizeStatus::Has) {
+            CopyStats stats;
+            bool ok = false;
+            entry->hasTotalSize = TotalSizeStatus::InPogress;
+            updateColumn(row, *entry);
+            collectCopyStats(entry->info.absoluteFilePath(), stats, ok);
+            if (ok) {
+                entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
+                entry->hasTotalSize = TotalSizeStatus::Has;
+                updateColumn(row, *entry);
+            } else
+                entry->hasTotalSize = TotalSizeStatus::Unknown;
+        }
+    }
+
+    toggleMarkOnCurrent(false);
+    return true;
 }
 
 bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {

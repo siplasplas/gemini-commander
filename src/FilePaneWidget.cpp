@@ -10,6 +10,7 @@
 FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     : m_side(side), QWidget(parent)
 {
+    ObjectRegistry::add(this, "PaneComposite");
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(2);
@@ -50,32 +51,15 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     connect(m_searchEdit, &SearchEdit::prevMatchRequested,
             m_filePanel,  &FilePanel::prevMatch);
 
-    connect(m_searchEdit, &SearchEdit::escapePressed,
-            this, [this]() {
-                if (m_filePanel)
-                    m_filePanel->rememberSelection();
-                m_searchEdit->clear();
-                m_searchEdit->hide();
-            });
-
-    connect(m_filePanel, &FilePanel::searchRequested,
-        this, [this](const QString& initialText) {
-            m_searchEdit->show();
-            m_searchEdit->setFocus();
-            m_searchEdit->clear();
-            if (!initialText.isEmpty())
-                m_searchEdit->setText(initialText);
-            // poinformuj panel o nowym tekście
-            m_filePanel->updateSearch(m_searchEdit->text());
+    connect(m_searchEdit, &SearchEdit::acceptPressed,
+        this, [this]() {
+            m_filePanel->rememberSelection();
+            m_searchEdit->hide();
+            if (m_filePanel) {
+                m_filePanel->triggerCurrentEntry();
+            }
         });
 
-    connect(m_searchEdit, &SearchEdit::acceptPressed,
-            this, [this]() {
-                m_searchEdit->hide();
-                if (m_filePanel) {
-                    m_filePanel->triggerCurrentEntry();
-                }
-            });
 
     // initial
     setCurrentPath(m_filePanel->currentPath);
@@ -147,3 +131,19 @@ void FilePaneWidget::updateStatusLabel()
             .arg(totalRows);
     m_statusLabel->setText(text);
 }
+
+
+bool FilePaneWidget::doLocalSearch(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    m_searchEdit->show();
+    m_searchEdit->setFocus();
+    m_searchEdit->clear();
+    QString initialText = keyEvent->text();
+    if (!initialText.isEmpty())
+         m_searchEdit->setText(initialText);
+    // inform the panel about the new text
+    m_filePanel->updateSearch(m_searchEdit->text());
+    return true;
+}
+

@@ -8,6 +8,7 @@
 #include <QMimeDatabase>
 #include <QStyle>
 #include <QStyledItemDelegate>
+#include <QProgressDialog>
 
 class QStandardItem;
 QT_BEGIN_NAMESPACE
@@ -101,6 +102,16 @@ public:
     void restoreSelectionFromMemory();
     void styleActive();
     void styleInactive();
+
+    struct CopyStats {
+        quint64 totalBytes = 0;
+        quint64 totalFiles = 0;
+        quint64 totalDirs  = 0;
+    };
+
+    static void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok);
+    static bool copyDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, const CopyStats &stats,
+                                QProgressDialog &progress, quint64 &bytesCopied, bool &userAbort);
     std::pair<PanelEntry*, int> currentEntryRow();
     void updateColumn(int row, PanelEntry& entry);
     QList<QStandardItem*> entryToRow(PanelEntry& entry);
