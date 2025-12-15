@@ -152,6 +152,10 @@ private:
     void addFirstEntry(bool isRoot);
     void addEntries();
     QString normalizeForSearch(const QString& s) const;
+
+    // Shared pattern history for select/unselect group
+    static QStringList s_patternHistory;
+    static QString showPatternDialog(QWidget* parent, const QString& title, const QString& label);
 };
 
 #endif //PANEL_H

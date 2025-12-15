@@ -15,15 +15,69 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QLabel>
 #include <QProgressDialog>
 #include <QRegularExpression>
 #include <QStandardItemModel>
+#include <QVBoxLayout>
 #include <QStorageInfo>
 #include <QUrl>
 #include "FilePanel.h"
 
 #include "SizeFormat.h"
 #include "SortedDirIterator.h"
+
+// Static pattern history shared between select/unselect group dialogs
+QStringList FilePanel::s_patternHistory = { "*" };
+
+QString FilePanel::showPatternDialog(QWidget* parent, const QString& title, const QString& label)
+{
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+
+    auto* layout = new QVBoxLayout(&dialog);
+
+    auto* labelWidget = new QLabel(label, &dialog);
+    layout->addWidget(labelWidget);
+
+    auto* comboBox = new QComboBox(&dialog);
+    comboBox->setEditable(true);
+    comboBox->addItems(s_patternHistory);
+    comboBox->setCurrentIndex(0);
+    comboBox->lineEdit()->selectAll();
+    layout->addWidget(comboBox);
+
+    auto* buttonBox = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttonBox);
+
+    comboBox->setFocus();
+
+    if (dialog.exec() != QDialog::Accepted)
+        return {};
+
+    QString pattern = comboBox->currentText().trimmed();
+    if (pattern.isEmpty())
+        return {};
+
+    // Add to history if not already present, move to front if exists
+    int idx = s_patternHistory.indexOf(pattern);
+    if (idx > 0) {
+        s_patternHistory.move(idx, 0);
+    } else if (idx < 0) {
+        s_patternHistory.prepend(pattern);
+        // Keep history limited
+        while (s_patternHistory.size() > 20)
+            s_patternHistory.removeLast();
+    }
+
+    return pattern;
+}
 
 QString stripLeadingDot(const QString& s)
 {

@@ -262,16 +262,12 @@ bool FilePanel::doSelectGroup(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 
-    bool ok = false;
-    QString pattern = QInputDialog::getText(
+    QString pattern = showPatternDialog(
         window(),
         tr("Select Group"),
-        tr("Select files matching pattern:"),
-        QLineEdit::Normal,
-        "*",
-        &ok
+        tr("Select files matching pattern:")
     );
-    if (!ok || pattern.isEmpty())
+    if (pattern.isEmpty())
         return true;
 
     QRegularExpression regex(
@@ -427,16 +423,12 @@ bool FilePanel::doUnselectGroup(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 
-    bool ok = false;
-    QString pattern = QInputDialog::getText(
+    QString pattern = showPatternDialog(
         window(),
         tr("Unselect Group"),
-        tr("Unselect files matching pattern:"),
-        QLineEdit::Normal,
-        "*",
-        &ok
+        tr("Unselect files matching pattern:")
     );
-    if (!ok || pattern.isEmpty())
+    if (pattern.isEmpty())
         return true;
 
     QRegularExpression regex(
