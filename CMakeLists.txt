@@ -161,5 +161,28 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 qt_add_resources(APP_RESOURCES res/resources.qrc)
 target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
 
+# Installation
+include(GNUInstallDirs)
+
+# Install executable
+install(TARGETS ${PROJECT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# Install .desktop file
+install(FILES res/gemini-commander.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+
+# Install icons
+foreach(size 16 32 48 64 128 256)
+    install(FILES res/icons/gemini-commander-${size}.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps
+            RENAME gemini-commander.png)
+endforeach()
+
+# Install SVG icon (scalable)
+install(FILES res/icons/gemini-commander.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+        RENAME gemini-commander.svg)
+
 enable_testing()
 add_subdirectory(tests)

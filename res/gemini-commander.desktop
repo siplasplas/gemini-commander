@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Gemini Commander
+GenericName=File Manager
+Comment=Dual-pane file manager inspired by Total Commander
+Icon=gemini-commander
+Exec=gemini-commander
+Terminal=false
+Categories=System;FileManager;FileTools;
+Keywords=file;manager;explorer;browser;dual-pane;
+StartupNotify=true

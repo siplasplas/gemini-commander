@@ -4,6 +4,7 @@
         <file>icons/folder_blue.svg</file>
         <file>icons/folder_white.svg</file>
         <file>icons/search.svg</file>
+        <file>icons/gemini-commander.svg</file>
     </qresource>
     <qresource>
         <file>config/keys.toml</file>

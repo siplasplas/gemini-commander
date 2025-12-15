@@ -63,6 +63,7 @@ MainWindow::MainWindow(QWidget *parent)
     );
 
     setWindowTitle("Gemini Commander");
+    setWindowIcon(QIcon(":/icons/gemini-commander.svg"));
     resize(1024, 768);
     keyMap.load(":/config/keys.toml");
     KeyRouter::instance().setKeyMap(&keyMap);

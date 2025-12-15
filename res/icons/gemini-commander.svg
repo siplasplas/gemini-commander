@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e5ba8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Connection line between stars -->
+  <line x1="20" y1="20" x2="44" y2="44"
+        stroke="url(#starGradient)"
+        stroke-width="2"
+        stroke-linecap="round"
+        opacity="0.6"/>
+
+  <!-- Left star (Castor) -->
+  <g transform="translate(20, 20)">
+    <path d="M 0,-8 L 2.4,-2.4 L 8,0 L 2.4,2.4 L 0,8 L -2.4,2.4 L -8,0 L -2.4,-2.4 Z"
+          fill="url(#starGradient)"
+          stroke="#1e5ba8"
+          stroke-width="1"/>
+    <circle cx="0" cy="0" r="2" fill="#ffffff" opacity="0.8"/>
+  </g>
+
+  <!-- Right star (Pollux) -->
+  <g transform="translate(44, 44)">
+    <path d="M 0,-10 L 3,-3 L 10,0 L 3,3 L 0,10 L -3,3 L -10,0 L -3,-3 Z"
+          fill="url(#starGradient)"
+          stroke="#1e5ba8"
+          stroke-width="1"/>
+    <circle cx="0" cy="0" r="2.5" fill="#ffffff" opacity="0.8"/>
+  </g>
+</svg>
