@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QVector>
+#include <unordered_set>
 #include <functional>
 
 class SortedDirIterator {
@@ -22,15 +23,19 @@ public:
 private:
     struct Frame {
         QDir dir;
+        QString canonicalPath;  // canonical path for cycle detection
         QFileInfoList entries;
         int index = 0;
     };
 
-    QVector<Frame> m_stack;   // stos katalogów
+    QVector<Frame> m_stack;   // directory stack
+    std::unordered_set<QString> m_visitedPaths;  // canonical paths on stack (cycle detection)
     QDir::Filters m_filters;
     Comparator m_cmp;
     QFileInfo m_fileInfo;
 
+    bool canEnter(const QString& canonicalPath) const;
     void pushDir(const QString& path);
+    void popFrame();
     static bool defaultComparator(const QFileInfo& a, const QFileInfo& b);
 };
