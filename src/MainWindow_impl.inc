@@ -22,7 +22,7 @@ bool MainWindow::doActivate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     if (!commandLineEdit->text().isEmpty()) {
-        currentFilePanel()->activate(QString::fromStdString(fileutils::trim(commandLineEdit->text().toStdString())));
+        currentFilePanel()->activate(QString::fromStdString(utils::trim(commandLineEdit->text().toStdString())));
         doClearAndReturnToPanel(obj, keyEvent);
     } else {
         currentFilePanel()->trigger(currentPanelName());
@@ -88,21 +88,21 @@ bool MainWindow::doCurrentDirToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     QString currentPath = currentFilePanel()->currentPath;
-    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(fileutils::escapePathForShell(currentPath.toStdString()))+" ");
+    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(utils::escapePathForShell(currentPath.toStdString()))+" ");
     return true;
 }
 
 bool MainWindow::doCurrentNameToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(fileutils::escapePathForShell(currentPanelName().toStdString()))+" ");
+    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(utils::escapePathForShell(currentPanelName().toStdString()))+" ");
     return true;
 }
 
 bool MainWindow::doCurrentPathToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(fileutils::escapePathForShell(currentPanelPath().toStdString()))+" ");
+    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(utils::escapePathForShell(currentPanelPath().toStdString()))+" ");
     return true;
 }
 

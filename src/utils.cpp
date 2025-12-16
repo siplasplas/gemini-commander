@@ -18,7 +18,7 @@
 #  define GETPID() getpid()
 #endif
 
-namespace fileutils {
+namespace utils {
 
 namespace {
 void replaceAll(std::string& str, const std::string& from, const std::string& to)

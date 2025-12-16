@@ -4,7 +4,7 @@
 #include <functional>
 #include <string>
 
-namespace fileutils {
+namespace utils {
 
 // Escapes a file path for safe use in shell commands.
 //

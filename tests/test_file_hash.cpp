@@ -6,14 +6,14 @@
 
 #include "utils.h"
 
-using fileutils::compute_file_hash;
-using fileutils::HashProgressCallback;
+using utils::compute_file_hash;
+using utils::HashProgressCallback;
 
 TEST(FileHashTest, HashesWithVariousBufferSizes)
 {
     // Create temporary file in /dev/shm using makeTempPartPath
     const std::string tmpPath =
-         fileutils::makeTempPartPath("/dev/shm", /*pathIsDir=*/true);
+         utils::makeTempPartPath("/dev/shm", /*pathIsDir=*/true);
 
     const std::string pattern = "0123456";     // 7 bytes
     const int repeats = 10000;                 // 70'000 bytes total
