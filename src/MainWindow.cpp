@@ -70,6 +70,20 @@ MainWindow::MainWindow(QWidget *parent)
     KeyRouter::instance().installOn(qApp, this);
 }
 
+void MainWindow::closeEvent(QCloseEvent *event) {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+                    this,
+                    tr("Unsaved Changes"),
+                    "Exit?",
+                    QMessageBox::Yes|QMessageBox::Cancel
+                );
+    if (reply == QMessageBox::Yes) {
+        event->accept();
+    } else {
+        event->ignore();
+    }
+}
+
 void MainWindow::setupUi() {
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);

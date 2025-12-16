@@ -25,6 +25,8 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
 #include "MainWindow_decl.inc"
+protected:
+    void closeEvent(QCloseEvent *event) override;
 private:
     void setupUi();
     static Side opposite(Side side);
