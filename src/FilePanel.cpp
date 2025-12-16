@@ -491,7 +491,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     connect(header, &QHeaderView::sectionClicked,
             this, &FilePanel::onHeaderSectionClicked);
 
-    connect(this, &QTableView::activated, [this](const QModelIndex &index) {
+    connect(this, &QTableView::doubleClicked, [this](const QModelIndex &index) {
         trigger(index);
     });
 
