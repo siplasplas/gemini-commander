@@ -1175,7 +1175,7 @@ void FilePanel::styleInactive() {
         "    background-color: white;"
         "}"
         "QTableView::item:selected {"
-        "    background-color: #d0d0d0;"
+        "    background-color: #a0a0a0;"
         "}"
     );
 }
