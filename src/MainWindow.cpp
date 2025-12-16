@@ -75,7 +75,8 @@ void MainWindow::closeEvent(QCloseEvent *event) {
                     this,
                     tr("Unsaved Changes"),
                     "Exit?",
-                    QMessageBox::Yes|QMessageBox::Cancel
+                    QMessageBox::Yes|QMessageBox::Cancel,
+                    QMessageBox::Yes
                 );
     if (reply == QMessageBox::Yes) {
         event->accept();
