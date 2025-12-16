@@ -59,8 +59,8 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_editorTabWidget->setTabsClosable(true);
     m_editorTabWidget->setMovable(true);
     m_editorTabWidget->setUsesScrollButtons(true);
-    connect(m_editorTabWidget, &MruTabWidget::cleanupBeforeTabClose,
-            this, &EditorFrame::cleanupBeforeTabClose);
+    connect(m_editorTabWidget, &MruTabWidget::actionsBeforeTabClose,
+            this, &EditorFrame::actionsBeforeTabClose);
     connect(m_editorTabWidget, &MruTabWidget::tabAboutToClose,
             this, &EditorFrame::tabAboutToClose);
     connect(m_editorTabWidget, &MruTabWidget::tabContextMenuRequested,
@@ -88,7 +88,7 @@ void EditorFrame::extendTabContextMenu(int tabIndex, QMenu* menu) {
             auto* base_viewer = qobject_cast<BaseViewer*>(w);
             if (base_viewer && !base_viewer->isModified())
             {
-                m_editorTabWidget->closeTab(i);
+                m_editorTabWidget->requestCloseTab(i);
             }
         }
         });
@@ -213,7 +213,7 @@ void EditorFrame::onOpenFileTriggered()
 
 void EditorFrame::onCloseCurrentTabTriggered()
 {
-    m_editorTabWidget->closeTab(m_editorTabWidget-> currentIndex());
+    m_editorTabWidget->requestCloseTab(m_editorTabWidget-> currentIndex());
 }
 
 void EditorFrame::onAboutTriggered()
@@ -244,80 +244,70 @@ void EditorFrame::onAboutTriggered()
  *
  * Handles document saving and KTextEditor integration
  */
-bool EditorFrame::cleanupBeforeTabClose(int index)
+bool EditorFrame::actionsBeforeTabClose(int index)
 {
     QWidget* widget = m_editorTabWidget->widget(index);
     Editor* editor = qobject_cast<Editor*>(widget); // Cast to our Editor view
     if (!editor)
         return true;
-    bool success = true;
-
     if (editor && editor->document())
     {
-        qDebug() << "save if needed";
         KTextEditor::Document* doc = editor->document(); // Pobierz wskaźnik do dokumentu
+        // Zamknij dokument przez interfejs Application <<< POPRAWKA
+        KTextEditor::Editor* kate = KTextEditor::Editor::instance();
+        KTextEditor::Application* app = kate->application();
+        bool closedDocOk = false;
 
-        // Sprawdzenie modyfikacji i zapis (kod jak poprzednio)
-        if (editor->isModified())
+        if (app && doc)
         {
-            qDebug() << "Tab" << index << "is modified. Saving file:" << editor->filePath();
-            if (!editor->saveFile())
-            {
-                qWarning() << "Failed to save file via Editor::saveFile:" << editor->filePath() << "Aborting close.";
-                success = false;
-            }
-            else
-            {
-                qDebug() << "File saved successfully:" << editor->filePath();
-            }
+            // Użyj app->closeDocument(doc) zamiast błędnego kate->closeUrl() <<< POPRAWKA
+            closedDocOk = app->closeDocument(doc);
+            qDebug() << "KTextEditor::Application::closeDocument(" << doc->url().toLocalFile() << ") returned:" <<
+                closedDocOk;
         }
         else
         {
-            qDebug() << "Tab" << index << "not modified. Closing.";
-        }
-
-        if (success)
-        {
-            // Zamknij dokument przez interfejs Application <<< POPRAWKA
-            KTextEditor::Editor* kate = KTextEditor::Editor::instance();
-            KTextEditor::Application* app = kate->application();
-            bool closedDocOk = false;
-
-            if (app && doc)
-            {
-                // Użyj app->closeDocument(doc) zamiast błędnego kate->closeUrl() <<< POPRAWKA
-                closedDocOk = app->closeDocument(doc);
-                qDebug() << "KTextEditor::Application::closeDocument(" << doc->url().toLocalFile() << ") returned:" <<
-                    closedDocOk;
-            }
-            else
-            {
-                qWarning() << "Could not get Application or Document pointer to close document via KTE.";
-            }
+            qWarning() << "Could not get Application or Document pointer to close document via KTE.";
         }
     }
     else if (widget)
     {
         qDebug() << "Closing non-Editor tab at index:" << index;
     }
-    return success;
+    return true;
 }
 
-void EditorFrame::tabAboutToClose(int index, bool &allow_close)
+void EditorFrame::tabAboutToClose(int index, bool askPin, bool &allow_close)
 {
     if (!allow_close)
         return;
     QWidget* w = m_editorTabWidget->widget(index);
-    auto base_viewer = qobject_cast<BaseViewer*>(w);
-    if (base_viewer && base_viewer->isModified())
+    auto* editor = qobject_cast<Editor*>(w);
+    if (editor && editor->isModified())
     {
+        QString message;
+        if (askPin) {
+            message = "TabWidget has set tab limit and must be closed least used unpinned tab.\n\n";
+            message += "The text in the file " + editor->baseFileName() + " has been changed.\n";
+            message += "Do you want to save the modifications? (No = close and discard changes, Cancel = pin tab)";
+        } else {
+            message = "The text in the file " + editor->baseFileName() + " has been changed.\n";
+            message += "Do you want to save the modifications? (No = close and discard changes)";
+        }
+
         QMessageBox::StandardButton reply = QMessageBox::question(
                     this,
                     tr("Unsaved Changes"),
-                    tr("Close tab with unsaved changes?"),
-                    QMessageBox::Yes|QMessageBox::No
+                    message,
+                    QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel
                 );
-        allow_close = (reply == QMessageBox::Yes);
+        switch (reply) {
+            case QMessageBox::Cancel:allow_close = false; break;
+            case QMessageBox::No:allow_close = true; break;
+            case QMessageBox::Yes:
+                allow_close = editor->saveFile(); break;
+            default:allow_close = true;
+        }
     } else
         allow_close = true;
 }
@@ -371,15 +361,11 @@ QString EditorFrame::generateUniqueTabTitle(const QString& filePath)
 
 void EditorFrame::closeEvent(QCloseEvent* event)
 {
-    if (tryCloseAll()) {
-        event->accept();
-    } else {
+    if (!m_editorTabWidget->requestCloseAllTabs()) {
         event->ignore();
+    } else {
+        event->accept();
     }
-}
-
-bool EditorFrame::tryCloseAll() {
-    return true;
 }
 
 #include  "EditorFrame_impl.inc"

@@ -36,15 +36,15 @@ class MruTabWidget : public QTabWidget
     Q_OBJECT
 signals:
     void tabContextMenuRequested(int tabIndex, QMenu* menu);
-    void tabAboutToClose(int index, bool &allow_close);
-    void cleanupBeforeTabClose(int index);
+    void tabAboutToClose(int index, bool askPin, bool &allow_close);
+    void actionsBeforeTabClose(int index);
 public:
     /**
      * @brief Constructs an MRU-enabled tab widget
      * @param parent Parent widget
      */
     explicit MruTabWidget(QWidget *parent = nullptr);
-    bool requestTabClose(int index);
+    bool requestCloseTab(int index, bool askPin = false);
 
     /**
      * @brief Destructor cleans up resources
@@ -71,11 +71,11 @@ public:
      */
     void setTabPinned(int tabIndex, bool pinned);
     bool isTabPinned(int tabIndex) const;
-    bool closeTab(int index);
-    bool closeAllTabs();
+    bool requestCloseAllTabs();
     void closeOtherTabs(int keepIndex);
     void closeTabsToLeft(int fromIndex);
     void closeTabsToRight(int fromIndex);
+    void setPinIconUri(QString iconUri) { m_pinIconUri = iconUri; }
 
 protected:
     // Override key event handlers
@@ -118,7 +118,7 @@ private:
     void mapCloseButtonsToTabs();
 
     // Add new private methods
-    int findLeastRecentlyUsedUnpinnedTab() const;
+    QVector<QWidget*> findLeastRecentlyUsedUnpinnedTabs(int atMost) const;
     int pinnedTabCount() const;
 
 
@@ -128,6 +128,7 @@ private:
     QTimer m_ctrlTabTimer;
     bool m_expectingPopup = false;
     bool m_shiftHeldOnTabPress = false;
+    QString m_pinIconUri;
 
     QPointer<QDialog> m_mruPopup;
     QPointer<QListWidget> m_mruListWidget;

@@ -4,7 +4,7 @@
 #include <string>
 #include <botan/hash.h>
 
-#include "fileutils.h"
+#include "utils.h"
 
 using fileutils::compute_file_hash;
 using fileutils::HashProgressCallback;

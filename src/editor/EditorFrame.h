@@ -36,14 +36,13 @@ public:
     void loadPlugins();
 
     /// @brief Closes specific editor tab
-    bool cleanupBeforeTabClose(int index);
+    bool actionsBeforeTabClose(int index);
 
-    void tabAboutToClose(int index, bool &allow_close);
+    void tabAboutToClose(int index, bool askPin, bool &allow_close);
     void openFile(const QString& filePath);
     void openFileInViewer(const QString &fileName);
 
 protected:
-    bool tryCloseAll();
     void closeEvent(QCloseEvent *event) override;
 
 private slots:

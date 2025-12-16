@@ -105,7 +105,7 @@ add_executable(${PROJECT_NAME}
         src/editor/EditorFrame.h
         src/editor/mainheader.cpp
         src/widgets/mrutabwidget.cpp
-        src/widgets/Ev.cpp
+        src/utils/Ev.cpp
         src/editor/BaseViewer.cpp
         src/editor/BaseViewer.h
         src/editor/Viewer.cpp

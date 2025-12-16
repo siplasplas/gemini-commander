@@ -17,7 +17,7 @@
 #include <QDebug>
 #include <QMenu>
 
-#include "Ev.h"
+#include "utils/Ev.h"
 
 constexpr int CTRL_TAB_TIMEOUT_MS = 200;
 
@@ -39,22 +39,22 @@ MruTabWidget::MruTabWidget(QWidget *parent)
     connect(tabBar(), &QTabBar::customContextMenuRequested, this, &MruTabWidget::onTabContextMenuRequested);
 
     connect(this, &QTabWidget::tabCloseRequested, [this](int index) {
-        requestTabClose(index);
+        requestCloseTab(index);
     });
 }
 
 
-bool MruTabWidget::requestTabClose(int index)
+bool MruTabWidget::requestCloseTab(int index, bool askPin)
 {
-    if (index < 0 || index >= count()) return false;
+    assert(index >= 0 && index < count());
 
     QWidget* tab = widget(index);
-    if (!tab) return false;
+    assert(tab);
 
     bool allowClose = true;
-    emit tabAboutToClose(index, allowClose);
+    emit tabAboutToClose(index, askPin, allowClose);
     if (!allowClose) return false;
-    emit cleanupBeforeTabClose(index);
+    emit actionsBeforeTabClose(index);
     tab->deleteLater();
     removeTab(index);
     return true;
@@ -539,25 +539,35 @@ bool MruTabWidget::isTabPinned(int tabIndex) const
     return m_pinnedTabs[tabIndex];
 }
 
-int MruTabWidget::findLeastRecentlyUsedUnpinnedTab() const
+QVector<QWidget*> MruTabWidget::findLeastRecentlyUsedUnpinnedTabs(int atMost) const
 {
-    // Iterate through MRU list from least recent to most recent
-    for (int i = m_mruOrder.size() - 1; i >= 0; --i) {
+    QVector<QWidget*> result;
+    if (atMost <= 0) return result;
+
+    // First, try to find unpinned tabs from MRU list (least recent to most recent)
+    for (int i = m_mruOrder.size() - 1; i >= 0 && result.size() < atMost; --i) {
         int tabIndex = m_mruOrder[i];
         if (tabIndex >= 0 && tabIndex < count() && !isTabPinned(tabIndex)) {
-            return tabIndex;
+            QWidget* w = widget(tabIndex);
+            if (w && !result.contains(w)) {
+                result.append(w);
+            }
         }
     }
 
-    // If MRU list is empty or doesn't contain unpinned tabs,
-    // search through all tabs from right to left
-    for (int i = count() - 1; i >= 0; --i) {
-        if (!isTabPinned(i)) {
-            return i;
+    // If we still need more, search through all tabs from right to left
+    if (result.size() < atMost) {
+        for (int i = count() - 1; i >= 0 && result.size() < atMost; --i) {
+            if (!isTabPinned(i)) {
+                QWidget* w = widget(i);
+                if (w && !result.contains(w)) {
+                    result.append(w);
+                }
+            }
         }
     }
 
-    return -1; // All tabs are pinned
+    return result;
 }
 
 int MruTabWidget::pinnedTabCount() const
@@ -726,33 +736,12 @@ void MruTabWidget::performDirectSwitch()
     }
 }
 
-bool MruTabWidget::closeTab(int index)
-{
-    if (index < 0 || index >= count())
-        return true;
-    QWidget* tabWidget = widget(index);
-    bool closeApproved = true;
-    emit tabAboutToClose(index, closeApproved);
-    if (!closeApproved)
-        return false;
-
-    emit cleanupBeforeTabClose(index);
-
-    // Schedule the widget for deletion
-    if (tabWidget) {
-        tabWidget->deleteLater();
-    }
-    // Remove the tab (this won't delete the widget)
-    removeTab(index);
-    return true;
-}
-
-bool MruTabWidget::closeAllTabs()
+bool MruTabWidget::requestCloseAllTabs()
 {
     int leaved = 0;
     for (int index = count() - 1; index >= 0; index--)
     {
-        if (!closeTab(index))
+        if (!requestCloseTab(index))
             leaved++;
     }
     return leaved == 0;
@@ -763,7 +752,7 @@ void MruTabWidget::closeOtherTabs(int keepIndex)
     for (int i = count() - 1; i >= 0; --i)
     {
         if (i != keepIndex)
-            closeTab(i);
+            requestCloseTab(i);
     }
 }
 
@@ -771,7 +760,7 @@ void MruTabWidget::closeTabsToLeft(int fromIndex)
 {
     for (int i = fromIndex - 1; i >= 0; --i)
     {
-        closeTab(i);
+        requestCloseTab(i);
     }
 }
 
@@ -779,7 +768,7 @@ void MruTabWidget::closeTabsToRight(int fromIndex)
 {
     for (int i = count() - 1; i > fromIndex; --i)
     {
-        closeTab(i);
+        requestCloseTab(i);
     }
 }
 
@@ -793,7 +782,7 @@ void MruTabWidget::onTabContextMenuRequested(const QPoint& pos)
     QAction* closeAction = menu.addAction(tr("Close"));
     closeAction->setShortcut(QKeySequence::Close); // Ctrl+F4
     connect(closeAction, &QAction::triggered, this, [this, tabIndex]() {
-        closeTab(tabIndex);
+        requestCloseTab(tabIndex);
     });
 
     QAction* closeOthersAction = menu.addAction(tr("Close Other Tabs"));
@@ -803,7 +792,7 @@ void MruTabWidget::onTabContextMenuRequested(const QPoint& pos)
 
     QAction* closeAllAction = menu.addAction(tr("Close All Tabs"));
     connect(closeAllAction, &QAction::triggered, this, [this]() {
-        closeAllTabs();
+        requestCloseAllTabs();
     });
 
     menu.addSeparator();
@@ -858,7 +847,7 @@ void MruTabWidget::updateTabButton(int index)
     {
         // Pinned: wstawiamy pinezkę
         QToolButton* pinButton = new QToolButton(bar);
-        pinButton->setIcon(QIcon(":/icons/Bootstrap_pin-angle.svg"));
+        pinButton->setIcon(QIcon(m_pinIconUri));
         pinButton->setIconSize(QSize(16, 16));
         pinButton->setCursor(Qt::PointingHandCursor);
         pinButton->setToolTip(tr("Unpin Tab"));
@@ -896,17 +885,24 @@ int MruTabWidget::enforceTabLimit()
     int unpinnedCount = count() - pinnedTabCount();
     if (unpinnedCount <= m_tabLimit) return 0;
 
-    int removedCount = 0;;
     int tabsToRemove = unpinnedCount - m_tabLimit;
-    for (int i = 0; i < tabsToRemove; i++) {
-        int lruIndex = findLeastRecentlyUsedUnpinnedTab();
-        if (lruIndex == -1) break; // No unpinned tabs left
+    QVector<QWidget*> tabsToClose = findLeastRecentlyUsedUnpinnedTabs(tabsToRemove);
 
-        removedCount++;
-        QWidget *w = widget(lruIndex);
-        removeTab(lruIndex);
-        w->deleteLater();
+    int removedCount = 0;
+    for (QWidget* w : tabsToClose) {
+        int index = indexOf(w);
+        if (index == -1) continue; // Widget not found, skip
+
+        // Try to close the tab with askPin = true
+        if (requestCloseTab(index, true)) {
+            // Tab was closed successfully
+            removedCount++;
+        } else {
+            // User cancelled - pin the tab
+            setTabPinned(index, true);
+        }
     }
+
     return removedCount;
 }
 
