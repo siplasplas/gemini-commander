@@ -44,6 +44,7 @@ KTextEditor::MainWindow* getDummyKateMainWindow()
 EditorFrame::EditorFrame(QWidget* parent)
     : QMainWindow(parent)
 {
+    ObjectRegistry::add(this, "EditorFrame");
     auto* central = new QWidget(this);
     m_mainLayout = new QVBoxLayout(central);
     m_mainLayout->setContentsMargins(0, 0, 0, 0);

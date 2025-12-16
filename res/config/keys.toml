@@ -2,13 +2,13 @@
 [Panel]
 keys = [
     { key = "Ctrl+Tab",            handler = "none" },
-    { key = "Ctrl+Shift+Backtab",      handler = "none" },
+    { key = "Ctrl+Shift+Backtab",  handler = "none" },
 
     { key = "Tab",                 handler = "doSwitchSide" },
     { key = "Escape",              handler = "doClearAndReturnToPanel" },
 
-    { key = "Down",           handler = "default" },
-    { key = "Up",             handler = "default" },
+    { key = "Down",                handler = "default" },
+    { key = "Up",                  handler = "default" },
 
     { key = "Ctrl+Down",           handler = "doJumpDownToFiles" },
     { key = "Ctrl+Up",             handler = "doJumpUpToDirectories" },
@@ -18,7 +18,7 @@ keys = [
     { key = "Shift+F4",            handler = "doEditNew" },
 
     { key = "Space",               handler = "doToggleMarkTotalSize" },
-    { key = "Alt+Shift+Return",     handler = "doTotalSizes" },
+    { key = "Alt+Shift+Return",    handler = "doTotalSizes" },
 
     { key = "Insert",              handler = "doToggleMarkDown" },
 
@@ -132,6 +132,11 @@ keys = [
     { key = "Down",                handler = "doNextMatch" },
     { key = "PageDown",            handler = "doNextMatch" },
     { key = "Return",              handler = "doAccept" },
+]
+
+[EditorFrame]
+keys = [
+    { key = "Escape",            handler = "doCloseRequest" },
 ]
 
 [Editor]
