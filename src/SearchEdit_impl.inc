@@ -16,7 +16,7 @@ bool SearchEdit::doReturnToPanel(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     clear();
-    hide();
+    emit escapePressed();
     return true;
 }
 

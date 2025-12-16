@@ -60,6 +60,11 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
             }
         });
 
+    connect(m_searchEdit, &SearchEdit::escapePressed,
+        this, [this]() {
+            m_filePanel->rememberSelection();
+            m_searchEdit->hide();
+        });
 
     // initial
     setCurrentPath(m_filePanel->currentPath);
