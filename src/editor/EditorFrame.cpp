@@ -143,7 +143,6 @@ void EditorFrame::createActions()
 void EditorFrame::openFile(const QString& fileName)
 {
     KTextEditor::Editor* kate = KTextEditor::Editor::instance(); // Singleton KTE Editor
-    // Download Application interface from singleton Editor
     KTextEditor::Application* app = kate->application();
     if (!app)
     {
@@ -179,13 +178,14 @@ void EditorFrame::openFile(const QString& fileName)
         QMessageBox::warning(this, tr("Error"), tr("Could not create document for:\n%1").arg(fileName));
         return;
     }
-
     Editor* newEditor = new Editor(doc, m_editorTabWidget);
     QString tabTitle = generateUniqueTabTitle(newEditor->filePath());
     int newIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
     int removedCount = m_editorTabWidget->enforceTabLimit();
     m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
-    qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view()->setFocus();
+    auto view = qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view();
+    ObjectRegistry::add(view, "Editor");
+    view->setFocus();
 }
 
 /**

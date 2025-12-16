@@ -32,6 +32,42 @@ void KeyRouter::installOn(QCoreApplication* app, QObject* owner)
     installed_ = true;
 }
 
+void KeyRouter::handleNone(QObject *obj, QKeyEvent *keyEvent) {
+    qDebug() << "return none";
+    auto parentObj = obj->parent();
+    if (parentObj) {
+        // Create a copy of the key event for the parent
+        QKeyEvent *eventCopy =
+                new QKeyEvent(keyEvent->type(), keyEvent->key(), keyEvent->modifiers(), keyEvent->nativeScanCode(),
+                              keyEvent->nativeVirtualKey(), keyEvent->nativeModifiers(), keyEvent->text(),
+                              keyEvent->isAutoRepeat(), keyEvent->count());
+        QCoreApplication::postEvent(parentObj, eventCopy);
+    }
+}
+
+bool KeyRouter::handelWithHandler(QObject *obj, QKeyEvent *keyEvent, Qt::KeyboardModifiers mods, QString handlerName) {
+    QObject *codeObj = obj;
+    while (codeObj) {
+        // Try to call the handler on 'current' with 'obj' as first parameter
+        auto r = invokeHandler(codeObj, obj, handlerName, keyEvent);
+
+        if (!r.called) {
+            // Handler defined in keymap but not found on this object
+            // Continue searching in parent
+            codeObj = codeObj->parent();
+            continue;
+        }
+
+        qDebug() << "[KeyRouter]"
+                 << "event_obj =" << ObjectRegistry::name(obj)
+                 << "key =" << keyEvent->key() << "mods =" << mods << "handler =" << handlerName
+                 << "result =" << r.result;
+        // Handler was called - consume the event
+        return true;
+    }
+    return false;
+}
+
 bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
 {
     // Only process key press events
@@ -46,33 +82,36 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
     QString handlerName;
     QString widgetName;
+    /////////////////////////
+
+
+    ////////////////////
     widgetName = ObjectRegistry::name(obj);
-    if (widgetName.isEmpty())
+    QString widgetParent;
+    if (widgetName.isEmpty()) {
+        auto parentObj = obj->parent();
+        while (parentObj) {
+            widgetParent = ObjectRegistry::name(parentObj);
+            qDebug() << "  walk:" << parentObj << "name=" << widgetParent;
+            if (!widgetParent.isEmpty()) {
+                handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetParent);
+                qDebug() << "    handlerFor(" << keyEvent->key() << "," << mods << "," << widgetParent << ") =" << handlerName;
+                if (!handlerName.isEmpty())
+                    break;
+            }
+            parentObj = parentObj->parent();
+        }
+        if (parentObj && handlerName == "noneWithChildren") {
+            handleNone(parentObj, keyEvent);
+            return true;
+        }
         return owner_->eventFilter(obj, event);
+    }
     handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetName);
 
     // "none" = handle in parent object
     if (handlerName == QStringLiteral("none")) {
-        qDebug() << "return none";
-        auto parentObj = obj->parent();
-        if (parentObj) {
-            // Create a copy of the key event for the parent
-            QKeyEvent* eventCopy = new QKeyEvent(
-                keyEvent->type(),
-                keyEvent->key(),
-                keyEvent->modifiers(),
-                keyEvent->nativeScanCode(),
-                keyEvent->nativeVirtualKey(),
-                keyEvent->nativeModifiers(),
-                keyEvent->text(),
-                keyEvent->isAutoRepeat(),
-                keyEvent->count()
-            );
-
-            // Post to parent's event queue
-            QCoreApplication::postEvent(parentObj, eventCopy);
-        }
-
+        handleNone(obj, keyEvent);
         return true;
     }
 
@@ -81,34 +120,7 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
         qDebug() << "return default";
         return owner_->eventFilter(obj, event);
     }
-
-    QObject* codeObj = obj;
-    while (codeObj) {
-        // Try to call the handler on 'current' with 'obj' as first parameter
-        auto r = invokeHandler(codeObj, obj, handlerName, keyEvent);
-
-        if (!r.called) {
-            // Handler defined in keymap but not found on this object
-            // Continue searching in parent
-            codeObj = codeObj->parent();
-            continue;
-        }
-
-        qDebug()
-            << "[KeyRouter]"
-            << "event_obj =" << ObjectRegistry::name(obj)
-            << "handler_obj =" << widgetName
-            << "key =" << keyEvent->key()
-            << "mods =" << mods
-            << "handler =" << handlerName
-            << "result =" << r.result;
-
-        // Handler was called - consume the event
-        return true;
-    }
-
-    // No binding found in hierarchy - delegate to owner
-    return owner_->eventFilter(obj, event);
+    return handelWithHandler(obj, keyEvent, mods, handlerName);
 }
 
 HandlerCallResult KeyRouter::invokeHandler(QObject* target,

@@ -26,6 +26,8 @@ public:
 
     // Install event filter on application (only once)
     void installOn(QCoreApplication* app, QObject* owner);
+    void handleNone(QObject *obj, QKeyEvent *keyEvent);
+    bool handelWithHandler(QObject *obj, QKeyEvent *keyEvent, Qt::KeyboardModifiers mods, QString handlerName);
 
     // Assign key map that resolves (widget, key, modifiers) → handler
     void setKeyMap(KeyMap* map) { keyMap_ = map; }

@@ -4,6 +4,7 @@ keys = [
     { key = "Ctrl+Tab",            handler = "none" },
     { key = "Ctrl+Shift+Backtab",      handler = "none" },
 
+    { key = "Tab",                 handler = "doSwitchSide" },
     { key = "Escape",              handler = "doClearAndReturnToPanel" },
 
     { key = "Down",           handler = "default" },
@@ -77,7 +78,6 @@ keys = [
 
     { key = "Return",                 handler = "doActivate" },
 
-    { key = "Tab",                 handler = "doSwitchSide" },
     # Special case: Shift+Tab only blocks the default behavior of QTableView
     { key = "Shift+Tab",           handler = "none" },
 
@@ -132,4 +132,9 @@ keys = [
     { key = "Down",                handler = "doNextMatch" },
     { key = "PageDown",            handler = "doNextMatch" },
     { key = "Return",              handler = "doAccept" },
+]
+
+[Editor]
+keys = [
+    { key = "Ctrl+Tab",            handler = "noneWithChildren" },
 ]
