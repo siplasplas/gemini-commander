@@ -151,7 +151,7 @@ void MainWindow::setupUi() {
 
     // File menu
     QAction* quitAction = new QAction(tr("Quit"), this);
-    quitAction->setShortcut(QKeySequence::Quit);
+    quitAction->setShortcut(QKeySequence::fromString("Alt+F4"));
     connect(quitAction, &QAction::triggered, this, &QWidget::close);
     fileMenu->addAction(quitAction);
 
