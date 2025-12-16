@@ -4,6 +4,9 @@ keys = [
     { key = "Ctrl+Tab",            handler = "none" },
     { key = "Ctrl+Shift+Backtab",  handler = "none" },
 
+    { key = "Left",                handler = "doFocusCommandLine" },
+    { key = "Right",               handler = "doFocusCommandLine" },
+
     { key = "Tab",                 handler = "doSwitchSide" },
     { key = "Escape",              handler = "doClearAndReturnToPanel" },
 
@@ -84,9 +87,6 @@ keys = [
     { key = "Ctrl+P",              handler = "doCurrentDirToCommandLine" },
     { key = "Ctrl+Return",         handler = "doCurrentNameToCommandLine" },
     { key = "Ctrl+Shift+Return",   handler = "doCurrentPathToCommandLine" },
-
-    { key = "Left",                handler = "doFocusCommandLine" },
-    { key = "Right",               handler = "doFocusCommandLine" },
 
     { key = "Ctrl+D",              handler = "doDirHotlist" },
     { key = "Ctrl+Shift+D",        handler = "doDirHotlistConfig" },
