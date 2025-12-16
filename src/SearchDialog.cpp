@@ -253,7 +253,6 @@ SearchDialog::SearchDialog(const QString& startPath, QWidget* parent)
     , m_searchThread(nullptr)
     , m_searchWorker(nullptr)
 {
-    ObjectRegistry::add(this, "SearchGlobal");
     setWindowTitle(tr("Find Files"));
     resize(700, 500);
 
@@ -282,7 +281,6 @@ void SearchDialog::setupUi()
 
     // Tab widget
     m_tabWidget = new QTabWidget(this);
-    ObjectRegistry::add(m_tabWidget, "Tabs");
     createStandardTab();
     createAdvancedTab();
     createResultsTab();

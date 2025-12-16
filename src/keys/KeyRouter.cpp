@@ -38,60 +38,54 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
     if (!keyMap_ || event->type() != QEvent::KeyPress)
         return owner_->eventFilter(obj, event);
 
-    // Skip routing for modal dialogs (QInputDialog, QMessageBox, etc.)
-    // Let them handle their own key events
-    QWidget* modalWidget = QApplication::activeModalWidget();
-    if (modalWidget && qobject_cast<QDialog*>(modalWidget)) {
-        // Check if event source is inside the modal dialog
-        QObject* check = obj;
-        while (check) {
-            if (check == modalWidget) {
-                // Event is for modal dialog - let it handle natively
-                return false;
-            }
-            check = check->parent();
-        }
-    }
-
     qDebug() << "-------------------";
     qDebug()<<obj;
     qDebug()<<"name obj = " << ObjectRegistry::name(obj);
     auto* keyEvent = static_cast<QKeyEvent*>(event);
     qDebug() << "key =" << keyEvent->key();
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
-    QObject* dataObj = obj;
     QString handlerName;
     QString widgetName;
-    while (dataObj) {
-        widgetName = ObjectRegistry::name(dataObj);
-        qDebug() << "  walk:" << dataObj << "name=" << widgetName;
-        if (!widgetName.isEmpty()) {
-            handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetName);
-            qDebug() << "    handlerFor(" << keyEvent->key() << "," << mods << "," << widgetName << ") =" << handlerName;
-            if (!handlerName.isEmpty())
-                break;
-        }
-        dataObj = dataObj->parent();
-    }
-    if (!dataObj || handlerName.isEmpty())
+    widgetName = ObjectRegistry::name(obj);
+    if (widgetName.isEmpty())
         return owner_->eventFilter(obj, event);
+    handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetName);
 
-    // "none" = consume event, do nothing
+    // "none" = handle in parent object
     if (handlerName == QStringLiteral("none")) {
         qDebug() << "return none";
+        auto parentObj = obj->parent();
+        if (parentObj) {
+            // Create a copy of the key event for the parent
+            QKeyEvent* eventCopy = new QKeyEvent(
+                keyEvent->type(),
+                keyEvent->key(),
+                keyEvent->modifiers(),
+                keyEvent->nativeScanCode(),
+                keyEvent->nativeVirtualKey(),
+                keyEvent->nativeModifiers(),
+                keyEvent->text(),
+                keyEvent->isAutoRepeat(),
+                keyEvent->count()
+            );
+
+            // Post to parent's event queue
+            QCoreApplication::postEvent(parentObj, eventCopy);
+        }
+
         return true;
     }
 
     // "default" = allow Qt default behavior
     if (handlerName == QStringLiteral("default")) {
         qDebug() << "return default";
-        return false;
+        return owner_->eventFilter(obj, event);
     }
 
-    QObject* codeObj = dataObj;
+    QObject* codeObj = obj;
     while (codeObj) {
         // Try to call the handler on 'current' with 'obj' as first parameter
-        auto r = invokeHandler(codeObj, dataObj, handlerName, keyEvent);
+        auto r = invokeHandler(codeObj, obj, handlerName, keyEvent);
 
         if (!r.called) {
             // Handler defined in keymap but not found on this object

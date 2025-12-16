@@ -1,6 +1,9 @@
 # Panel - single panel operations (navigation, sorting, selection, view)
 [Panel]
 keys = [
+    { key = "Ctrl+Tab",            handler = "none" },
+    { key = "Ctrl+Shift+Backtab",      handler = "none" },
+
     { key = "Escape",              handler = "doClearAndReturnToPanel" },
 
     { key = "Down",           handler = "default" },
@@ -66,24 +69,12 @@ keys = [
     { key = "Ctrl+Q",              handler = "doQuickView" },
 ]
 
-[Menu]
-keys = [
-    { key = "Return",             handler = "default" },
-]
-
-[Tabs]
-keys = [
-    { key = "Ctrl+Tab",            handler = "doNextTab" },
-    { key = "Ctrl+Shift+Tab",      handler = "doPreviousTab" },
-    { key = "Ctrl+Shift+Backtab",   handler = "doPreviousTab" },
-
-    { key = "Ctrl+T",              handler = "doAddTab" },
-    { key = "Ctrl+W",              handler = "doRemoveTab" },
-]
-
 # MainFrame - dual panel operations (Tab switches panels)
 [MainFrame]
 keys = [
+    { key = "Ctrl+T",              handler = "doAddTab" },
+    { key = "Ctrl+W",              handler = "doRemoveTab" },
+
     { key = "Return",                 handler = "doActivate" },
 
     { key = "Tab",                 handler = "doSwitchSide" },
@@ -141,34 +132,4 @@ keys = [
     { key = "Down",                handler = "doNextMatch" },
     { key = "PageDown",            handler = "doNextMatch" },
     { key = "Return",              handler = "doAccept" },
-]
-
-[SearchGlobal]
-keys = [
-    { key = "Return",              handler = "default" },
-    { key = "Tab",                 handler = "default" },
-]
-
-[EditorTabs]
-keys = [
-    { key = "Ctrl+Tab",            handler = "default" },
-    { key = "Ctrl+Shift+Tab",      handler = "default" },
-
-    { key = "Ctrl+F4",              handler = "doRemoveTab" },
-]
-
-[Editor]
-keys = [
-    { key = "LETTERS",             handler = "default" },
-    { key = "DIGITS",              handler = "default" },
-]
-
-[EditorFrame]
-keys = [
-    { key = "Alt+F4",              handler = "default" },
-]
-
-[Viewer]
-keys = [
-    { key = "Escape",              handler = "doClose" },
 ]

@@ -77,9 +77,7 @@ void MainWindow::setupUi() {
     auto* splitter = new QSplitter(Qt::Horizontal, centralWidget);
 
     m_leftTabs = new QTabWidget(splitter);
-    ObjectRegistry::add(m_leftTabs, "Tabs");
     m_rightTabs = new QTabWidget(splitter);
-    ObjectRegistry::add(m_rightTabs, "Tabs");
     auto tuneTabBar = [](QTabWidget* tabs) {
         QTabBar* bar = tabs->tabBar();
         QFontMetrics fm(bar->font());
@@ -320,7 +318,6 @@ void MainWindow::showFavoriteDirsMenu(Side side)
 
     // Popup position: above the active panel
     QPoint panelPos = panel->mapToGlobal(QPoint(panel->width() / 2, panel->height()/2));
-    ObjectRegistry::add(&menu, "Menu");
     QAction* chosen = menu.exec(panelPos);
     if (!chosen)
         return;

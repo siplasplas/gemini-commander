@@ -44,7 +44,6 @@ KTextEditor::MainWindow* getDummyKateMainWindow()
 EditorFrame::EditorFrame(QWidget* parent)
     : QMainWindow(parent)
 {
-    ObjectRegistry::add(this, "EditorFrame");
     auto* central = new QWidget(this);
     m_mainLayout = new QVBoxLayout(central);
     m_mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -56,7 +55,6 @@ EditorFrame::EditorFrame(QWidget* parent)
 
     // --- Editor Tab Widget ---
     m_editorTabWidget = new MruTabWidget(this);
-    ObjectRegistry::add(m_editorTabWidget, "EditorTabs");
     m_editorTabWidget->setTabLimit(3); // Small value for tests
     m_editorTabWidget->setTabsClosable(true);
     m_editorTabWidget->setMovable(true);
@@ -183,7 +181,6 @@ void EditorFrame::openFile(const QString& fileName)
     }
 
     Editor* newEditor = new Editor(doc, m_editorTabWidget);
-    ObjectRegistry::add(newEditor, "Editor");
     QString tabTitle = generateUniqueTabTitle(newEditor->filePath());
     int newIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
     int removedCount = m_editorTabWidget->enforceTabLimit();
