@@ -4,4 +4,3 @@ bool EditorFrame::doCloseRequest(QObject *obj, QKeyEvent *keyEvent) {
     close();
     return true;
 }
-
