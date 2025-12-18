@@ -108,8 +108,6 @@ add_executable(${PROJECT_NAME}
         src/utils/Ev.cpp
         src/editor/BaseViewer.cpp
         src/editor/BaseViewer.h
-        src/editor/Viewer.cpp
-        src/editor/Viewer.h
         src/editor/ViewerFrame.cpp
         src/editor/ViewerFrame.h
         external/textviewers/wid/TextViewer.cpp

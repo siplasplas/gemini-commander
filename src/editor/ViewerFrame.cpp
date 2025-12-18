@@ -1,8 +1,9 @@
 #include "ViewerFrame.h"
-#include "Viewer.h"
 
 #include <QKeyEvent>
 #include <QVBoxLayout>
+#include <QFile>
+#include "../../external/textviewers/wid/TextViewer.h"
 
 #include "keys/ObjectRegistry.h"
 
@@ -16,7 +17,15 @@ ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
     m_layout = new QVBoxLayout(this);
     m_layout->setContentsMargins(0, 0, 0, 0);
 
-    m_viewer = new Viewer(filePath, this);
+    file = std::make_unique<QFile>(filePath);
+    if (!file->open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qDebug() << "error open file";
+        return;
+    }
+    if (file->size()==0)
+        return;
+    uchar *addr = file->map(0, file->size());
+    m_viewer = new wid::TextViewer((char *) addr, file->size(), this);
     m_layout->addWidget(m_viewer);
 }
 

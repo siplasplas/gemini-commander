@@ -3,6 +3,11 @@
 
 #include <QDialog>
 
+class QFile;
+
+namespace wid {
+class TextViewer;
+}
 class Viewer;
 class QVBoxLayout;
 
@@ -15,7 +20,8 @@ public:
     ~ViewerFrame() override;
 
 private:
-    Viewer *m_viewer = nullptr;
+    std::unique_ptr<QFile> file;
+    wid::TextViewer *m_viewer = nullptr;
     QVBoxLayout *m_layout = nullptr;
 };
 
