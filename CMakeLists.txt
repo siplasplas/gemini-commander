@@ -136,6 +136,8 @@ add_executable(${PROJECT_NAME}
         src/SearchEdit.cpp
         src/keys/KeyRouter.cpp
         src/keys/ObjectRegistry.cpp
+        src/qutils.cpp
+        src/quitls.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
