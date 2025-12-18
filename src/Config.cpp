@@ -49,10 +49,18 @@ void Config::addFavoriteDir(const QString& dir, const QString& label, const QStr
     m_favorites.append(f);
 }
 
+static IconMode parseIconMode(const std::string& str)
+{
+    if (str == "filetype")  return IconMode::FileType;
+    if (str == "appicon")   return IconMode::AppIcon;
+    return IconMode::Extension;
+}
+
 bool Config::load(const QString& path)
 {
     m_configPath = path;
     m_favorites.clear();
+    m_iconMode = IconMode::Extension;
 
     QFile f(path);
     if (!f.exists()) {
@@ -62,6 +70,13 @@ bool Config::load(const QString& path)
 
     try {
         auto tbl = toml::parse_file(path.toStdString());
+
+        // [icons] section
+        if (tbl.contains("icons")) {
+            auto& icons = *tbl["icons"].as_table();
+            if (auto mode = icons["mode"].value<std::string>())
+                m_iconMode = parseIconMode(*mode);
+        }
 
         if (tbl.contains("favorites")) {
             auto favs = *tbl["favorites"].as_array();
@@ -98,14 +113,29 @@ bool Config::load(const QString& path)
     return true;
 }
 
+static const char* iconModeToString(IconMode mode)
+{
+    switch (mode) {
+        case IconMode::FileType: return "filetype";
+        case IconMode::AppIcon:  return "appicon";
+        default:                 return "extension";
+    }
+}
+
 bool Config::save() const
 {
     if (m_configPath.isEmpty())
         return false;
 
     toml::table tbl;
-    toml::array arr;
 
+    // [icons] section
+    toml::table iconsTbl;
+    iconsTbl.insert("mode", iconModeToString(m_iconMode));
+    tbl.insert("icons", iconsTbl);
+
+    // [[favorites]] array
+    toml::array arr;
     for (const auto& f : m_favorites) {
         toml::table t;
 

@@ -11,6 +11,12 @@ struct FavoriteDir {
   QString group;
 };
 
+enum class IconMode {
+  Extension,  // current behavior: icon by file extension via QMimeDatabase
+  FileType,   // icon by file type category (executable, text, image, etc.)
+  AppIcon     // icon from associated application (future: + thumbnails)
+};
+
 class Config
 {
 public:
@@ -31,11 +37,15 @@ public:
   void setConfigPath(const QString& p) { m_configPath = p; }
   QString configPath() const { return m_configPath; }
 
+  IconMode iconMode() const { return m_iconMode; }
+  void setIconMode(IconMode mode) { m_iconMode = mode; }
+
 private:
   Config() = default;
 
   QString m_configPath;
   QVector<FavoriteDir> m_favorites;
+  IconMode m_iconMode = IconMode::Extension;
 };
 
 #endif

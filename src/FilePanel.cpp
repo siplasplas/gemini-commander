@@ -26,6 +26,7 @@
 #include <QStorageInfo>
 #include <QUrl>
 #include "FilePanel.h"
+#include "Config.h"
 
 #include "SizeFormat.h"
 #include "keys/KeyRouter.h"
@@ -295,7 +296,7 @@ QList<QStandardItem*> FilePanel::entryToRow(PanelEntry& entry)
     row[COLUMN_NAME]->setData(fullName, Qt::UserRole);
 
     EntryContentState state = ensureContentState(entry);
-    row[COLUMN_NAME]->setIcon(getIconForExtension(list[COLUMN_EXT], state));
+    row[COLUMN_NAME]->setIcon(getIconForEntry(entry.info, state));
 
     return row;
 }
@@ -313,7 +314,7 @@ void FilePanel::updateColumn(int row, PanelEntry& entry)
     // ikona (na wypadek gdyby state się zmienił)
     EntryContentState state = ensureContentState(entry);
     if (QStandardItem* nameItem = model->item(row, COLUMN_NAME)) {
-        nameItem->setIcon(getIconForExtension(list[COLUMN_EXT], state));
+        nameItem->setIcon(getIconForEntry(entry.info, state));
     }
     if (viewport()) {
         QModelIndex idx = model->index(row, COLUMN_NAME);
@@ -655,14 +656,136 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     drag->exec(actions, Qt::CopyAction);
 }
 
-QIcon FilePanel::getIconForExtension(const QString& ext, EntryContentState contentState)
+FileType FilePanel::classifyFileType(const QFileInfo& info)
+{
+    static QMimeDatabase db;
+
+    const QString fileName = info.fileName();
+
+    // Hidden files (starting with .)
+    if (fileName.startsWith('.') && fileName.size() > 1)
+        return FileType::Hidden;
+
+    // Check if executable
+    if (info.isExecutable() && info.isFile()) {
+        // Quick ELF check (first 4 bytes: 0x7f 'E' 'L' 'F')
+        QFile file(info.absoluteFilePath());
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray header = file.read(4);
+            file.close();
+            if (header.size() >= 4 &&
+                header[0] == 0x7f &&
+                header[1] == 'E' &&
+                header[2] == 'L' &&
+                header[3] == 'F') {
+                return FileType::Executable;
+            }
+        }
+        // Also check for shebang scripts
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray header = file.read(2);
+            file.close();
+            if (header.startsWith("#!"))
+                return FileType::Executable;
+        }
+    }
+
+    // Use MIME type for classification
+    const QString ext = info.suffix().toLower();
+    QMimeType mt = db.mimeTypeForFile(info.absoluteFilePath(), QMimeDatabase::MatchExtension);
+    QString mimeName = mt.name();
+
+    // Image types
+    if (mimeName.startsWith("image/"))
+        return FileType::Image;
+
+    // Audio types
+    if (mimeName.startsWith("audio/"))
+        return FileType::Audio;
+
+    // Video types
+    if (mimeName.startsWith("video/"))
+        return FileType::Video;
+
+    // Archive types
+    static const QStringList archiveExts = {
+        "zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz", "tbz2", "txz", "cab", "iso"
+    };
+    if (archiveExts.contains(ext) || mimeName.contains("archive") || mimeName.contains("compressed"))
+        return FileType::Archive;
+
+    // Document types
+    static const QStringList docExts = {
+        "pdf", "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "rtf"
+    };
+    if (docExts.contains(ext) || mimeName.startsWith("application/pdf") ||
+        mimeName.contains("document") || mimeName.contains("spreadsheet") ||
+        mimeName.contains("presentation"))
+        return FileType::Document;
+
+    // Text/source code types
+    if (mimeName.startsWith("text/") || mimeName.contains("json") || mimeName.contains("xml") ||
+        mimeName.contains("javascript") || mimeName.contains("x-python") ||
+        mimeName.contains("x-perl") || mimeName.contains("x-ruby") ||
+        mimeName.contains("x-shellscript"))
+        return FileType::Text;
+
+    return FileType::Unknown;
+}
+
+QIcon FilePanel::getIconForFileType(FileType type)
+{
+    static QHash<int, QIcon> cache;
+
+    int key = static_cast<int>(type);
+    auto it = cache.find(key);
+    if (it != cache.end())
+        return it.value();
+
+    QString iconPath;
+    switch (type) {
+        case FileType::Executable:
+            iconPath = ":/icons/file_executable.svg";
+            break;
+        case FileType::Text:
+            iconPath = ":/icons/file_text.svg";
+            break;
+        case FileType::Image:
+            iconPath = ":/icons/file_image.svg";
+            break;
+        case FileType::Archive:
+            iconPath = ":/icons/file_archive.svg";
+            break;
+        case FileType::Audio:
+            iconPath = ":/icons/file_audio.svg";
+            break;
+        case FileType::Video:
+            iconPath = ":/icons/file_video.svg";
+            break;
+        case FileType::Document:
+            iconPath = ":/icons/file_document.svg";
+            break;
+        case FileType::Hidden:
+            iconPath = ":/icons/file_hidden.svg";
+            break;
+        default:
+            iconPath = ":/icons/file_unknown.svg";
+            break;
+    }
+
+    QIcon icon(iconPath);
+    cache.insert(key, icon);
+    return icon;
+}
+
+QIcon FilePanel::getIconForEntry(const QFileInfo& info, EntryContentState contentState)
 {
     static QFileIconProvider provider;
     static QMimeDatabase db;
-    static QHash<QString, QIcon> cache;   // files
-    static QHash<int, QIcon> folderCache; // folders (EntryContentState as int)
+    static QHash<QString, QIcon> extCache;   // for Extension mode
+    static QHash<int, QIcon> folderCache;
 
-    // --- folders ---
+    // --- folders (same for all modes) ---
     if (contentState != EntryContentState::NotDirectory) {
         int key = static_cast<int>(contentState);
         auto it = folderCache.find(key);
@@ -682,9 +805,18 @@ QIcon FilePanel::getIconForExtension(const QString& ext, EntryContentState conte
         return icon;
     }
 
-    // --- files: cache by extension ---
-    auto it = cache.find(ext);
-    if (it != cache.end())
+    // --- files: depends on IconMode ---
+    IconMode mode = Config::instance().iconMode();
+
+    if (mode == IconMode::FileType) {
+        FileType ft = classifyFileType(info);
+        return getIconForFileType(ft);
+    }
+
+    // Default: Extension mode (original behavior)
+    QString ext = info.suffix().toLower();
+    auto it = extCache.find(ext);
+    if (it != extCache.end())
         return it.value();
 
     QIcon icon;
@@ -692,20 +824,16 @@ QIcon FilePanel::getIconForExtension(const QString& ext, EntryContentState conte
     if (!ext.isEmpty()) {
         QMimeType mt = db.mimeTypeForFile("." + ext, QMimeDatabase::MatchExtension);
         if (mt.isValid()) {
-            // icon trial from theme
             icon = QIcon::fromTheme(mt.iconName());
-
-            // Alternatively, you can use mt.genericIconName() as a theme fallback:
             if (icon.isNull() && !mt.genericIconName().isEmpty())
                 icon = QIcon::fromTheme(mt.genericIconName());
         }
     }
 
-    // if nothing could be extracted from the theme, take the default
     if (icon.isNull())
         icon = provider.icon(QFileIconProvider::File);
 
-    cache.insert(ext, icon);
+    extCache.insert(ext, icon);
     return icon;
 }
 

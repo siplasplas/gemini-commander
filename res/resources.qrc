@@ -5,6 +5,15 @@
         <file>icons/folder_white.svg</file>
         <file>icons/search.svg</file>
         <file>icons/gemini-commander.svg</file>
+        <file>icons/file_executable.svg</file>
+        <file>icons/file_text.svg</file>
+        <file>icons/file_image.svg</file>
+        <file>icons/file_archive.svg</file>
+        <file>icons/file_audio.svg</file>
+        <file>icons/file_video.svg</file>
+        <file>icons/file_document.svg</file>
+        <file>icons/file_hidden.svg</file>
+        <file>icons/file_unknown.svg</file>
     </qresource>
     <qresource>
         <file>config/keys.toml</file>
