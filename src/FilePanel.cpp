@@ -295,7 +295,7 @@ QList<QStandardItem*> FilePanel::entryToRow(PanelEntry& entry)
     row[COLUMN_NAME]->setData(fullName, Qt::UserRole);
 
     EntryContentState state = ensureContentState(entry);
-    row[COLUMN_NAME]->setIcon(iconForExtension(list[COLUMN_EXT], state));
+    row[COLUMN_NAME]->setIcon(getIconForExtension(list[COLUMN_EXT], state));
 
     return row;
 }
@@ -313,7 +313,7 @@ void FilePanel::updateColumn(int row, PanelEntry& entry)
     // ikona (na wypadek gdyby state się zmienił)
     EntryContentState state = ensureContentState(entry);
     if (QStandardItem* nameItem = model->item(row, COLUMN_NAME)) {
-        nameItem->setIcon(iconForExtension(list[COLUMN_EXT], state));
+        nameItem->setIcon(getIconForExtension(list[COLUMN_EXT], state));
     }
     if (viewport()) {
         QModelIndex idx = model->index(row, COLUMN_NAME);
@@ -655,7 +655,7 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     drag->exec(actions, Qt::CopyAction);
 }
 
-QIcon FilePanel::iconForExtension(const QString& ext, EntryContentState contentState)
+QIcon FilePanel::getIconForExtension(const QString& ext, EntryContentState contentState)
 {
     static QFileIconProvider provider;
     static QMimeDatabase db;
