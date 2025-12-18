@@ -28,6 +28,7 @@
 #include "FilePanel.h"
 
 #include "SizeFormat.h"
+#include "keys/KeyRouter.h"
 #include "SortedDirIterator.h"
 
 // Static pattern history shared between select/unselect group dialogs

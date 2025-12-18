@@ -74,10 +74,23 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
     if (!keyMap_ || event->type() != QEvent::KeyPress)
         return owner_->eventFilter(obj, event);
 
+    auto* keyEvent = static_cast<QKeyEvent*>(event);
+
+    // If operation is in progress, only allow ESC key
+    if (m_operationInProgress) {
+        if (keyEvent->key() == Qt::Key_Escape) {
+            // Allow ESC to pass through for cancellation
+            qDebug() << "[KeyRouter] Operation in progress - allowing ESC";
+        } else {
+            // Block all other keys during operation
+            qDebug() << "[KeyRouter] Operation in progress - blocking key:" << keyEvent->key();
+            return true;  // Consume the event
+        }
+    }
+
     qDebug() << "-------------------";
     qDebug()<<obj;
     qDebug()<<"name obj = " << ObjectRegistry::name(obj);
-    auto* keyEvent = static_cast<QKeyEvent*>(event);
     qDebug() << "key =" << keyEvent->key();
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
     QString handlerName;

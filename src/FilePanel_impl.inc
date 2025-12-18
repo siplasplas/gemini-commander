@@ -403,6 +403,10 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
             CopyStats stats;
             bool ok = false;
             m_cancelOperation = false;  // Reset cancel flag
+
+            // Block all keys except ESC during operation
+            KeyRouter::instance().setOperationInProgress(true);
+
             entry->hasTotalSize = TotalSizeStatus::InPogress;
             updateColumn(row, *entry);
             collectCopyStats(entry->info.absoluteFilePath(), stats, ok, &m_cancelOperation);
@@ -413,6 +417,9 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
                 entry->hasTotalSize = TotalSizeStatus::Unknown;
             }
             updateColumn(row, *entry);
+
+            // Unblock keys after operation
+            KeyRouter::instance().setOperationInProgress(false);
         }
     }
 

@@ -32,6 +32,10 @@ public:
     // Assign key map that resolves (widget, key, modifiers) → handler
     void setKeyMap(KeyMap* map) { keyMap_ = map; }
 
+    // Operation in progress state - blocks all keys except ESC
+    void setOperationInProgress(bool inProgress) { m_operationInProgress = inProgress; }
+    bool isOperationInProgress() const { return m_operationInProgress; }
+
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
     HandlerCallResult invokeHandler(QObject* target, QObject* eventSource,
@@ -44,4 +48,5 @@ private:
     QObject* owner_ = nullptr;
     bool installed_ = false;
     KeyMap* keyMap_ = nullptr;
+    bool m_operationInProgress = false;
 };
