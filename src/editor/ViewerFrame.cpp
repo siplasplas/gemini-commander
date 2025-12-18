@@ -27,6 +27,7 @@ ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
     uchar *addr = file->map(0, file->size());
     m_viewer = new wid::TextViewer((char *) addr, file->size(), this);
     m_layout->addWidget(m_viewer);
+    setFocusProxy(m_viewer);
 }
 
 ViewerFrame::~ViewerFrame() = default;
