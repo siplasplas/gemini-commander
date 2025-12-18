@@ -142,7 +142,6 @@ signals:
     void searchRequested(const QString& initialText);
 
 private:
-    static QIcon iconForEntry(const QFileInfo& info);
     QIcon iconForExtension(const QString &ext, EntryContentState contentState);
     EntryContentState ensureContentState(PanelEntry&entry)const;
     bool mixedHidden = true;//filenames with dot, are between others

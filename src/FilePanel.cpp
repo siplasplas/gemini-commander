@@ -655,36 +655,14 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     drag->exec(actions, Qt::CopyAction);
 }
 
-QIcon FilePanel::iconForEntry(const QFileInfo& info)
-{
-    static QFileIconProvider provider;
-
-    // Katalog – klasyczna ikonka folderu
-    if (info.isDir()) {
-        return provider.icon(QFileIconProvider::Folder);
-    }
-
-    // Plik – spróbuj po MIME (na podstawie rozszerzenia, bez czytania zawartości)
-    QMimeDatabase db;
-    QMimeType mt = db.mimeTypeForFile(info, QMimeDatabase::MatchExtension);
-    if (mt.isValid()) {
-        QIcon ico = QIcon::fromTheme(mt.iconName());
-        if (!ico.isNull())
-            return ico;
-    }
-
-    // Fallback: domyślna ikonka pliku z systemu / stylu
-    return provider.icon(QFileIconProvider::File);
-}
-
 QIcon FilePanel::iconForExtension(const QString& ext, EntryContentState contentState)
 {
     static QFileIconProvider provider;
     static QMimeDatabase db;
-    static QHash<QString, QIcon> cache;   // pliki
-    static QHash<int, QIcon> folderCache; // katalogi (EntryContentState jako int)
+    static QHash<QString, QIcon> cache;   // files
+    static QHash<int, QIcon> folderCache; // folders (EntryContentState as int)
 
-    // --- katalogi ---
+    // --- folders ---
     if (contentState != EntryContentState::NotDirectory) {
         int key = static_cast<int>(contentState);
         auto it = folderCache.find(key);
@@ -704,7 +682,7 @@ QIcon FilePanel::iconForExtension(const QString& ext, EntryContentState contentS
         return icon;
     }
 
-    // --- pliki: cache po rozszerzeniu ---
+    // --- files: cache by extension ---
     auto it = cache.find(ext);
     if (it != cache.end())
         return it.value();
@@ -714,16 +692,16 @@ QIcon FilePanel::iconForExtension(const QString& ext, EntryContentState contentS
     if (!ext.isEmpty()) {
         QMimeType mt = db.mimeTypeForFile("." + ext, QMimeDatabase::MatchExtension);
         if (mt.isValid()) {
-            // próba ikony z motywu
+            // icon trial from theme
             icon = QIcon::fromTheme(mt.iconName());
 
-            // ewentualnie możesz użyć mt.genericIconName() jako fallback motywu:
+            // Alternatively, you can use mt.genericIconName() as a theme fallback:
             if (icon.isNull() && !mt.genericIconName().isEmpty())
                 icon = QIcon::fromTheme(mt.genericIconName());
         }
     }
 
-    // jeśli nie udało się wyciągnąć nic z motywu, bierz domyślną
+    // if nothing could be extracted from the theme, take the default
     if (icon.isNull())
         icon = provider.icon(QFileIconProvider::File);
 
