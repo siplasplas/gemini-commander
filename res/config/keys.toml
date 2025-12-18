@@ -8,7 +8,7 @@ keys = [
     { key = "Right",               handler = "doFocusCommandLine" },
 
     { key = "Tab",                 handler = "doSwitchSide" },
-    { key = "Escape",              handler = "doClearAndReturnToPanel" },
+    { key = "Escape",              handler = "doCancelOperation" },
 
     { key = "Down",                handler = "default" },
     { key = "Up",                  handler = "default" },
