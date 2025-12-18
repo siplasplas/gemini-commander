@@ -5,6 +5,28 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
     return false;
 }
 
+bool FilePanel::doCancelOperation(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    // Only handle ESC if an operation is in progress
+    // Check if any entry has InProgress status
+    bool operationInProgress = false;
+    for (const auto& entry : entries) {
+        if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
+            operationInProgress = true;
+            break;
+        }
+    }
+
+    if (operationInProgress) {
+        m_cancelOperation = true;
+        qDebug() << "Cancel operation requested";
+        return true;  // Consume ESC event
+    }
+
+    return false;  // Let ESC propagate to default handler
+}
+
 bool FilePanel::doCDTree(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -380,15 +402,17 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
         if (entry->hasTotalSize != TotalSizeStatus::Has) {
             CopyStats stats;
             bool ok = false;
+            m_cancelOperation = false;  // Reset cancel flag
             entry->hasTotalSize = TotalSizeStatus::InPogress;
             updateColumn(row, *entry);
-            collectCopyStats(entry->info.absoluteFilePath(), stats, ok);
+            collectCopyStats(entry->info.absoluteFilePath(), stats, ok, &m_cancelOperation);
             if (ok) {
                 entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
                 entry->hasTotalSize = TotalSizeStatus::Has;
-                updateColumn(row, *entry);
-            } else
+            } else {
                 entry->hasTotalSize = TotalSizeStatus::Unknown;
+            }
+            updateColumn(row, *entry);
         }
     }
 

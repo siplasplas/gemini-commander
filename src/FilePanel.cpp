@@ -1181,7 +1181,7 @@ void FilePanel::styleInactive() {
 }
 
 
-void FilePanel::collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok)
+void FilePanel::collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag)
 {
     ok = true;
 
@@ -1197,7 +1197,19 @@ void FilePanel::collectCopyStats(const QString& srcPath, CopyStats& stats, bool&
     SortedDirIterator it(srcPath,
                     QDir::AllEntries | QDir::NoDotAndDotDot);
 
+    int counter = 0;
     while (it.hasNext()) {
+        // Check for cancellation every 100 iterations
+        if (cancelFlag && *cancelFlag) {
+            ok = false;
+            return;
+        }
+
+        // Process events every 100 iterations to allow UI to respond
+        if (++counter % 100 == 0) {
+            QCoreApplication::processEvents();
+        }
+
         it.next();
         const QFileInfo fi = it.fileInfo();
 

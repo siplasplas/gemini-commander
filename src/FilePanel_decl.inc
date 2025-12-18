@@ -1,4 +1,5 @@
     Q_INVOKABLE bool doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doCancelOperation(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCDTree(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doDeletePermanently(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent);

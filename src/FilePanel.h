@@ -109,7 +109,7 @@ public:
         quint64 totalDirs  = 0;
     };
 
-    static void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok);
+    static void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool* cancelFlag = nullptr);
     static bool copyDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, const CopyStats &stats,
                                 QProgressDialog &progress, quint64 &bytesCopied, bool &userAbort);
     std::pair<PanelEntry*, int> currentEntryRow();
@@ -134,6 +134,7 @@ private:
     QString m_lastSearchText;
     void updateRowMarking(int row, bool marked);
     int m_lastSelectedRow = -1;
+    bool m_cancelOperation = false;  // Flag for canceling long-running operations
 
 signals:
     void selectionChanged();
