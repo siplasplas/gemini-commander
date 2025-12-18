@@ -622,6 +622,7 @@ void KeyMap::load(const std::filesystem::path& filePath)
 
     // And now parse `tbl` normally
     bindings_.clear();
+    bindingsMap_.clear();
 
     for (auto&& [widgetName, node] : tbl) {
         if (!node.is_table()) continue;
@@ -656,7 +657,11 @@ void KeyMap::load(const std::filesystem::path& filePath)
             e.modifiers = mods;
             e.handler   = *handlerOpt;
 
-            bindings_.push_back(std::move(e));
+            bindings_.push_back(e);
+
+            // Also populate the fast lookup map
+            BindingKey mapKey{e.widget, e.key, e.modifiers};
+            bindingsMap_[mapKey] = e.handler;
         }
     }
 }
@@ -705,14 +710,12 @@ QString KeyMap::handlerFor(int qtKey, Qt::KeyboardModifiers mods, const QString&
     std::string widgetStd = widgetName.toStdString();
     std::string keyStd = keyStr.toStdString();
 
-    // Helper to find binding
+    // Helper to find binding using map lookup
     auto findBinding = [&](const std::string& keyToFind) -> QString {
-        for (const auto& e : bindings_) {
-            if (e.widget == widgetStd &&
-                e.key == keyToFind &&
-                e.modifiers == mods) {
-                return QString::fromStdString(e.handler);
-            }
+        BindingKey mapKey{widgetStd, keyToFind, mods};
+        auto it = bindingsMap_.find(mapKey);
+        if (it != bindingsMap_.end()) {
+            return QString::fromStdString(it->second);
         }
         return {};
     };

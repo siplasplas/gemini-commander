@@ -82,10 +82,7 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
     QString handlerName;
     QString widgetName;
-    /////////////////////////
 
-
-    ////////////////////
     widgetName = ObjectRegistry::name(obj);
     QString widgetParent;
     if (widgetName.isEmpty()) {

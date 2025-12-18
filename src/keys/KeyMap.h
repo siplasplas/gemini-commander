@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <qnamespace.h>
 #include <QString>
 #include <string>
@@ -12,6 +13,19 @@ struct KeyBindingEntry {
     std::string key;        // e.g. "F5", "Tab", "NumPlus", "Left"
     Qt::KeyboardModifiers modifiers; // KeyModifier
     std::string handler;    // e.g. "onCopy", "onMove"
+};
+
+// Key for fast lookup in bindings map
+struct BindingKey {
+    std::string widget;
+    std::string key;
+    Qt::KeyboardModifiers modifiers;
+
+    bool operator<(const BindingKey& other) const {
+        if (widget != other.widget) return widget < other.widget;
+        if (key != other.key) return key < other.key;
+        return modifiers < other.modifiers;
+    }
 };
 
 class KeyMap {
@@ -41,4 +55,5 @@ private:
     // Convert Qt::Key to string key name
     QString keyToString(int qtKey) const;
     std::vector<KeyBindingEntry> bindings_;
+    std::map<BindingKey, std::string> bindingsMap_;  // Fast lookup map
 };
