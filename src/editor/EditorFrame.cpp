@@ -69,7 +69,7 @@ EditorFrame::EditorFrame(QWidget* parent)
 
     createActions();
     m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
-                             m_exitAction, m_aboutAction);
+                             m_exitAction, m_showSpecialCharsAction, m_aboutAction);
 
 
     m_mainLayout->addWidget(m_editorTabWidget);
@@ -133,6 +133,11 @@ void EditorFrame::createActions()
 
     m_aboutAction = new QAction(tr("&About"), this);
     connect(m_aboutAction, &QAction::triggered, this, &EditorFrame::onAboutTriggered);
+
+    m_showSpecialCharsAction = new QAction(tr("Show Special Characters"), this);
+    m_showSpecialCharsAction->setCheckable(true);
+    m_showSpecialCharsAction->setChecked(false);
+    connect(m_showSpecialCharsAction, &QAction::toggled, this, &EditorFrame::onToggleSpecialChars);
 }
 
 /**
@@ -358,6 +363,21 @@ QString EditorFrame::generateUniqueTabTitle(const QString& filePath)
         }
     }
     return uniqueTitle;
+}
+
+void EditorFrame::onToggleSpecialChars(bool checked)
+{
+    // Iterate through all open editor tabs and toggle whitespace display
+    for (int i = 0; i < m_editorTabWidget->count(); ++i) {
+        Editor* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i));
+        if (editor && editor->view()) {
+            // Use the built-in KTextEditor action for showing whitespace
+            QAction* wsAction = editor->view()->action("view_show_whitespaces");
+            if (wsAction && wsAction->isChecked() != checked) {
+                wsAction->trigger();
+            }
+        }
+    }
 }
 
 void EditorFrame::closeEvent(QCloseEvent* event)

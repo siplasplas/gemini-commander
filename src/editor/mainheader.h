@@ -29,12 +29,11 @@ public:
      * @param openFile Action for opening files
      * @param closeFile Action for closing files
      * @param exitApp Action for exiting application
-     * @param buildProject Action for building projects
-     * @param runProject Action for running projects
+     * @param showSpecialChars Action for showing special characters
      * @param aboutApp Action for about dialog
      */
     void setupMenus(QAction* openFile, QAction* closeFile,
-                    QAction* exitApp, QAction* aboutApp);
+                    QAction* exitApp, QAction* showSpecialChars, QAction* aboutApp);
 
     /**
      * @brief Configures toolbar buttons
