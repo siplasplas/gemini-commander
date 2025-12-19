@@ -40,12 +40,16 @@ public:
   IconMode iconMode() const { return m_iconMode; }
   void setIconMode(IconMode mode) { m_iconMode = mode; }
 
+  QString externalToolPath() const { return m_externalToolPath; }
+  void setExternalToolPath(const QString& path) { m_externalToolPath = path; }
+
 private:
   Config() = default;
 
   QString m_configPath;
   QVector<FavoriteDir> m_favorites;
   IconMode m_iconMode = IconMode::Extension;
+  QString m_externalToolPath;
 };
 
 #endif

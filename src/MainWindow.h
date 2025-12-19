@@ -7,6 +7,7 @@
 #include <QPointer>
 #include <QTableView>
 #include <QProgressDialog>
+#include <QToolButton>
 
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
@@ -61,6 +62,7 @@ private:
     QToolBar* m_mountsToolBar = nullptr;;
     QAction* m_openTerminalAction = nullptr;
     QAction* m_searchAction = nullptr;
+    QAction* m_externalToolAction = nullptr;
 
     void createMountsToolbar();
     QStringList listMountPoints() const;
@@ -71,8 +73,16 @@ private:
     QString currentPanelName();
     QString currentPanelPath();
     void updateCurrentPathLabel();
+
+    void updateExternalToolButton();
+    QString findDesktopFile(const QString& executablePath);
+    QString extractIconFromDesktop(const QString& desktopFilePath);
+
 private slots:
     void onOpenTerminal();
+    void onExternalToolClicked();
+    void onExternalToolContextMenu(const QPoint& pos);
+    void configureExternalTool();
 };
 
 #endif // MAINWINDOW_H

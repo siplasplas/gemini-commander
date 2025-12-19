@@ -61,6 +61,7 @@ bool Config::load(const QString& path)
     m_configPath = path;
     m_favorites.clear();
     m_iconMode = IconMode::Extension;
+    m_externalToolPath.clear();
 
     QFile f(path);
     if (!f.exists()) {
@@ -76,6 +77,13 @@ bool Config::load(const QString& path)
             auto& icons = *tbl["icons"].as_table();
             if (auto mode = icons["mode"].value<std::string>())
                 m_iconMode = parseIconMode(*mode);
+        }
+
+        // [external_tool] section
+        if (tbl.contains("external_tool")) {
+            auto& tool = *tbl["external_tool"].as_table();
+            if (auto path = tool["path"].value<std::string>())
+                m_externalToolPath = QString::fromStdString(*path);
         }
 
         if (tbl.contains("favorites")) {
@@ -133,6 +141,13 @@ bool Config::save() const
     toml::table iconsTbl;
     iconsTbl.insert("mode", iconModeToString(m_iconMode));
     tbl.insert("icons", iconsTbl);
+
+    // [external_tool] section
+    if (!m_externalToolPath.isEmpty()) {
+        toml::table toolTbl;
+        toolTbl.insert("path", m_externalToolPath.toStdString());
+        tbl.insert("external_tool", toolTbl);
+    }
 
     // [[favorites]] array
     toml::array arr;

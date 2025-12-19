@@ -29,6 +29,11 @@
 #include <QStandardPaths>
 #include <QMessageBox>
 #include <QStorageInfo>
+#include <QFileDialog>
+#include <QToolButton>
+#include <QFile>
+#include <QTextStream>
+#include <QRegularExpression>
 
 #include "SortedDirIterator.h"
 #include "SearchDialog.h"
@@ -172,7 +177,13 @@ void MainWindow::setupUi() {
     connect(m_openTerminalAction, &QAction::triggered,
             this, &MainWindow::onOpenTerminal);
 
+    // External tool action
+    m_externalToolAction = new QAction(tr("External Tool"), this);
+    connect(m_externalToolAction, &QAction::triggered,
+            this, &MainWindow::onExternalToolClicked);
+
     m_mainToolBar->addAction(m_openTerminalAction);
+    m_mainToolBar->addAction(m_externalToolAction);
     m_mainToolBar->addAction(m_searchAction);
 
     addToolBarBreak(Qt::TopToolBarArea);
@@ -195,6 +206,17 @@ void MainWindow::setupUi() {
 
     m_mainToolBar->setStyleSheet(tbStyle);
     m_mountsToolBar->setStyleSheet(tbStyle);
+
+    // Setup context menu for external tool button
+    if (QToolButton* toolBtn = qobject_cast<QToolButton*>(
+            m_mainToolBar->widgetForAction(m_externalToolAction))) {
+        toolBtn->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(toolBtn, &QToolButton::customContextMenuRequested,
+                this, &MainWindow::onExternalToolContextMenu);
+    }
+
+    // Initialize external tool button from config
+    updateExternalToolButton();
 }
 
 Side MainWindow::opposite(Side side){
@@ -522,6 +544,244 @@ void MainWindow::onOpenTerminal()
                              tr("Failed to start terminal: %1").arg(termCmd));
         proc->deleteLater();
     }
+}
+
+void MainWindow::onExternalToolClicked()
+{
+    QString toolPath = Config::instance().externalToolPath();
+
+    // If no tool configured, open configuration dialog
+    if (toolPath.isEmpty()) {
+        configureExternalTool();
+        return;
+    }
+
+    // Verify executable still exists and is executable
+    QFileInfo info(toolPath);
+    if (!info.exists() || !info.isExecutable()) {
+        QMessageBox::warning(this,
+                           tr("External Tool"),
+                           tr("The configured tool no longer exists or is not executable: %1")
+                             .arg(toolPath));
+        configureExternalTool();
+        return;
+    }
+
+    // Get working directory from current panel
+    QString workDir;
+    if (auto* pane = currentPane()) {
+        workDir = pane->currentPath();
+    }
+    if (workDir.isEmpty()) {
+        workDir = QDir::homePath();
+    }
+
+    // Launch the tool
+    auto* proc = new QProcess(this);
+    proc->setWorkingDirectory(workDir);
+    proc->start(toolPath, QStringList() << workDir);
+
+    if (!proc->waitForStarted(1000)) {
+        QMessageBox::warning(this,
+                           tr("External Tool"),
+                           tr("Failed to start: %1").arg(toolPath));
+        proc->deleteLater();
+    }
+}
+
+void MainWindow::onExternalToolContextMenu(const QPoint& pos)
+{
+    QMenu menu(this);
+
+    QAction* editAction = menu.addAction(tr("Configure Tool..."));
+    connect(editAction, &QAction::triggered, this, &MainWindow::configureExternalTool);
+
+    QString toolPath = Config::instance().externalToolPath();
+    if (!toolPath.isEmpty()) {
+        menu.addSeparator();
+        QAction* clearAction = menu.addAction(tr("Clear Tool"));
+        connect(clearAction, &QAction::triggered, this, [this]() {
+            Config::instance().setExternalToolPath(QString());
+            Config::instance().save();
+            updateExternalToolButton();
+        });
+    }
+
+    // Convert local pos to global - pos is relative to the QToolButton
+    if (QToolButton* btn = qobject_cast<QToolButton*>(sender())) {
+        menu.exec(btn->mapToGlobal(pos));
+    }
+}
+
+void MainWindow::configureExternalTool()
+{
+    QString currentPath = Config::instance().externalToolPath();
+    QString startDir = currentPath.isEmpty() ? "/usr/bin" : currentPath;
+
+    QString selectedFile = QFileDialog::getOpenFileName(
+        this,
+        tr("Select External Tool"),
+        startDir,
+        tr("Executable files (*)"),
+        nullptr,
+        QFileDialog::DontUseNativeDialog
+    );
+
+    if (selectedFile.isEmpty())
+        return; // User cancelled
+
+    // Verify the selected file is executable
+    QFileInfo info(selectedFile);
+    if (!info.isExecutable()) {
+        QMessageBox::warning(this,
+                           tr("External Tool"),
+                           tr("The selected file is not executable: %1")
+                             .arg(selectedFile));
+        return;
+    }
+
+    // Save to config
+    Config::instance().setExternalToolPath(selectedFile);
+    Config::instance().save();
+
+    // Update button icon and tooltip
+    updateExternalToolButton();
+}
+
+void MainWindow::updateExternalToolButton()
+{
+    if (!m_externalToolAction)
+        return;
+
+    QString toolPath = Config::instance().externalToolPath();
+
+    if (toolPath.isEmpty()) {
+        // No tool configured - show placeholder
+        m_externalToolAction->setIcon(QIcon(":/icons/file_executable.svg"));
+        m_externalToolAction->setToolTip(tr("Click to configure external tool"));
+        m_externalToolAction->setText(tr("Tool"));
+        return;
+    }
+
+    // Tool is configured
+    QFileInfo info(toolPath);
+    QString baseName = info.fileName();
+    m_externalToolAction->setText(baseName);
+    m_externalToolAction->setToolTip(tr("Launch %1\nRight-click to configure")
+                                      .arg(toolPath));
+
+    // Try to find and extract icon from .desktop file
+    QString desktopFile = findDesktopFile(toolPath);
+    if (!desktopFile.isEmpty()) {
+        QString iconName = extractIconFromDesktop(desktopFile);
+        if (!iconName.isEmpty()) {
+            QIcon icon = QIcon::fromTheme(iconName);
+            if (!icon.isNull()) {
+                m_externalToolAction->setIcon(icon);
+                return;
+            }
+        }
+    }
+
+    // Fallback to generic executable icon
+    m_externalToolAction->setIcon(QIcon(":/icons/file_executable.svg"));
+}
+
+QString MainWindow::findDesktopFile(const QString& executablePath)
+{
+    QFileInfo info(executablePath);
+    QString baseName = info.fileName();
+
+    // Common locations for .desktop files
+    QStringList searchPaths = {
+        "/usr/share/applications",
+        "/usr/local/share/applications",
+        QDir::homePath() + "/.local/share/applications"
+    };
+
+    for (const QString& searchPath : searchPaths) {
+        QDir dir(searchPath);
+        if (!dir.exists())
+            continue;
+
+        // Try exact match: baseName.desktop
+        QString exactMatch = dir.filePath(baseName + ".desktop");
+        if (QFile::exists(exactMatch)) {
+            // Verify it contains the executable we're looking for
+            QFile f(exactMatch);
+            if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&f);
+                QString content = in.readAll();
+                // Check if Exec line contains our executable name
+                if (content.contains(QRegularExpression(
+                    "^Exec=.*" + QRegularExpression::escape(baseName),
+                    QRegularExpression::MultilineOption))) {
+                    return exactMatch;
+                }
+            }
+        }
+
+        // Search all .desktop files in directory
+        QStringList desktopFiles = dir.entryList(
+            QStringList() << "*.desktop",
+            QDir::Files
+        );
+
+        for (const QString& filename : desktopFiles) {
+            QString fullPath = dir.filePath(filename);
+            QFile f(fullPath);
+            if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+                continue;
+
+            QTextStream in(&f);
+            while (!in.atEnd()) {
+                QString line = in.readLine().trimmed();
+                if (line.startsWith("Exec=")) {
+                    // Extract command from Exec line (may have args like "%F")
+                    QString execLine = line.mid(5).trimmed();
+                    // Remove arguments and env variables
+                    QStringList parts = execLine.split(QRegularExpression("\\s+"));
+                    for (const QString& part : parts) {
+                        if (part.isEmpty() || part.startsWith("%"))
+                            continue;
+                        if (part.contains("=")) // env variable like GDK_BACKEND=x11
+                            continue;
+
+                        // Extract just the executable name
+                        QFileInfo execInfo(part);
+                        if (execInfo.fileName() == baseName) {
+                            return fullPath;
+                        }
+                        break; // Only check first real argument
+                    }
+                }
+            }
+        }
+    }
+
+    return QString(); // Not found
+}
+
+QString MainWindow::extractIconFromDesktop(const QString& desktopFilePath)
+{
+    QFile f(desktopFilePath);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return QString();
+
+    QTextStream in(&f);
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.startsWith("Icon=")) {
+            QString iconName = line.mid(5).trimmed();
+            // Icon name can be:
+            // 1. Just a name (e.g., "audacity") - use with QIcon::fromTheme
+            // 2. Absolute path (e.g., "/usr/share/pixmaps/app.png")
+            // We'll return the name and let QIcon::fromTheme handle it
+            return iconName;
+        }
+    }
+
+    return QString();
 }
 
 QStringList MainWindow::listMountPoints() const
