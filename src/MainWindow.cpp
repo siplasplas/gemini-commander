@@ -567,19 +567,27 @@ void MainWindow::onExternalToolClicked()
         return;
     }
 
-    // Get working directory from current panel
-    QString workDir;
+    // Get working directories from current and opposite panels
+    QString currentDir;
     if (auto* pane = currentPane()) {
-        workDir = pane->currentPath();
+        currentDir = pane->currentPath();
     }
-    if (workDir.isEmpty()) {
-        workDir = QDir::homePath();
+    if (currentDir.isEmpty()) {
+        currentDir = QDir::homePath();
     }
 
-    // Launch the tool
+    QString oppositeDir;
+    if (auto* oppPanel = oppositeFilePanel()) {
+        oppositeDir = oppPanel->currentPath;
+    }
+    if (oppositeDir.isEmpty()) {
+        oppositeDir = currentDir; // fallback to current if opposite not available
+    }
+
+    // Launch the tool with both directories as arguments
     auto* proc = new QProcess(this);
-    proc->setWorkingDirectory(workDir);
-    proc->start(toolPath, QStringList() << workDir);
+    proc->setWorkingDirectory(currentDir);
+    proc->start(toolPath, QStringList() << currentDir << oppositeDir);
 
     if (!proc->waitForStarted(1000)) {
         QMessageBox::warning(this,
