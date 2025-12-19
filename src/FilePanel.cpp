@@ -445,7 +445,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     model = new QStandardItemModel(nullptr);
     QStringList headers = {"id","Name", "Ext", "Size", "Date"};
     model->setHorizontalHeaderLabels(headers);
-    currentPath = QDir::homePath();
+    currentPath = QDir::currentPath();
     setModel(model);
     setItemDelegate(new MarkedItemDelegate(this));
 
