@@ -40,6 +40,8 @@ public:
                     QAction* findAction = nullptr, QAction* findNextAction = nullptr,
                     QAction* findPrevAction = nullptr, QAction* replaceAction = nullptr);
 
+    void setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth);
+
     /**
      * @brief Configures toolbar buttons
      * @param buildProject Build action to add

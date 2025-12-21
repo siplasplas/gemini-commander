@@ -56,6 +56,9 @@ private slots:
     void onFindNextTriggered();
     void onFindPrevTriggered();
     void onReplaceTriggered();
+    void onInsertDateTriggered();
+    void onInsertTimeTriggered();
+    void onInsertBothTriggered();
 
 private:
     MruTabWidget *m_editorTabWidget;
@@ -74,6 +77,9 @@ private:
     QAction *m_findNextAction;
     QAction *m_findPrevAction;
     QAction *m_replaceAction;
+    QAction *m_insertDateAction;
+    QAction *m_insertTimeAction;
+    QAction *m_insertBothAction;
 
     void viewFileInEditor(const QString& filePath);
     int findTabByPath(const QString& filePath);

@@ -56,6 +56,14 @@ void MainHeader::setupMenus(QAction* openFile, QAction* closeFile,
     helpMenu->addAction(aboutApp);
 }
 
+void MainHeader::setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth)
+{
+    QMenu* toolsMenu = m_menuBar->addMenu(tr("&Tools"));
+    toolsMenu->addAction(insertDate);
+    toolsMenu->addAction(insertTime);
+    toolsMenu->addAction(insertBoth);
+}
+
 void MainHeader::setupToolBar(QAction* buildProject, QAction* runProject)
 {
     m_toolBar->addAction(buildProject);

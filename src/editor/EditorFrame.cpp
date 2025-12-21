@@ -14,6 +14,8 @@
 #include <QShortcut>
 #include <QClipboard>
 #include <QShowEvent>
+#include <chrono>
+#include <ctime>
 #include "../Config.h"
 
 // KTextEditor Includes
@@ -72,6 +74,7 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
                              m_exitAction, m_showSpecialCharsAction, m_aboutAction,
                              m_findAction, m_findNextAction, m_findPrevAction, m_replaceAction);
+    m_mainHeader->setupToolsMenu(m_insertDateAction, m_insertTimeAction, m_insertBothAction);
 
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
@@ -153,6 +156,15 @@ void EditorFrame::createActions()
 
     m_replaceAction = new QAction(tr("&Replace...\tCtrl+H"), this);
     connect(m_replaceAction, &QAction::triggered, this, &EditorFrame::onReplaceTriggered);
+
+    m_insertDateAction = new QAction(tr("Insert &Date"), this);
+    connect(m_insertDateAction, &QAction::triggered, this, &EditorFrame::onInsertDateTriggered);
+
+    m_insertTimeAction = new QAction(tr("Insert &Time"), this);
+    connect(m_insertTimeAction, &QAction::triggered, this, &EditorFrame::onInsertTimeTriggered);
+
+    m_insertBothAction = new QAction(tr("Insert &Both Date and Time"), this);
+    connect(m_insertBothAction, &QAction::triggered, this, &EditorFrame::onInsertBothTriggered);
 }
 
 /**
@@ -496,6 +508,64 @@ void EditorFrame::onReplaceTriggered()
     QAction* replaceAction = editor->view()->action("edit_replace");
     if (replaceAction)
         replaceAction->trigger();
+}
+
+static const char* daysOfWeek[] = {
+    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+};
+
+void EditorFrame::onInsertDateTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view() || !editor->document())
+        return;
+
+    auto nowChrono = std::chrono::system_clock::now();
+    time_t now_time_t = std::chrono::system_clock::to_time_t(nowChrono);
+    struct tm* now_tm = localtime(&now_time_t);
+    char buf[64];
+    sprintf(buf, "%s %d-%.2d-%.2d",
+            daysOfWeek[now_tm->tm_wday],
+            now_tm->tm_year + 1900, now_tm->tm_mon + 1, now_tm->tm_mday);
+
+    KTextEditor::Cursor cursor = editor->view()->cursorPosition();
+    editor->document()->insertText(cursor, QString::fromUtf8(buf));
+}
+
+void EditorFrame::onInsertTimeTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view() || !editor->document())
+        return;
+
+    auto nowChrono = std::chrono::system_clock::now();
+    time_t now_time_t = std::chrono::system_clock::to_time_t(nowChrono);
+    struct tm* now_tm = localtime(&now_time_t);
+    char buf[64];
+    sprintf(buf, "%.2d:%.2d:%.2d",
+            now_tm->tm_hour, now_tm->tm_min, now_tm->tm_sec);
+
+    KTextEditor::Cursor cursor = editor->view()->cursorPosition();
+    editor->document()->insertText(cursor, QString::fromUtf8(buf));
+}
+
+void EditorFrame::onInsertBothTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view() || !editor->document())
+        return;
+
+    auto nowChrono = std::chrono::system_clock::now();
+    time_t now_time_t = std::chrono::system_clock::to_time_t(nowChrono);
+    struct tm* now_tm = localtime(&now_time_t);
+    char buf[128];
+    sprintf(buf, "%s %d-%.2d-%.2d %.2d:%.2d:%.2d",
+            daysOfWeek[now_tm->tm_wday],
+            now_tm->tm_year + 1900, now_tm->tm_mon + 1, now_tm->tm_mday,
+            now_tm->tm_hour, now_tm->tm_min, now_tm->tm_sec);
+
+    KTextEditor::Cursor cursor = editor->view()->cursorPosition();
+    editor->document()->insertText(cursor, QString::fromUtf8(buf));
 }
 
 #include  "EditorFrame_impl.inc"
