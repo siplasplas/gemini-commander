@@ -5,6 +5,7 @@
 
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 QPair<QString, QString> splitFileName(const QFileInfo& info)
 {
@@ -102,7 +103,7 @@ ExecutableType getExecutableType(const QString& filePath) {
     return ExecutableType::Unknown;
 }
 
-void preserveModificationTime(const QString& srcPath, const QString& dstPath)
+void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
 {
     struct stat srcStat;
     if (stat(srcPath.toLocal8Bit().constData(), &srcStat) == 0) {
@@ -110,5 +111,12 @@ void preserveModificationTime(const QString& srcPath, const QString& dstPath)
         times[0] = srcStat.st_atim;  // access time
         times[1] = srcStat.st_mtim;  // modification time
         utimensat(AT_FDCWD, dstPath.toLocal8Bit().constData(), times, 0);
+    }
+
+    // Sync file to disk (important for USB drives to prevent data loss)
+    int fd = open(dstPath.toLocal8Bit().constData(), O_RDONLY);
+    if (fd >= 0) {
+        fsync(fd);
+        close(fd);
     }
 }

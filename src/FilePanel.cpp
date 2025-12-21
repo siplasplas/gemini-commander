@@ -1569,7 +1569,7 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
                 );
                 return false;
             }
-            preserveModificationTime(srcPath, dstPath);
+            finalizeCopiedFile(srcPath, dstPath);
 
             bytesCopied += static_cast<quint64>(fi.size());
 

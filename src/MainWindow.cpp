@@ -1154,7 +1154,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                     QMessageBox::warning(this, tr("Error"),
                         tr("Failed to copy '%1'").arg(name));
                 } else {
-                    preserveModificationTime(srcPath, dstFilePath);
+                    finalizeCopiedFile(srcPath, dstFilePath);
                 }
             } else if (srcInfo.isDir()) {
                 FilePanel::CopyStats stats;
@@ -1233,7 +1233,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                 tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, finalDstPath));
             return;
         }
-        preserveModificationTime(srcPath, finalDstPath);
+        finalizeCopiedFile(srcPath, finalDstPath);
 
         if (dstPanel) {
             dstPanel->loadDirectory();

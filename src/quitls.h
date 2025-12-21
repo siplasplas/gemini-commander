@@ -24,6 +24,6 @@ enum class ExecutableType {
 ExecutableType getExecutableType(const QString& filePath);
 bool isTextFile(const QString& filePath);
 
-// Preserve source file's modification time on destination after copy
-void preserveModificationTime(const QString& srcPath, const QString& dstPath);
+// Finalize copied file: preserve modification time and sync to disk
+void finalizeCopiedFile(const QString& srcPath, const QString& dstPath);
 
