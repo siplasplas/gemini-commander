@@ -1010,7 +1010,9 @@ void MainWindow::createMountsToolbar()
 
     QStringList pts = listMountPoints();
     for (const QString& mp : pts) {
-        QAction* act = new QAction(mp, m_mountsToolBar);
+        QString label = QFileInfo(mp).fileName();
+        QAction* act = new QAction(label, m_mountsToolBar);
+        act->setToolTip(mp);
 
         connect(act, &QAction::triggered, this, [this, mp]() {
             FilePanel* panel = currentFilePanel();
@@ -1606,7 +1608,9 @@ void MainWindow::refreshMountsToolbar()
     m_mountsToolBar->clear();
 
     for (const QString& mp : m_lastMountPoints) {
-        QAction* act = new QAction(mp, m_mountsToolBar);
+        QString label = QFileInfo(mp).fileName();
+        QAction* act = new QAction(label, m_mountsToolBar);
+        act->setToolTip(mp);
 
         connect(act, &QAction::triggered, this, [this, mp]() {
             FilePanel* panel = currentFilePanel();
