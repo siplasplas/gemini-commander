@@ -2,6 +2,14 @@
 # gemini-commander
 Twin-panel file manager written in C++ with the Qt library.
 
+## Features
+
+- **Hidden file search** — Incremental search handles dot-prefixed files naturally (e.g., typing "git" finds ".gitignore")
+- **Built-in editor and viewer** — Opens instantly on top of the main window, even on Wayland where window stacking can be problematic
+- **Drag and drop** — Drag files from panels to other applications
+- **Command line path insertion** — Like Total Commander: Ctrl+Enter inserts current file path, Ctrl+Shift+Enter inserts full path, Ctrl+P inserts current directory. Unlike Double Commander, arrow keys immediately select text in the command line for quick keyboard-only copying
+- **Safe USB copying** — Every copied file is synced to disk with fsync(), preventing data loss when unmounting USB drives
+
 ## License
 
 The source code of this project ([Project Name, e.g., Gemini Commander]) is made available under the terms of the **Apache License 2.0**. The full text of the license can be found in the `LICENSE` file in the repository's root directory.
