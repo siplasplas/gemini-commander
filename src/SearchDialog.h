@@ -91,6 +91,7 @@ private:
     QPushButton* m_browseButton;
     QLineEdit* m_fileNameEdit;
     QCheckBox* m_fileNameCaseSensitiveCheck;
+    QCheckBox* m_directoriesOnlyCheck;
     QCheckBox* m_partOfNameCheck;
     QLineEdit* m_containingTextEdit;
     QCheckBox* m_textCaseSensitiveCheck;
@@ -100,7 +101,6 @@ private:
     QWidget* m_advancedTab;
     QLineEdit* m_minSizeEdit;
     QLineEdit* m_maxSizeEdit;
-    QCheckBox* m_directoriesOnlyCheck;
 
     // Results tab
     QWidget* m_resultsTab;

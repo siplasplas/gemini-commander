@@ -346,16 +346,27 @@ void SearchDialog::createStandardTab()
     fileNameLayout->addWidget(m_fileNameEdit, 1);
     criteriaLayout->addLayout(fileNameLayout);
 
-    // File name options row
+    // File name options row: Case sensitive, Directories only, Part of name
     auto* fileNameOptionsLayout = new QHBoxLayout();
     fileNameOptionsLayout->addSpacing(20);
+    m_fileNameCaseSensitiveCheck = new QCheckBox(tr("Case sensitive"), criteriaGroup);
+    m_directoriesOnlyCheck = new QCheckBox(tr("Directories only"), criteriaGroup);
     m_partOfNameCheck = new QCheckBox(tr("Part of name"), criteriaGroup);
     m_partOfNameCheck->setChecked(true);  // default ON
-    m_fileNameCaseSensitiveCheck = new QCheckBox(tr("Case sensitive"), criteriaGroup);
-    fileNameOptionsLayout->addWidget(m_partOfNameCheck);
     fileNameOptionsLayout->addWidget(m_fileNameCaseSensitiveCheck);
+    fileNameOptionsLayout->addWidget(m_directoriesOnlyCheck);
+    fileNameOptionsLayout->addWidget(m_partOfNameCheck);
     fileNameOptionsLayout->addStretch();
     criteriaLayout->addLayout(fileNameOptionsLayout);
+
+    // Hide "Part of name" when filename contains wildcard (*)
+    connect(m_fileNameEdit, &QLineEdit::textChanged, this, [this](const QString& text) {
+        bool hasWildcard = text.contains('*');
+        m_partOfNameCheck->setVisible(!hasWildcard);
+        if (hasWildcard) {
+            m_partOfNameCheck->setChecked(false);  // disable part-of-name matching when using wildcards
+        }
+    });
 
     criteriaLayout->addSpacing(10);
 
@@ -411,15 +422,6 @@ void SearchDialog::createAdvancedTab()
     sizeLayout->addRow(tr("Maximum (bytes):"), m_maxSizeEdit);
 
     layout->addWidget(sizeGroup);
-
-    // Search type
-    auto* typeGroup = new QGroupBox(tr("Search type:"), m_advancedTab);
-    auto* typeLayout = new QVBoxLayout(typeGroup);
-
-    m_directoriesOnlyCheck = new QCheckBox(tr("Directories only"), typeGroup);
-    typeLayout->addWidget(m_directoriesOnlyCheck);
-
-    layout->addWidget(typeGroup);
     layout->addStretch();
 }
 
