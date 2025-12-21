@@ -625,6 +625,8 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     header->setSortIndicatorShown(true);
     header->setHighlightSections(false);
 
+    // Show initial sort indicator
+    header->setSortIndicator(sortColumn, sortOrder);
 
     connect(header, &QHeaderView::sectionClicked,
             this, &FilePanel::onHeaderSectionClicked);
@@ -694,12 +696,19 @@ QString FilePanel::normalizeForSearch(const QString& s) const
 void FilePanel::onHeaderSectionClicked(int logicalIndex)
 {
     if (sortColumn == logicalIndex) {
+        // Toggle direction
         sortOrder = (sortOrder == Qt::AscendingOrder)
                     ? Qt::DescendingOrder
                     : Qt::AscendingOrder;
     } else {
         sortColumn = logicalIndex;
-        sortOrder = Qt::AscendingOrder;
+        // For Date and Size, default to Descending (newest/largest first)
+        // For Name and Ext, default to Ascending (A-Z)
+        if (logicalIndex == COLUMN_DATE || logicalIndex == COLUMN_SIZE) {
+            sortOrder = Qt::DescendingOrder;
+        } else {
+            sortOrder = Qt::AscendingOrder;
+        }
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     loadDirectory();

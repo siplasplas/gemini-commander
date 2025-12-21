@@ -364,7 +364,7 @@ bool FilePanel::doSortByDate(QObject *obj, QKeyEvent *keyEvent) {
                 : Qt::AscendingOrder;
     } else {
         sortColumn = COLUMN_DATE;
-        sortOrder = Qt::AscendingOrder;
+        sortOrder = Qt::DescendingOrder;  // newest first by default
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     addAllEntries();
@@ -412,7 +412,7 @@ bool FilePanel::doSortBySize(QObject *obj, QKeyEvent *keyEvent) {
                 : Qt::AscendingOrder;
     } else {
         sortColumn = COLUMN_SIZE;
-        sortOrder = Qt::AscendingOrder;
+        sortOrder = Qt::DescendingOrder;  // largest first by default
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     addAllEntries();
