@@ -64,6 +64,22 @@ void Config::setWindowGeometry(int x, int y, int width, int height)
     m_windowHeight = height;
 }
 
+void Config::setEditorGeometry(int x, int y, int width, int height)
+{
+    m_editorX = x;
+    m_editorY = y;
+    m_editorWidth = width;
+    m_editorHeight = height;
+}
+
+void Config::setViewerGeometry(int x, int y, int width, int height)
+{
+    m_viewerX = x;
+    m_viewerY = y;
+    m_viewerWidth = width;
+    m_viewerHeight = height;
+}
+
 bool Config::load(const QString& path)
 {
     m_configPath = path;
@@ -76,6 +92,14 @@ bool Config::load(const QString& path)
     m_windowX = -1;
     m_windowY = -1;
     m_showFunctionBar = true;
+    m_editorWidth = 800;
+    m_editorHeight = 600;
+    m_editorX = 0;
+    m_editorY = 0;
+    m_viewerWidth = 800;
+    m_viewerHeight = 600;
+    m_viewerX = 0;
+    m_viewerY = 0;
 
     QFile f(path);
     if (!f.exists()) {
@@ -125,6 +149,32 @@ bool Config::load(const QString& path)
             auto& ui = *tbl["ui"].as_table();
             if (auto show = ui["showFunctionBar"].value<bool>())
                 m_showFunctionBar = *show;
+        }
+
+        // [editor] section (position relative to main window)
+        if (tbl.contains("editor")) {
+            auto& editor = *tbl["editor"].as_table();
+            if (auto w = editor["width"].value<int64_t>())
+                m_editorWidth = static_cast<int>(*w);
+            if (auto h = editor["height"].value<int64_t>())
+                m_editorHeight = static_cast<int>(*h);
+            if (auto x = editor["x"].value<int64_t>())
+                m_editorX = static_cast<int>(*x);
+            if (auto y = editor["y"].value<int64_t>())
+                m_editorY = static_cast<int>(*y);
+        }
+
+        // [viewer] section (position relative to main window)
+        if (tbl.contains("viewer")) {
+            auto& viewer = *tbl["viewer"].as_table();
+            if (auto w = viewer["width"].value<int64_t>())
+                m_viewerWidth = static_cast<int>(*w);
+            if (auto h = viewer["height"].value<int64_t>())
+                m_viewerHeight = static_cast<int>(*h);
+            if (auto x = viewer["x"].value<int64_t>())
+                m_viewerX = static_cast<int>(*x);
+            if (auto y = viewer["y"].value<int64_t>())
+                m_viewerY = static_cast<int>(*y);
         }
 
         if (tbl.contains("favorites")) {
@@ -226,6 +276,22 @@ bool Config::save() const
     toml::table uiTbl;
     uiTbl.insert("showFunctionBar", m_showFunctionBar);
     tbl.insert("ui", uiTbl);
+
+    // [editor] section (position relative to main window)
+    toml::table editorTbl;
+    editorTbl.insert("width", static_cast<int64_t>(m_editorWidth));
+    editorTbl.insert("height", static_cast<int64_t>(m_editorHeight));
+    editorTbl.insert("x", static_cast<int64_t>(m_editorX));
+    editorTbl.insert("y", static_cast<int64_t>(m_editorY));
+    tbl.insert("editor", editorTbl);
+
+    // [viewer] section (position relative to main window)
+    toml::table viewerTbl;
+    viewerTbl.insert("width", static_cast<int64_t>(m_viewerWidth));
+    viewerTbl.insert("height", static_cast<int64_t>(m_viewerHeight));
+    viewerTbl.insert("x", static_cast<int64_t>(m_viewerX));
+    viewerTbl.insert("y", static_cast<int64_t>(m_viewerY));
+    tbl.insert("viewer", viewerTbl);
 
     // [external_tool] section
     if (!m_externalToolPath.isEmpty()) {

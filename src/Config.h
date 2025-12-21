@@ -53,6 +53,20 @@ public:
   int windowY() const { return m_windowY; }
   void setWindowGeometry(int x, int y, int width, int height);
 
+  // Editor window geometry (position relative to main window)
+  int editorWidth() const { return m_editorWidth; }
+  int editorHeight() const { return m_editorHeight; }
+  int editorX() const { return m_editorX; }
+  int editorY() const { return m_editorY; }
+  void setEditorGeometry(int x, int y, int width, int height);
+
+  // Viewer window geometry (position relative to main window)
+  int viewerWidth() const { return m_viewerWidth; }
+  int viewerHeight() const { return m_viewerHeight; }
+  int viewerX() const { return m_viewerX; }
+  int viewerY() const { return m_viewerY; }
+  void setViewerGeometry(int x, int y, int width, int height);
+
   // Validate TOML content without loading it
   static bool validateToml(const QString& content, QString& errorMsg);
 
@@ -76,6 +90,18 @@ private:
   int m_windowX = -1;  // -1 means not set (use system default)
   int m_windowY = -1;
   bool m_showFunctionBar = true;
+
+  // Editor window geometry (relative to main window)
+  int m_editorWidth = 800;
+  int m_editorHeight = 600;
+  int m_editorX = 0;
+  int m_editorY = 0;
+
+  // Viewer window geometry (relative to main window)
+  int m_viewerWidth = 800;
+  int m_viewerHeight = 600;
+  int m_viewerX = 0;
+  int m_viewerY = 0;
 };
 
 #endif

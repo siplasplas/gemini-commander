@@ -21,10 +21,17 @@ public:
 
     void openFile(const QString& filePath);
 
+protected:
+    void closeEvent(QCloseEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+
 private:
+    void saveGeometryToConfig();
+
     std::unique_ptr<QFile> file;
     wid::TextViewer *m_viewer = nullptr;
     QVBoxLayout *m_layout = nullptr;
+    bool m_geometryRestored = false;
 };
 
 #endif // VIEWERFRAME_H

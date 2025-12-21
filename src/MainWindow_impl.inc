@@ -313,7 +313,7 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
         return true;
     }
     if (!viewerFrame)
-        viewerFrame = new ViewerFrame(fullPath);
+        viewerFrame = new ViewerFrame(fullPath, this);
     else
         viewerFrame->openFile(fullPath);
     viewerFrame->show();
@@ -537,7 +537,7 @@ void MainWindow::openViewerForFile(const QString& filePath) {
         return;
 
     if (!viewerFrame)
-        viewerFrame = new ViewerFrame(filePath);
+        viewerFrame = new ViewerFrame(filePath, this);
     else
         viewerFrame->openFile(filePath);
     viewerFrame->show();

@@ -45,6 +45,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     void onOpenFileTriggered();
@@ -78,5 +79,8 @@ private:
     int findTabByPath(const QString& filePath);
     QString generateUniqueTabTitle(const QString& filePath);
     void createActions();
+    void saveGeometryToConfig();
+
+    bool m_geometryRestored = false;
 };
 #endif // EDITORFRAME_H

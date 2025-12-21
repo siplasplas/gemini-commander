@@ -13,6 +13,8 @@
 #include <QMessageBox>
 #include <QShortcut>
 #include <QClipboard>
+#include <QShowEvent>
+#include "../Config.h"
 
 // KTextEditor Includes
 #include <qguiapplication.h>
@@ -405,8 +407,50 @@ void EditorFrame::closeEvent(QCloseEvent* event)
     if (!m_editorTabWidget->requestCloseAllTabs()) {
         event->ignore();
     } else {
+        saveGeometryToConfig();
         event->accept();
     }
+}
+
+void EditorFrame::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+
+    if (!m_geometryRestored) {
+        m_geometryRestored = true;
+
+        Config& cfg = Config::instance();
+        int w = cfg.editorWidth();
+        int h = cfg.editorHeight();
+        int relX = cfg.editorX();
+        int relY = cfg.editorY();
+
+        resize(w, h);
+
+        // Position relative to parent window
+        if (parentWidget()) {
+            QPoint parentPos = parentWidget()->pos();
+            move(parentPos.x() + relX, parentPos.y() + relY);
+        }
+    }
+}
+
+void EditorFrame::saveGeometryToConfig()
+{
+    Config& cfg = Config::instance();
+
+    int relX = 0;
+    int relY = 0;
+
+    // Calculate position relative to parent window
+    if (parentWidget()) {
+        QPoint parentPos = parentWidget()->pos();
+        relX = x() - parentPos.x();
+        relY = y() - parentPos.y();
+    }
+
+    cfg.setEditorGeometry(relX, relY, width(), height());
+    cfg.save();
 }
 
 void EditorFrame::onFindTriggered()
