@@ -9,6 +9,14 @@ QPair<QString, QString> splitFileName(const QFileInfo& info)
         return {info.fileName(), QString()};
     }
 
+    QString fileName = info.fileName();
+
+    // If name ends with a dot, there's no real extension
+    // e.g., "..." should be basename "...", not ".." with empty extension
+    if (fileName.endsWith('.')) {
+        return {fileName, QString()};
+    }
+
     QString baseName = info.completeBaseName();
     QString ext = info.suffix();
 
