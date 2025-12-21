@@ -69,13 +69,20 @@ MainWindow::MainWindow(QWidget *parent)
 
     setWindowTitle("Gemini Commander");
     setWindowIcon(QIcon(":/icons/gemini-commander.svg"));
-    resize(1024, 768);
+
+    // Apply window geometry from config
+    applyConfigGeometry();
+
     keyMap.load(":/config/keys.toml");
     KeyRouter::instance().setKeyMap(&keyMap);
     KeyRouter::instance().installOn(qApp, this);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
+    // Save window geometry before closing
+    Config::instance().setWindowGeometry(x(), y(), width(), height());
+    Config::instance().save();
+
     if (!Config::instance().confirmExit()) {
         event->accept();
         return;
@@ -93,6 +100,27 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     } else {
         event->ignore();
     }
+}
+
+void MainWindow::applyConfigGeometry()
+{
+    const auto& cfg = Config::instance();
+    resize(cfg.windowWidth(), cfg.windowHeight());
+    if (cfg.windowX() >= 0 && cfg.windowY() >= 0) {
+        move(cfg.windowX(), cfg.windowY());
+    }
+}
+
+void MainWindow::onConfigSaved()
+{
+    // Reload config from file
+    Config::instance().load(Config::instance().configPath());
+
+    // Apply window geometry
+    applyConfigGeometry();
+
+    // Update external tool button (in case path changed)
+    updateExternalToolButton();
 }
 
 void MainWindow::setupUi() {

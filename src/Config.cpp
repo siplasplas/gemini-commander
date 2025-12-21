@@ -56,6 +56,14 @@ static IconMode parseIconMode(const std::string& str)
     return IconMode::Extension;
 }
 
+void Config::setWindowGeometry(int x, int y, int width, int height)
+{
+    m_windowX = x;
+    m_windowY = y;
+    m_windowWidth = width;
+    m_windowHeight = height;
+}
+
 bool Config::load(const QString& path)
 {
     m_configPath = path;
@@ -63,6 +71,10 @@ bool Config::load(const QString& path)
     m_iconMode = IconMode::Extension;
     m_externalToolPath.clear();
     m_confirmExit = true;
+    m_windowWidth = 1024;
+    m_windowHeight = 768;
+    m_windowX = -1;
+    m_windowY = -1;
 
     QFile f(path);
     if (!f.exists()) {
@@ -92,6 +104,19 @@ bool Config::load(const QString& path)
             auto& general = *tbl["general"].as_table();
             if (auto confirm = general["confirm_exit"].value<bool>())
                 m_confirmExit = *confirm;
+        }
+
+        // [window] section
+        if (tbl.contains("window")) {
+            auto& window = *tbl["window"].as_table();
+            if (auto w = window["width"].value<int64_t>())
+                m_windowWidth = static_cast<int>(*w);
+            if (auto h = window["height"].value<int64_t>())
+                m_windowHeight = static_cast<int>(*h);
+            if (auto x = window["x"].value<int64_t>())
+                m_windowX = static_cast<int>(*x);
+            if (auto y = window["y"].value<int64_t>())
+                m_windowY = static_cast<int>(*y);
         }
 
         if (tbl.contains("favorites")) {
@@ -175,6 +200,14 @@ bool Config::save() const
     toml::table generalTbl;
     generalTbl.insert("confirm_exit", m_confirmExit);
     tbl.insert("general", generalTbl);
+
+    // [window] section
+    toml::table windowTbl;
+    windowTbl.insert("width", static_cast<int64_t>(m_windowWidth));
+    windowTbl.insert("height", static_cast<int64_t>(m_windowHeight));
+    windowTbl.insert("x", static_cast<int64_t>(m_windowX));
+    windowTbl.insert("y", static_cast<int64_t>(m_windowY));
+    tbl.insert("window", windowTbl);
 
     // [icons] section
     toml::table iconsTbl;

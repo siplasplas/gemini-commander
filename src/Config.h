@@ -46,6 +46,13 @@ public:
   bool confirmExit() const { return m_confirmExit; }
   void setConfirmExit(bool confirm) { m_confirmExit = confirm; }
 
+  // Window geometry
+  int windowWidth() const { return m_windowWidth; }
+  int windowHeight() const { return m_windowHeight; }
+  int windowX() const { return m_windowX; }
+  int windowY() const { return m_windowY; }
+  void setWindowGeometry(int x, int y, int width, int height);
+
   // Validate TOML content without loading it
   static bool validateToml(const QString& content, QString& errorMsg);
 
@@ -60,6 +67,10 @@ private:
   IconMode m_iconMode = IconMode::Extension;
   QString m_externalToolPath;
   bool m_confirmExit = true;
+  int m_windowWidth = 1024;
+  int m_windowHeight = 768;
+  int m_windowX = -1;  // -1 means not set (use system default)
+  int m_windowY = -1;
 };
 
 #endif

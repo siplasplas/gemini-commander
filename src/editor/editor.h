@@ -19,6 +19,10 @@
  */
 class Editor : public BaseViewer {
     Q_OBJECT
+
+signals:
+    void configFileSaved();
+
 public:
     /**
      * @brief Constructs editor with KTextEditor document

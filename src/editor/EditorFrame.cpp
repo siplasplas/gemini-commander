@@ -194,6 +194,13 @@ void EditorFrame::openFile(const QString& fileName)
     view->setFocus();
 }
 
+Editor* EditorFrame::currentEditor() const
+{
+    if (!m_editorTabWidget)
+        return nullptr;
+    return qobject_cast<Editor*>(m_editorTabWidget->currentWidget());
+}
+
 /**
  * @brief Handles file open action
  *

@@ -41,6 +41,7 @@ public:
     void tabAboutToClose(int index, bool askPin, bool &allow_close);
     void openFile(const QString& filePath);
     void openFileInViewer(const QString &fileName);
+    Editor* currentEditor() const;
 
 protected:
     void closeEvent(QCloseEvent *event) override;

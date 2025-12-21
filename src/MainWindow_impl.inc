@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "editor/editor.h"
 
 
 bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
@@ -452,6 +453,16 @@ void MainWindow::openEditorForFile(const QString& filePath) {
     if (!editorFrame)
         editorFrame = new EditorFrame(this);
     editorFrame->openFile(filePath);
+
+    // If opening config file, connect signal to reload config on save
+    if (Config::instance().isConfigFile(filePath)) {
+        if (Editor* editor = editorFrame->currentEditor()) {
+            connect(editor, &Editor::configFileSaved,
+                    this, &MainWindow::onConfigSaved,
+                    Qt::UniqueConnection);
+        }
+    }
+
     editorFrame->show();
     editorFrame->raise();
     editorFrame->activateWindow();

@@ -85,6 +85,11 @@ private:
     void openViewerForFile(const QString& filePath);
     void goToFile(const QString& dir, const QString& name);
 
+    void applyConfigGeometry();
+
+public slots:
+    void onConfigSaved();
+
 private slots:
     void onOpenTerminal();
     void onExternalToolClicked();

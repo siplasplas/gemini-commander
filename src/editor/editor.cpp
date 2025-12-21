@@ -149,6 +149,12 @@ bool Editor::saveFile() {
         return false;
     }
     qDebug() << "Document saved successfully:" << m_filePath;
+
+    // If config file was saved, emit signal to notify MainWindow
+    if (Config::instance().isConfigFile(m_filePath)) {
+        emit configFileSaved();
+    }
+
     // isModified should be automatically set to false by KTextEditor::Document on successful save
     return true;
 }
