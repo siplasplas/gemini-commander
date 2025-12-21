@@ -1139,7 +1139,8 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                         this, tr("Overwrite"),
                         tr("File '%1' already exists.\nOverwrite?").arg(name),
                         QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
-                        QMessageBox::No
+
+                        QMessageBox::Yes
                     );
                     if (reply == QMessageBox::Cancel)
                         break;
@@ -1210,7 +1211,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                 this, tr("Overwrite"),
                 tr("File '%1' already exists.\nOverwrite?").arg(finalDstInfo.fileName()),
                 QMessageBox::Yes | QMessageBox::No,
-                QMessageBox::No
+                QMessageBox::Yes
             );
             if (reply != QMessageBox::Yes)
                 return;
@@ -1401,7 +1402,7 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
                     this, tr("Overwrite"),
                     tr("'%1' already exists.\nOverwrite?").arg(name),
                     QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
-                    QMessageBox::No
+                    QMessageBox::Yes
                 );
                 if (reply == QMessageBox::Cancel)
                     break;
@@ -1456,7 +1457,7 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
             this, tr("Overwrite"),
             tr("'%1' already exists.\nOverwrite?").arg(finalDstInfo.fileName()),
             QMessageBox::Yes | QMessageBox::No,
-            QMessageBox::No
+            QMessageBox::Yes
         );
         if (reply != QMessageBox::Yes)
             return;
