@@ -237,12 +237,19 @@ void MainWindow::setupUi() {
     });
     commandsMenu->addAction(m_searchAction);
 
+    // Commands menu - Run Terminal (F9 shortcut managed by KeyRouter/TOML)
+    QAction* runTerminalAction = new QAction(tr("Run Terminal"), this);
+    runTerminalAction->setIcon(QIcon(":/icons/terminal.svg"));
+    runTerminalAction->setShortcut(QKeySequence(Qt::Key_F9));
+    connect(runTerminalAction, &QAction::triggered, this, &MainWindow::onOpenTerminal);
+    commandsMenu->addAction(runTerminalAction);
+
     // --- TOOLBAR ---
     m_mainToolBar = addToolBar(tr("Main toolbar"));
     m_mainToolBar->setMovable(true);
 
     m_openTerminalAction = new QAction(tr("Terminal"), this);
-    // Ikonka później: m_openTerminalAction->setIcon(QIcon(":/icons/terminal.svg"));
+    m_openTerminalAction->setIcon(QIcon(":/icons/terminal.svg"));
     connect(m_openTerminalAction, &QAction::triggered,
             this, &MainWindow::onOpenTerminal);
 
