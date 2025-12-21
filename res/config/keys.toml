@@ -75,6 +75,12 @@ keys = [
     { key = "Ctrl+R",              handler = "doRefresh" },
 ]
 
+[SearchDialog]
+keys = [
+{ key = "F3",                  handler = "doView" },
+{ key = "F4",                  handler = "doEdit" },
+]
+
 # MainFrame - dual panel operations (Tab switches panels)
 [MainFrame]
 keys = [

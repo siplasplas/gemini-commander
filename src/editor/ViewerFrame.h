@@ -19,6 +19,8 @@ public:
     explicit ViewerFrame(const QString& filePath, QWidget *parent = nullptr);
     ~ViewerFrame() override;
 
+    void openFile(const QString& filePath);
+
 private:
     std::unique_ptr<QFile> file;
     wid::TextViewer *m_viewer = nullptr;

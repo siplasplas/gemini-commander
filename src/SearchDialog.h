@@ -69,6 +69,16 @@ class SearchDialog : public QDialog {
 public:
     explicit SearchDialog(const QString& startPath, QWidget* parent = nullptr);
     ~SearchDialog();
+    Q_INVOKABLE bool doView(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doEdit(QObject *obj, QKeyEvent *keyEvent);
+
+    // Get currently selected file path (dir + name)
+    QString currentPanelPath() const;
+
+signals:
+    void requestEdit(const QString& filePath);
+    void requestView(const QString& filePath);
+    void requestGoToFile(const QString& dir, const QString& name);
 
 private slots:
     void onStartSearch();
@@ -76,7 +86,7 @@ private slots:
     void onResultFound(const QString& path, qint64 size, const QDateTime& modified);
     void onSearchFinished();
     void onProgressUpdate(int searchedFiles, int foundFiles);
-    void onResultDoubleClicked(int row, int column);
+    void onResultActivated(int row);
 
 private:
     void setupUi();

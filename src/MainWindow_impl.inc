@@ -257,9 +257,17 @@ bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
 
     QString startPath = currentFilePanel()->currentPath;
 
-    SearchDialog* dialog = new SearchDialog(startPath, this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->show();
+    if (!m_searchDialog) {
+        m_searchDialog = new SearchDialog(startPath, this);
+
+        connect(m_searchDialog, &SearchDialog::requestEdit, this, &MainWindow::openEditorForFile);
+        connect(m_searchDialog, &SearchDialog::requestView, this, &MainWindow::openViewerForFile);
+        connect(m_searchDialog, &SearchDialog::requestGoToFile, this, &MainWindow::goToFile);
+    }
+
+    m_searchDialog->show();
+    m_searchDialog->raise();
+    m_searchDialog->activateWindow();
 
     return true;
 }
@@ -298,6 +306,8 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
     }
     if (!viewerFrame)
         viewerFrame = new ViewerFrame(fullPath);
+    else
+        viewerFrame->openFile(fullPath);
     viewerFrame->show();
     viewerFrame->raise();
     viewerFrame->activateWindow();
@@ -432,5 +442,47 @@ bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
         panel->loadDirectory();
     }
     return true;
+}
+
+void MainWindow::openEditorForFile(const QString& filePath) {
+    QFileInfo info(filePath);
+    if (!info.isFile())
+        return;
+
+    if (!editorFrame)
+        editorFrame = new EditorFrame(this);
+    editorFrame->openFile(filePath);
+    editorFrame->show();
+    editorFrame->raise();
+    editorFrame->activateWindow();
+}
+
+void MainWindow::openViewerForFile(const QString& filePath) {
+    QFileInfo info(filePath);
+    if (!info.isFile())
+        return;
+
+    if (!viewerFrame)
+        viewerFrame = new ViewerFrame(filePath);
+    else
+        viewerFrame->openFile(filePath);
+    viewerFrame->show();
+    viewerFrame->raise();
+    viewerFrame->activateWindow();
+}
+
+void MainWindow::goToFile(const QString& dir, const QString& name) {
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return;
+
+    QDir targetDir(dir);
+    if (!targetDir.exists())
+        return;
+
+    panel->currentPath = targetDir.absolutePath();
+    panel->loadDirectory();
+    panel->selectEntryByName(name);
+    panel->setFocus();
 }
 

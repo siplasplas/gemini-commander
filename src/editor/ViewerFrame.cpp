@@ -31,3 +31,29 @@ ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
 }
 
 ViewerFrame::~ViewerFrame() = default;
+
+void ViewerFrame::openFile(const QString& filePath) {
+    // Clean up previous viewer
+    if (m_viewer) {
+        m_layout->removeWidget(m_viewer);
+        delete m_viewer;
+        m_viewer = nullptr;
+    }
+
+    // Close previous file
+    file.reset();
+
+    setWindowTitle(filePath);
+
+    file = std::make_unique<QFile>(filePath);
+    if (!file->open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qDebug() << "error open file";
+        return;
+    }
+    if (file->size() == 0)
+        return;
+    uchar *addr = file->map(0, file->size());
+    m_viewer = new wid::TextViewer((char *) addr, file->size(), this);
+    m_layout->addWidget(m_viewer);
+    setFocusProxy(m_viewer);
+}

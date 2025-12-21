@@ -264,6 +264,7 @@ SearchDialog::SearchDialog(const QString& startPath, QWidget* parent)
     , m_searchThread(nullptr)
     , m_searchWorker(nullptr)
 {
+    ObjectRegistry::add(this, "SearchDialog");
     setWindowTitle(tr("Find Files"));
     resize(700, 500);
 
@@ -323,8 +324,8 @@ void SearchDialog::setupUi()
     connect(m_stopButton, &QPushButton::clicked, this, &SearchDialog::onStopSearch);
     connect(m_closeButton, &QPushButton::clicked, this, &QDialog::accept);
 
-    connect(m_resultsView, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
-        onResultDoubleClicked(index.row(), index.column());
+    connect(m_resultsView, &QTableView::activated, this, [this](const QModelIndex& index) {
+        onResultActivated(index.row());
     });
 }
 
@@ -448,6 +449,7 @@ void SearchDialog::createResultsTab()
     m_resultsView->horizontalHeader()->setSortIndicatorShown(true);
     m_resultsView->horizontalHeader()->setSectionsClickable(true);
     m_resultsView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_resultsView->setSelectionMode(QAbstractItemView::SingleSelection);
     m_resultsView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_resultsView->setSortingEnabled(true);  // Allow user to sort by clicking headers
 
@@ -458,6 +460,17 @@ void SearchDialog::createResultsTab()
     m_resultsView->setColumnWidth(3, 130);  // Modified
 
     layout->addWidget(m_resultsView);
+
+    // Sync selection with current index after sorting (layout changes)
+    connect(m_resultsModel, &QAbstractItemModel::layoutChanged, this, [this]() {
+        QModelIndex current = m_resultsView->currentIndex();
+        if (current.isValid()) {
+            m_resultsView->selectionModel()->select(
+                current,
+                QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows
+            );
+        }
+    });
 
     // Status label
     m_statusLabel = new QLabel(tr("Ready"), m_resultsTab);
@@ -565,20 +578,59 @@ void SearchDialog::onSearchFinished()
     m_searchThread = nullptr;
 }
 
-void SearchDialog::onResultDoubleClicked(int row, int column)
+void SearchDialog::onResultActivated(int row)
 {
-    Q_UNUSED(column);
-
     if (row < 0 || row >= m_resultsModel->resultCount())
         return;
 
-    // Get file path from model (reconstruct from dir + name)
     const SearchResult& result = m_resultsModel->resultAt(row);
-    QString fullPath = result.dir + "/" + result.name;
+    hide();
+    emit requestGoToFile(result.dir, result.name);
+}
+
+QString SearchDialog::currentPanelPath() const
+{
+    QModelIndex idx = m_resultsView->currentIndex();
+    if (!idx.isValid())
+        return {};
+
+    int row = idx.row();
+    if (row < 0 || row >= m_resultsModel->resultCount())
+        return {};
+
+    const SearchResult& result = m_resultsModel->resultAt(row);
+    return result.dir + "/" + result.name;
+}
+
+bool SearchDialog::doEdit(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    QString fullPath = currentPanelPath();
+    if (fullPath.isEmpty())
+        return true;
 
     QFileInfo info(fullPath);
-    if (info.exists()) {
-        // Open file with default application
-        QDesktopServices::openUrl(QUrl::fromLocalFile(fullPath));
-    }
+    if (!info.isFile())
+        return true;
+
+    emit requestEdit(fullPath);
+    return true;
 }
+
+bool SearchDialog::doView(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    QString fullPath = currentPanelPath();
+    if (fullPath.isEmpty())
+        return true;
+
+    QFileInfo info(fullPath);
+    if (!info.isFile())
+        return true;
+
+    emit requestView(fullPath);
+    return true;
+}
+

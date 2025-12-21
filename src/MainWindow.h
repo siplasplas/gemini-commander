@@ -14,6 +14,7 @@
 
 class ViewerFrame;
 class FilePanel;
+class SearchDialog;
 QT_BEGIN_NAMESPACE
 class QSplitter;
 class QLineEdit;
@@ -42,6 +43,7 @@ private:
     QLineEdit *commandLineEdit;
     EditorFrame *editorFrame = nullptr;
     QPointer<ViewerFrame> viewerFrame;
+    SearchDialog* m_searchDialog = nullptr;
     int numberForWidget(QTableView* widget);
     void showFavoriteDirsMenu(Side side);
 
@@ -77,6 +79,11 @@ private:
     void updateExternalToolButton();
     QString findDesktopFile(const QString& executablePath);
     QString extractIconFromDesktop(const QString& desktopFilePath);
+
+    // Methods for opening editor/viewer with specific file
+    void openEditorForFile(const QString& filePath);
+    void openViewerForFile(const QString& filePath);
+    void goToFile(const QString& dir, const QString& name);
 
 private slots:
     void onOpenTerminal();
