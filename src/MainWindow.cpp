@@ -105,6 +105,13 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
+    // If editor is visible, close it first instead of closing the app
+    if (editorFrame && editorFrame->isVisible()) {
+        editorFrame->close();
+        event->ignore();
+        return;
+    }
+
     // Save window geometry before closing
     // Use frameGeometry for position (includes window decorations)
     QRect frame = frameGeometry();
