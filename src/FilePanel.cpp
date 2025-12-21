@@ -618,7 +618,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     setColumnWidth(COLUMN_NAME, 200);
     setColumnWidth(COLUMN_EXT, 80);
     setColumnWidth(COLUMN_SIZE, 100);
-    setColumnWidth(COLUMN_DATE, 150);
+    setColumnWidth(COLUMN_DATE, 125);
 
 
     header->setSectionsClickable(true);
