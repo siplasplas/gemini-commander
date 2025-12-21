@@ -94,6 +94,12 @@ private:
     QFileSystemWatcher* m_dirWatcher = nullptr;
     void updateWatchedDirectories();
 
+    // Mounts monitoring (polling-based for reliability)
+    QTimer* m_mountsPollTimer = nullptr;
+    QStringList m_lastMountPoints;
+    void refreshMountsToolbar();
+    void checkMountsChanged();
+
     // Function bar
     FunctionBar* m_functionBar = nullptr;
     QAction* m_showFunctionBarAction = nullptr;

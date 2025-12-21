@@ -90,6 +90,17 @@ MainWindow::MainWindow(QWidget *parent)
                 this, &MainWindow::updateWatchedDirectories);
     }
     updateWatchedDirectories();
+
+    // Mounts monitoring - use polling timer because:
+    // 1. /proc/mounts doesn't work with inotify (procfs)
+    // 2. Directory watching is unreliable - inotify events may fire before /proc/mounts is updated
+    // 3. User directories like /run/media/$USER may not exist at startup
+    m_lastMountPoints = listMountPoints();
+
+    m_mountsPollTimer = new QTimer(this);
+    m_mountsPollTimer->setInterval(500); // Check every 500ms for responsive mount detection
+    connect(m_mountsPollTimer, &QTimer::timeout, this, &MainWindow::checkMountsChanged);
+    m_mountsPollTimer->start();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -147,6 +158,15 @@ void MainWindow::onConfigSaved()
 
     // Update external tool button (in case path changed)
     updateExternalToolButton();
+
+    // Update function bar visibility
+    bool showFunctionBar = Config::instance().showFunctionBar();
+    if (showFunctionBar) {
+        m_functionBar->show();
+    } else {
+        m_functionBar->hide();
+    }
+    m_showFunctionBarAction->setChecked(showFunctionBar);
 }
 
 void MainWindow::setupUi() {
@@ -324,14 +344,20 @@ void MainWindow::setupUi() {
     m_showFunctionBarAction->setCheckable(true);
     m_showFunctionBarAction->setChecked(Config::instance().showFunctionBar());
     connect(m_showFunctionBarAction, &QAction::toggled, this, [this](bool checked) {
-        m_functionBar->setVisible(checked);
+        if (checked) {
+            m_functionBar->show();
+        } else {
+            m_functionBar->hide();
+        }
         Config::instance().setShowFunctionBar(checked);
         Config::instance().save();
     });
     viewMenu->addAction(m_showFunctionBarAction);
 
     // Apply initial function bar visibility from config
-    m_functionBar->setVisible(Config::instance().showFunctionBar());
+    if (!Config::instance().showFunctionBar()) {
+        m_functionBar->hide();
+    }
 }
 
 Side MainWindow::opposite(Side side){
@@ -1559,6 +1585,39 @@ void MainWindow::onDirectoryChanged(const QString& path)
         if (!m_dirWatcher->directories().contains(path)) {
             m_dirWatcher->addPath(path);
         }
+    }
+}
+
+void MainWindow::checkMountsChanged()
+{
+    QStringList currentMounts = listMountPoints();
+    if (currentMounts != m_lastMountPoints) {
+        m_lastMountPoints = currentMounts;
+        refreshMountsToolbar();
+    }
+}
+
+void MainWindow::refreshMountsToolbar()
+{
+    if (!m_mountsToolBar)
+        return;
+
+    // Clear and rebuild toolbar
+    m_mountsToolBar->clear();
+
+    for (const QString& mp : m_lastMountPoints) {
+        QAction* act = new QAction(mp, m_mountsToolBar);
+
+        connect(act, &QAction::triggered, this, [this, mp]() {
+            FilePanel* panel = currentFilePanel();
+            if (!panel)
+                return;
+
+            panel->currentPath = mp;
+            panel->loadDirectory();
+        });
+
+        m_mountsToolBar->addAction(act);
     }
 }
 
