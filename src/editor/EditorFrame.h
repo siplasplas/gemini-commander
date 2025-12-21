@@ -54,6 +54,7 @@ private slots:
     void onFindTriggered();
     void onFindNextTriggered();
     void onFindPrevTriggered();
+    void onReplaceTriggered();
 
 private:
     MruTabWidget *m_editorTabWidget;
@@ -71,6 +72,7 @@ private:
     QAction *m_findAction;
     QAction *m_findNextAction;
     QAction *m_findPrevAction;
+    QAction *m_replaceAction;
 
     void viewFileInEditor(const QString& filePath);
     int findTabByPath(const QString& filePath);

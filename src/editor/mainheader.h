@@ -38,7 +38,7 @@ public:
     void setupMenus(QAction* openFile, QAction* closeFile,
                     QAction* exitApp, QAction* showSpecialChars, QAction* aboutApp,
                     QAction* findAction = nullptr, QAction* findNextAction = nullptr,
-                    QAction* findPrevAction = nullptr);
+                    QAction* findPrevAction = nullptr, QAction* replaceAction = nullptr);
 
     /**
      * @brief Configures toolbar buttons

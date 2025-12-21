@@ -69,7 +69,7 @@ EditorFrame::EditorFrame(QWidget* parent)
     createActions();
     m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
                              m_exitAction, m_showSpecialCharsAction, m_aboutAction,
-                             m_findAction, m_findNextAction, m_findPrevAction);
+                             m_findAction, m_findNextAction, m_findPrevAction, m_replaceAction);
 
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
@@ -148,6 +148,9 @@ void EditorFrame::createActions()
 
     m_findPrevAction = new QAction(tr("Find &Previous\tShift+F3"), this);
     connect(m_findPrevAction, &QAction::triggered, this, &EditorFrame::onFindPrevTriggered);
+
+    m_replaceAction = new QAction(tr("&Replace...\tCtrl+H"), this);
+    connect(m_replaceAction, &QAction::triggered, this, &EditorFrame::onReplaceTriggered);
 }
 
 /**
@@ -438,6 +441,17 @@ void EditorFrame::onFindPrevTriggered()
     QAction* findPrevAction = editor->view()->action("edit_find_prev");
     if (findPrevAction)
         findPrevAction->trigger();
+}
+
+void EditorFrame::onReplaceTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view())
+        return;
+
+    QAction* replaceAction = editor->view()->action("edit_replace");
+    if (replaceAction)
+        replaceAction->trigger();
 }
 
 #include  "EditorFrame_impl.inc"
