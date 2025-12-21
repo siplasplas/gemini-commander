@@ -249,11 +249,13 @@ void FilePanel::sortEntries() {
                 if (aDir && bDir) {
                   return cmpNames(asc);
                 } else if (!aDir && !bDir) {
-                  const QString ea = a.suffix();
-                  const QString eb = b.suffix();
-                  int c = ea.compare(eb, Qt::CaseInsensitive);
-                  if (c != 0)
-                    return asc ? (c < 0) : (c > 0);
+                  // For hidden files like ".gitignore" where completeBaseName() is empty,
+                  // treat as having no extension (same logic as getTextColumn)
+                  QString ea = a.completeBaseName().isEmpty() ? QString() : a.suffix();
+                  QString eb = b.completeBaseName().isEmpty() ? QString() : b.suffix();
+                  int cmp = ea.compare(eb, Qt::CaseInsensitive);
+                  if (cmp != 0)
+                    return asc ? (cmp < 0) : (cmp > 0);
                   return cmpNames(asc);
                 } else {
                   return cmpNames(asc);
