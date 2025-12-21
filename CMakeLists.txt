@@ -172,17 +172,53 @@ install(TARGETS ${PROJECT_NAME}
 install(FILES res/gemini-commander.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 
-# Install icons
-foreach(size 16 32 48 64 128 256)
-    install(FILES res/icons/gemini-commander-${size}.png
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps
-            RENAME gemini-commander.png)
-endforeach()
-
 # Install SVG icon (scalable)
 install(FILES res/icons/gemini-commander.svg
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
         RENAME gemini-commander.svg)
+
+# Generate and install PNG icons from SVG at install time
+find_program(INKSCAPE_EXECUTABLE inkscape)
+find_program(RSVG_CONVERT_EXECUTABLE rsvg-convert)
+
+if(INKSCAPE_EXECUTABLE)
+    set(SVG_CONVERTER "${INKSCAPE_EXECUTABLE}")
+    set(SVG_CONVERTER_ARGS "--export-type=png --export-filename=")
+    set(SVG_CONVERTER_SIZE_ARG "--export-width=")
+elseif(RSVG_CONVERT_EXECUTABLE)
+    set(SVG_CONVERTER "${RSVG_CONVERT_EXECUTABLE}")
+    set(SVG_CONVERTER_ARGS "-o ")
+    set(SVG_CONVERTER_SIZE_ARG "-w ")
+endif()
+
+if(SVG_CONVERTER)
+    foreach(size 16 32 48 64 128 256)
+        install(CODE "
+            set(ICON_DIR \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps\")
+            file(MAKE_DIRECTORY \"\${ICON_DIR}\")
+            set(OUTPUT_FILE \"\${ICON_DIR}/gemini-commander.png\")
+            set(INPUT_FILE \"${CMAKE_CURRENT_SOURCE_DIR}/res/icons/gemini-commander.svg\")
+            if(\"${INKSCAPE_EXECUTABLE}\" STREQUAL \"${SVG_CONVERTER}\")
+                execute_process(
+                    COMMAND ${SVG_CONVERTER} \"\${INPUT_FILE}\" --export-type=png --export-filename=\${OUTPUT_FILE} --export-width=${size} --export-height=${size}
+                    RESULT_VARIABLE result
+                )
+            else()
+                execute_process(
+                    COMMAND ${SVG_CONVERTER} -w ${size} -h ${size} -o \"\${OUTPUT_FILE}\" \"\${INPUT_FILE}\"
+                    RESULT_VARIABLE result
+                )
+            endif()
+            if(result EQUAL 0)
+                message(STATUS \"Generated: \${OUTPUT_FILE}\")
+            else()
+                message(WARNING \"Failed to generate: \${OUTPUT_FILE}\")
+            endif()
+        ")
+    endforeach()
+else()
+    message(WARNING "No SVG converter found (inkscape or rsvg-convert). PNG icons will not be installed.")
+endif()
 
 enable_testing()
 add_subdirectory(tests)
