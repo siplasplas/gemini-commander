@@ -38,6 +38,7 @@
 
 #include "SortedDirIterator.h"
 #include "SearchDialog.h"
+#include "FunctionBar.h"
 #include "editor/ViewerFrame.h"
 #include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"
@@ -201,8 +202,32 @@ void MainWindow::setupUi() {
     bottomLayout->addWidget(currentPathLabel, 3);
     bottomLayout->addWidget(commandLineEdit, 5);
 
+    // Function bar
+    m_functionBar = new FunctionBar(centralWidget);
+    connect(m_functionBar, &FunctionBar::viewClicked, this, [this]() {
+        doView(nullptr, nullptr);
+    });
+    connect(m_functionBar, &FunctionBar::editClicked, this, [this]() {
+        doEdit(nullptr, nullptr);
+    });
+    connect(m_functionBar, &FunctionBar::copyClicked, this, [this]() {
+        doCopy(nullptr, nullptr);
+    });
+    connect(m_functionBar, &FunctionBar::moveClicked, this, [this]() {
+        doMove(nullptr, nullptr);
+    });
+    connect(m_functionBar, &FunctionBar::mkdirClicked, this, [this]() {
+        doMakeDirectory(nullptr, nullptr);
+    });
+    connect(m_functionBar, &FunctionBar::deleteClicked, this, [this]() {
+        doDeleteToTrash(nullptr, nullptr);
+    });
+    connect(m_functionBar, &FunctionBar::terminalClicked, this, &MainWindow::onOpenTerminal);
+    connect(m_functionBar, &FunctionBar::exitClicked, this, &QWidget::close);
+
     mainLayout->addWidget(splitter);
     mainLayout->addLayout(bottomLayout);
+    mainLayout->addWidget(m_functionBar);
     mainLayout->setStretchFactor(splitter, 1);
 
     setCentralWidget(centralWidget);
@@ -293,6 +318,20 @@ void MainWindow::setupUi() {
 
     // Initialize external tool button from config
     updateExternalToolButton();
+
+    // View menu - Function Bar toggle
+    m_showFunctionBarAction = new QAction(tr("Show Function Bar"), this);
+    m_showFunctionBarAction->setCheckable(true);
+    m_showFunctionBarAction->setChecked(Config::instance().showFunctionBar());
+    connect(m_showFunctionBarAction, &QAction::toggled, this, [this](bool checked) {
+        m_functionBar->setVisible(checked);
+        Config::instance().setShowFunctionBar(checked);
+        Config::instance().save();
+    });
+    viewMenu->addAction(m_showFunctionBarAction);
+
+    // Apply initial function bar visibility from config
+    m_functionBar->setVisible(Config::instance().showFunctionBar());
 }
 
 Side MainWindow::opposite(Side side){

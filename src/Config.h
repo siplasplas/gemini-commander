@@ -59,6 +59,10 @@ public:
   // Check if given path is the config file
   bool isConfigFile(const QString& path) const;
 
+  // UI visibility
+  bool showFunctionBar() const { return m_showFunctionBar; }
+  void setShowFunctionBar(bool show) { m_showFunctionBar = show; }
+
 private:
   Config() = default;
 
@@ -71,6 +75,7 @@ private:
   int m_windowHeight = 768;
   int m_windowX = -1;  // -1 means not set (use system default)
   int m_windowY = -1;
+  bool m_showFunctionBar = true;
 };
 
 #endif

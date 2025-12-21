@@ -126,6 +126,8 @@ add_executable(${PROJECT_NAME}
         src/Config.h
         src/FilePaneWidget.cpp
         src/FilePaneWidget.h
+        src/FunctionBar.cpp
+        src/FunctionBar.h
         src/SearchEdit.h
         src/SortedDirIterator.cpp
         src/SortedDirIterator.h

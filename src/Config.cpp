@@ -75,6 +75,7 @@ bool Config::load(const QString& path)
     m_windowHeight = 768;
     m_windowX = -1;
     m_windowY = -1;
+    m_showFunctionBar = true;
 
     QFile f(path);
     if (!f.exists()) {
@@ -117,6 +118,13 @@ bool Config::load(const QString& path)
                 m_windowX = static_cast<int>(*x);
             if (auto y = window["y"].value<int64_t>())
                 m_windowY = static_cast<int>(*y);
+        }
+
+        // [ui] section
+        if (tbl.contains("ui")) {
+            auto& ui = *tbl["ui"].as_table();
+            if (auto show = ui["showFunctionBar"].value<bool>())
+                m_showFunctionBar = *show;
         }
 
         if (tbl.contains("favorites")) {
@@ -213,6 +221,11 @@ bool Config::save() const
     toml::table iconsTbl;
     iconsTbl.insert("mode", iconModeToString(m_iconMode));
     tbl.insert("icons", iconsTbl);
+
+    // [ui] section
+    toml::table uiTbl;
+    uiTbl.insert("showFunctionBar", m_showFunctionBar);
+    tbl.insert("ui", uiTbl);
 
     // [external_tool] section
     if (!m_externalToolPath.isEmpty()) {

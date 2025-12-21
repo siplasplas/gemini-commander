@@ -13,6 +13,7 @@
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
 
+class FunctionBar;
 class ViewerFrame;
 class FilePanel;
 class SearchDialog;
@@ -92,6 +93,10 @@ private:
     // Directory monitoring
     QFileSystemWatcher* m_dirWatcher = nullptr;
     void updateWatchedDirectories();
+
+    // Function bar
+    FunctionBar* m_functionBar = nullptr;
+    QAction* m_showFunctionBarAction = nullptr;
 
 public slots:
     void onConfigSaved();
