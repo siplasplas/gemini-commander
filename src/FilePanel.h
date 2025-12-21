@@ -101,6 +101,7 @@ public:
 
     QString getRowName(int row) const;
     void selectEntryByName(const QString& fullName);
+    void selectFirstEntry();
     void trigger(const QString &name);
     void activate(const QString &name);
     void addAllEntries();

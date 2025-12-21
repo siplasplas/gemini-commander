@@ -491,6 +491,14 @@ void FilePanel::selectEntryByName(const QString& fullName)
         restoreSelectionFromMemory();
 }
 
+void FilePanel::selectFirstEntry()
+{
+    if (model->rowCount() > 0) {
+        m_lastSelectedRow = 0;
+        restoreSelectionFromMemory();
+    }
+}
+
 void FilePanel::trigger(const QString &name) {
     QString selectedName;
     QDir dir(currentPath);

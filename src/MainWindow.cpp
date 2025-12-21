@@ -517,6 +517,7 @@ void MainWindow::showFavoriteDirsMenu(Side side)
 
     panel->currentPath = dir.absolutePath();
     panel->loadDirectory();
+    panel->selectFirstEntry();
     panel->setFocus();
 }
 
