@@ -342,6 +342,30 @@ bool MainWindow::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+// Helper: check if path is safely inside baseDir (not parent, not sibling, not self)
+static bool isPathSafeToDelete(const QString& path, const QString& baseDir, QString& errorMsg) {
+    QFileInfo pathInfo(path);
+    QFileInfo baseInfo(baseDir);
+
+    // Get canonical paths (resolves symlinks, .., etc.)
+    QString canonicalPath = pathInfo.canonicalFilePath();
+    QString canonicalBase = baseInfo.canonicalFilePath();
+
+    if (canonicalPath.isEmpty() || canonicalBase.isEmpty()) {
+        errorMsg = QObject::tr("Cannot resolve path.");
+        return false;
+    }
+
+    // Path must start with baseDir + "/" (be inside it)
+    if (!canonicalPath.startsWith(canonicalBase + "/")) {
+        errorMsg = QObject::tr("Cannot delete items outside the current directory.\n"
+                               "Item: %1\nCurrent dir: %2").arg(canonicalPath, canonicalBase);
+        return false;
+    }
+
+    return true;
+}
+
 bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -357,11 +381,27 @@ bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     if (name.isEmpty())
         return true;
 
+    // Block "." and ".."
+    if (name == "." || name == "..") {
+        QMessageBox::warning(this, tr("Delete"),
+            tr("Cannot delete '%1'.").arg(name));
+        return true;
+    }
+
     QDir dir(panel->currentPath);
     QString fullPath = dir.absoluteFilePath(name);
     QFileInfo info(fullPath);
     if (!info.exists())
         return true;
+
+    // For directories, verify it's inside current directory
+    if (info.isDir()) {
+        QString errorMsg;
+        if (!isPathSafeToDelete(fullPath, panel->currentPath, errorMsg)) {
+            QMessageBox::warning(this, tr("Delete"), errorMsg);
+            return true;
+        }
+    }
 
     QString question;
     bool useTrash = true;
@@ -419,11 +459,27 @@ bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     if (name.isEmpty())
         return true;
 
+    // Block "." and ".."
+    if (name == "." || name == "..") {
+        QMessageBox::warning(this, tr("Delete"),
+            tr("Cannot delete '%1'.").arg(name));
+        return true;
+    }
+
     QDir dir(panel->currentPath);
     QString fullPath = dir.absoluteFilePath(name);
     QFileInfo info(fullPath);
     if (!info.exists())
         return true;
+
+    // For directories, verify it's inside current directory
+    if (info.isDir()) {
+        QString errorMsg;
+        if (!isPathSafeToDelete(fullPath, panel->currentPath, errorMsg)) {
+            QMessageBox::warning(this, tr("Delete"), errorMsg);
+            return true;
+        }
+    }
 
     QString question = tr("PERMANENTLY delete '%1'? This cannot be undone!").arg(name);
 
