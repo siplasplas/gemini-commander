@@ -31,6 +31,102 @@
 #include "SizeFormat.h"
 #include "keys/KeyRouter.h"
 #include "SortedDirIterator.h"
+#include <QProcess>
+#include <QStandardPaths>
+
+namespace {
+
+// Parse command line into program and arguments, handling quotes
+// Returns: {program, arguments}
+std::pair<QString, QStringList> parseCommandLine(const QString& cmdLine)
+{
+    QStringList parts;
+    QString current;
+    bool inSingleQuote = false;
+    bool inDoubleQuote = false;
+    bool escaped = false;
+
+    for (int i = 0; i < cmdLine.length(); ++i) {
+        QChar c = cmdLine[i];
+
+        if (escaped) {
+            current += c;
+            escaped = false;
+            continue;
+        }
+
+        if (c == '\\' && !inSingleQuote) {
+            escaped = true;
+            continue;
+        }
+
+        if (c == '\'' && !inDoubleQuote) {
+            inSingleQuote = !inSingleQuote;
+            continue;
+        }
+
+        if (c == '"' && !inSingleQuote) {
+            inDoubleQuote = !inDoubleQuote;
+            continue;
+        }
+
+        if (c.isSpace() && !inSingleQuote && !inDoubleQuote) {
+            if (!current.isEmpty()) {
+                parts.append(current);
+                current.clear();
+            }
+            continue;
+        }
+
+        current += c;
+    }
+
+    if (!current.isEmpty()) {
+        parts.append(current);
+    }
+
+    if (parts.isEmpty()) {
+        return {{}, {}};
+    }
+
+    QString program = parts.takeFirst();
+    return {program, parts};
+}
+
+// Find executable in PATH or return absolute path if it exists
+QString resolveExecutable(const QString& program, const QString& workingDir)
+{
+    // If program contains path separator, treat as path
+    if (program.contains('/')) {
+        QString path = program;
+        // Handle relative paths (e.g., ./run.sh)
+        if (!QDir::isAbsolutePath(path)) {
+            path = QDir(workingDir).absoluteFilePath(program);
+        }
+        QFileInfo info(path);
+        if (info.exists() && info.isExecutable()) {
+            return info.absoluteFilePath();
+        }
+        return {};
+    }
+
+    // Search in PATH using Qt's standard mechanism
+    QString found = QStandardPaths::findExecutable(program);
+    if (!found.isEmpty()) {
+        return found;
+    }
+
+    return {};
+}
+
+// Check if file is executable (has execute permission)
+bool isExecutableFile(const QString& path)
+{
+    QFileInfo info(path);
+    return info.exists() && info.isFile() && info.isExecutable();
+}
+
+} // anonymous namespace
 
 // Static pattern history shared between select/unselect group dialogs
 QStringList FilePanel::s_patternHistory = { "*" };
@@ -431,14 +527,66 @@ void FilePanel::trigger(const QString &name) {
     selectEntryByName(selectedName);
 }
 
-void FilePanel::activate(const QString &name) {
-    assert(!name.isEmpty());
-    QDir dir(currentPath);
-    QFileInfo info(dir.absoluteFilePath(name));
-    const QString absPath = info.absoluteFilePath();
-    QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
-    loadDirectory();
-    selectEntryByName(name);
+void FilePanel::activate(const QString &commandLine) {
+    if (commandLine.isEmpty())
+        return;
+
+    auto [program, args] = parseCommandLine(commandLine);
+    if (program.isEmpty())
+        return;
+
+    // Handle built-in shell command: cd
+    if (program == "cd") {
+        QString targetDir;
+        if (args.isEmpty()) {
+            // cd without argument = go to home directory
+            targetDir = QDir::homePath();
+        } else {
+            targetDir = args.first();
+            // Handle relative paths
+            if (!QDir::isAbsolutePath(targetDir)) {
+                targetDir = QDir(currentPath).absoluteFilePath(targetDir);
+            }
+        }
+
+        QDir newDir(targetDir);
+        if (newDir.exists()) {
+            currentPath = newDir.absolutePath();
+            loadDirectory();
+            selectEntryByName({});
+        }
+        return;
+    }
+
+    // Try to resolve as executable (with path or in PATH)
+    QString execPath = resolveExecutable(program, currentPath);
+
+    if (!execPath.isEmpty()) {
+        // It's an executable - run it without waiting
+        QProcess::startDetached(execPath, args, currentPath);
+        return;
+    }
+
+    // Not an executable command - treat as a file to open with default app
+    // Build absolute path from currentPath if needed
+    QString absPath;
+    if (QDir::isAbsolutePath(program)) {
+        absPath = program;
+    } else {
+        absPath = QDir(currentPath).absoluteFilePath(program);
+    }
+
+    QFileInfo info(absPath);
+    if (info.exists()) {
+        // Check if it's an executable file (even without execute permission set)
+        if (info.isFile() && info.isExecutable()) {
+            QProcess::startDetached(absPath, args, currentPath);
+        } else {
+            // Open with default application (documents, images, etc.)
+            QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
+        }
+        // Note: loadDirectory/selectEntryByName is called by trigger() if needed
+    }
 }
 
 FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(parent) {
