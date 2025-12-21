@@ -16,6 +16,7 @@
     Q_INVOKABLE bool doFocusCommandLine(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doMakeDirectoryOpposite(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doMove(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doMoveInPlace(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doPackFiles(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doRemoveTab(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doRename(QObject *obj, QKeyEvent *keyEvent);

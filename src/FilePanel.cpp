@@ -1381,6 +1381,26 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow)
     }
 }
 
+QStringList FilePanel::getMarkedNames() const
+{
+    QStringList result;
+    for (const auto& entry : entries) {
+        if (entry.isMarked) {
+            result << entry.info.fileName();
+        }
+    }
+    return result;
+}
+
+bool FilePanel::hasMarkedEntries() const
+{
+    for (const auto& entry : entries) {
+        if (entry.isMarked)
+            return true;
+    }
+    return false;
+}
+
 void FilePanel::rememberSelection()
 {
     QModelIndex idx = currentIndex();

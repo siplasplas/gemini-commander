@@ -103,7 +103,7 @@ keys = [
     { key = "Shift+F5",            handler = "doCopyInPlace" },
 
     { key = "F6",                  handler = "doMove" },
-    { key = "Shift+F6",            handler = "doRename" },
+    { key = "Shift+F6",            handler = "doMoveInPlace" },
 
     { key = "Shift+F7",            handler = "doMakeDirectoryOpposite" },
 

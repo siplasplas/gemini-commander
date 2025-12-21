@@ -68,7 +68,8 @@ private:
 
     void createMountsToolbar();
     QStringList listMountPoints() const;
-    void copyFromPanel(FilePanel* srcPanel);
+    void copyFromPanel(FilePanel* srcPanel, bool inPlace = false);
+    void moveFromPanel(FilePanel* srcPanel, bool inPlace = false);
     KeyMap keyMap;
 
     bool handle(const char* handler, QKeyEvent *ev);

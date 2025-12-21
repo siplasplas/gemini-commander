@@ -110,6 +110,8 @@ public:
     void renameOrMoveEntry(QWidget* dialogParent = nullptr,
                        const QString& defaultTargetDir = QString());
     void toggleMarkOnCurrent(bool advanceRow);
+    QStringList getMarkedNames() const;
+    bool hasMarkedEntries() const;
     void rememberSelection();
     void restoreSelectionFromMemory();
     void styleActive();

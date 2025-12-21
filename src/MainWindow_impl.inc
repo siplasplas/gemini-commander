@@ -78,8 +78,11 @@ bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doCopyInPlace";
-    return false;
+    FilePanel* panel = currentFilePanel();
+    if (panel) {
+        copyFromPanel(panel, true);  // inPlace = true
+    }
+    return true;
 }
 
 bool MainWindow::doCurrentDirToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
@@ -195,13 +198,17 @@ bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        Side srcSide = panel->side();
-        QString targetDir;
-        Side dstSide = opposite(srcSide);
-        if (auto* dstPanel = filePanelForSide(dstSide)) {
-            targetDir = dstPanel->currentPath;
-        }
-        panel->renameOrMoveEntry(this, targetDir);
+        moveFromPanel(panel, false);  // inPlace = false
+    }
+    return true;
+}
+
+bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    FilePanel* panel = currentFilePanel();
+    if (panel) {
+        moveFromPanel(panel, true);  // inPlace = true (rename)
     }
     return true;
 }
