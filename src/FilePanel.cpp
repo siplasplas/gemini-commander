@@ -27,11 +27,11 @@
 #include <QUrl>
 #include "FilePanel.h"
 #include "Config.h"
+#include "quitls.h"
 
 #include "SizeFormat.h"
 #include "keys/KeyRouter.h"
 #include "SortedDirIterator.h"
-#include "quitls.h"
 #include <QProcess>
 #include <QStandardPaths>
 
@@ -1569,6 +1569,7 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
                 );
                 return false;
             }
+            preserveModificationTime(srcPath, dstPath);
 
             bytesCopied += static_cast<quint64>(fi.size());
 

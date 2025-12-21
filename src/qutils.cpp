@@ -3,6 +3,9 @@
 #include <QFileInfo>
 #include <QString>
 
+#include <sys/stat.h>
+#include <fcntl.h>
+
 QPair<QString, QString> splitFileName(const QFileInfo& info)
 {
     if (info.isDir()) {
@@ -97,4 +100,15 @@ ExecutableType getExecutableType(const QString& filePath) {
     }
 
     return ExecutableType::Unknown;
+}
+
+void preserveModificationTime(const QString& srcPath, const QString& dstPath)
+{
+    struct stat srcStat;
+    if (stat(srcPath.toLocal8Bit().constData(), &srcStat) == 0) {
+        struct timespec times[2];
+        times[0] = srcStat.st_atim;  // access time
+        times[1] = srcStat.st_mtim;  // modification time
+        utimensat(AT_FDCWD, dstPath.toLocal8Bit().constData(), times, 0);
+    }
 }

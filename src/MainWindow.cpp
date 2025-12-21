@@ -42,6 +42,7 @@
 #include "editor/ViewerFrame.h"
 #include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"
+#include "quitls.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
@@ -1152,6 +1153,8 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                 if (!QFile::copy(srcPath, dstFilePath)) {
                     QMessageBox::warning(this, tr("Error"),
                         tr("Failed to copy '%1'").arg(name));
+                } else {
+                    preserveModificationTime(srcPath, dstFilePath);
                 }
             } else if (srcInfo.isDir()) {
                 FilePanel::CopyStats stats;
@@ -1230,6 +1233,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                 tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, finalDstPath));
             return;
         }
+        preserveModificationTime(srcPath, finalDstPath);
 
         if (dstPanel) {
             dstPanel->loadDirectory();
