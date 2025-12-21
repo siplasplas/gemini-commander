@@ -31,6 +31,7 @@
 #include "SizeFormat.h"
 #include "keys/KeyRouter.h"
 #include "SortedDirIterator.h"
+#include "quitls.h"
 #include <QProcess>
 #include <QStandardPaths>
 
@@ -249,10 +250,9 @@ void FilePanel::sortEntries() {
                 if (aDir && bDir) {
                   return cmpNames(asc);
                 } else if (!aDir && !bDir) {
-                  // For hidden files like ".gitignore" where completeBaseName() is empty,
-                  // treat as having no extension (same logic as getTextColumn)
-                  QString ea = a.completeBaseName().isEmpty() ? QString() : a.suffix();
-                  QString eb = b.completeBaseName().isEmpty() ? QString() : b.suffix();
+                  // Use splitFileName to handle hidden files consistently
+                  auto [baseA, ea] = splitFileName(a);
+                  auto [baseB, eb] = splitFileName(b);
                   int cmp = ea.compare(eb, Qt::CaseInsensitive);
                   if (cmp != 0)
                     return asc ? (cmp < 0) : (cmp > 0);
@@ -340,28 +340,14 @@ static QStringList getTextColumn(PanelEntry& entry)
     QStringList colStrings;
     colStrings.append(""); // ID column
 
-    QString base, ext;
-    auto& info = entry.info;
-
-    if (info.isDir()) {
-        base = info.fileName();
-    } else {
-        base = info.completeBaseName();
-        ext  = info.suffix();
-
-        // hidden: ".git" type case
-        if (base.isEmpty()) {
-            base = "." + ext;
-            ext.clear();
-        }
-    }
+    auto [base, ext] = splitFileName(entry.info);
 
     colStrings.append(base);               // COLUMN_NAME
-    colStrings.append(ext);                    // COLUMN_EXT
+    colStrings.append(ext);                // COLUMN_EXT
 
     QString sizeStr;
-    if (!info.isDir()) {
-        sizeStr = QString::fromStdString(SizeFormat::formatSize(info.size(), false));
+    if (!entry.info.isDir()) {
+        sizeStr = QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
     } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
         sizeStr = QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
     } else if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
@@ -371,7 +357,7 @@ static QStringList getTextColumn(PanelEntry& entry)
     }
     colStrings.append(sizeStr);                // COLUMN_SIZE
 
-    colStrings.append(info.lastModified().toString("yyyy-MM-dd hh:mm")); // COLUMN_DATE
+    colStrings.append(entry.info.lastModified().toString("yyyy-MM-dd hh:mm")); // COLUMN_DATE
 
     return colStrings;
 }

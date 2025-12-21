@@ -1,6 +1,26 @@
 #include "quitls.h"
 #include <QFile>
 #include <QFileInfo>
+#include <QString>
+
+QPair<QString, QString> splitFileName(const QFileInfo& info)
+{
+    if (info.isDir()) {
+        return {info.fileName(), QString()};
+    }
+
+    QString baseName = info.completeBaseName();
+    QString ext = info.suffix();
+
+    // Handle hidden files like ".gitignore" where completeBaseName() is empty
+    // Qt treats the whole name as extension in this case
+    if (baseName.isEmpty() && !ext.isEmpty()) {
+        baseName = "." + ext;
+        ext.clear();
+    }
+
+    return {baseName, ext};
+}
 
 bool isTextFile(const QString& filePath) {
     QFile file(filePath);
