@@ -46,6 +46,12 @@ public:
   bool confirmExit() const { return m_confirmExit; }
   void setConfirmExit(bool confirm) { m_confirmExit = confirm; }
 
+  // Validate TOML content without loading it
+  static bool validateToml(const QString& content, QString& errorMsg);
+
+  // Check if given path is the config file
+  bool isConfigFile(const QString& path) const;
+
 private:
   Config() = default;
 

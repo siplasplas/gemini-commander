@@ -6,6 +6,10 @@
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QDebug>
+#include <QAction>
+#include <QShortcut>
+
+#include "../Config.h"
 
 /**
  * @brief Constructs editor with document
@@ -52,6 +56,16 @@ Editor::Editor(KTextEditor::Document *doc, QWidget *parent) :
     // Add the KTextEditor::View to the layout, making it fill the Editor widget
     layout->addWidget(m_view);
     this->setLayout(layout);
+
+    // Intercept Ctrl+S to use our saveFile() with validation
+    // Find and disable the default save action from KTextEditor
+    QAction* kteSaveAction = m_view->action("file_save");
+    if (kteSaveAction) {
+        kteSaveAction->setShortcut(QKeySequence());  // Remove shortcut
+    }
+    // Add our own Ctrl+S shortcut
+    QShortcut* saveShortcut = new QShortcut(QKeySequence::Save, m_view);
+    connect(saveShortcut, &QShortcut::activated, this, &Editor::saveFile);
 
     // Set object name for debugging/identification
     setObjectName(m_filePath);
@@ -104,7 +118,8 @@ bool Editor::isModified() const {
  * @brief Saves document to original path
  * @return true on successful save
  *
- * @details Uses KTextEditor's native save functionality
+ * @details Uses KTextEditor's native save functionality.
+ *          For config.toml files, validates TOML syntax before saving.
  * @warning Shows QMessageBox on failure
  */
 bool Editor::saveFile() {
@@ -112,6 +127,19 @@ bool Editor::saveFile() {
         qWarning() << "saveFile called on Editor with null document.";
         return false;
     }
+
+    // If this is the config file, validate TOML before saving
+    if (Config::instance().isConfigFile(m_filePath)) {
+        QString content = m_document->text();
+        QString errorMsg;
+        if (!Config::validateToml(content, errorMsg)) {
+            QMessageBox::critical(this->parentWidget(),
+                                  tr("Invalid Configuration"),
+                                  tr("Cannot save: TOML syntax error.\n\n%1").arg(errorMsg));
+            return false;
+        }
+    }
+
     // Use the document's save method
     if (!m_document->save()) {
         qWarning() << "Failed to save document:" << m_filePath;

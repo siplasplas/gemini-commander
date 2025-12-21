@@ -138,6 +138,32 @@ static const char* iconModeToString(IconMode mode)
     }
 }
 
+bool Config::validateToml(const QString& content, QString& errorMsg)
+{
+    try {
+        toml::parse(content.toStdString());
+        return true;
+    }
+    catch (const toml::parse_error& e) {
+        errorMsg = QString::fromStdString(std::string(e.description()));
+        if (e.source().begin.line > 0) {
+            errorMsg += QString(" (line %1)").arg(e.source().begin.line);
+        }
+        return false;
+    }
+    catch (const std::exception& e) {
+        errorMsg = QString::fromUtf8(e.what());
+        return false;
+    }
+}
+
+bool Config::isConfigFile(const QString& path) const
+{
+    if (m_configPath.isEmpty() || path.isEmpty())
+        return false;
+    return QFileInfo(path).absoluteFilePath() == QFileInfo(m_configPath).absoluteFilePath();
+}
+
 bool Config::save() const
 {
     if (m_configPath.isEmpty())
