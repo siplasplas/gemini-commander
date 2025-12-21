@@ -54,8 +54,10 @@ QVariant SearchResultsModel::data(const QModelIndex& index, int role) const
 
     if (role == Qt::DisplayRole) {
         switch (index.column()) {
-            case ColumnPath:
-                return result.path;
+            case ColumnName:
+                return result.name;
+            case ColumnDir:
+                return result.dir;
             case ColumnSize:
                 return formatSize(result.size);
             case ColumnModified:
@@ -73,7 +75,8 @@ QVariant SearchResultsModel::headerData(int section, Qt::Orientation orientation
 
     if (orientation == Qt::Horizontal) {
         switch (section) {
-            case ColumnPath: return tr("Path");
+            case ColumnDir: return tr("Dir");
+            case ColumnName: return tr("Name");
             case ColumnSize: return tr("Size");
             case ColumnModified: return tr("Modified");
         }
@@ -158,10 +161,15 @@ void SearchResultsModel::sort(int column, Qt::SortOrder order)
 
 void SearchResultsModel::addResult(const QString& path, qint64 size, qint64 modifiedTimestamp)
 {
+    // Split path into directory and name
+    QFileInfo info(path);
+    QString dir = info.path();
+    QString name = info.fileName();
+
     // Add to raw data without sorting - just append
     int newRow = m_results.size();
     beginInsertRows(QModelIndex(), newRow, newRow);
-    m_results.append({path, size, modifiedTimestamp});
+    m_results.append({dir, name, size, modifiedTimestamp});
     endInsertRows();
 }
 
@@ -201,8 +209,11 @@ void SearchResultsModel::updateSortedIndices()
 
             bool less = false;
             switch (m_sortColumn) {
-                case ColumnPath:
-                    less = ra.path < rb.path;
+                case ColumnName:
+                    less = ra.name < rb.name;
+                    break;
+                case ColumnDir:
+                    less = ra.dir < rb.dir;
                     break;
                 case ColumnSize:
                     less = ra.size < rb.size;
@@ -440,10 +451,11 @@ void SearchDialog::createResultsTab()
     m_resultsView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_resultsView->setSortingEnabled(true);  // Allow user to sort by clicking headers
 
-    // Set column widths
-    m_resultsView->setColumnWidth(0, 400);
-    m_resultsView->setColumnWidth(1, 100);
-    m_resultsView->setColumnWidth(2, 150);
+    // Set column widths: Dir, Name, Size, Modified
+    m_resultsView->setColumnWidth(0, 250);  // Dir
+    m_resultsView->setColumnWidth(1, 200);  // Name
+    m_resultsView->setColumnWidth(2, 90);   // Size
+    m_resultsView->setColumnWidth(3, 130);  // Modified
 
     layout->addWidget(m_resultsView);
 
@@ -560,12 +572,13 @@ void SearchDialog::onResultDoubleClicked(int row, int column)
     if (row < 0 || row >= m_resultsModel->resultCount())
         return;
 
-    // Get file path from model
+    // Get file path from model (reconstruct from dir + name)
     const SearchResult& result = m_resultsModel->resultAt(row);
-    QFileInfo info(result.path);
+    QString fullPath = result.dir + "/" + result.name;
 
+    QFileInfo info(fullPath);
     if (info.exists()) {
         // Open file with default application
-        QDesktopServices::openUrl(QUrl::fromLocalFile(result.path));
+        QDesktopServices::openUrl(QUrl::fromLocalFile(fullPath));
     }
 }

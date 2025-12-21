@@ -15,7 +15,8 @@ class SearchWorker;
 
 // Raw search result data
 struct SearchResult {
-    QString path;
+    QString dir;   // directory path
+    QString name;  // file/directory name
     qint64 size;
     qint64 modifiedTimestamp;  // QDateTime as msecsSinceEpoch for efficient sorting
 };
@@ -26,10 +27,11 @@ class SearchResultsModel : public QAbstractTableModel {
 
 public:
     enum Column {
-        ColumnPath = 0,
-        ColumnSize = 1,
-        ColumnModified = 2,
-        ColumnCount = 3
+        ColumnDir = 0,
+        ColumnName = 1,
+        ColumnSize = 2,
+        ColumnModified = 3,
+        ColumnCount = 4
     };
 
     explicit SearchResultsModel(QObject* parent = nullptr);
