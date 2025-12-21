@@ -142,11 +142,6 @@ keys = [
     { key = "Return",              handler = "doAccept" },
 ]
 
-[EditorFrame]
-keys = [
-    { key = "Escape",            handler = "doCloseRequest" },
-]
-
 [Editor]
 keys = [
     { key = "Ctrl+Tab",            handler = "noneWithChildren" },
