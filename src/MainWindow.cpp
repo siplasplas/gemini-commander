@@ -157,6 +157,7 @@ void MainWindow::setupUi() {
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
     QMenu* commandsMenu = menuBar()->addMenu(tr("&Commands"));
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
+    QMenu* configMenu = menuBar()->addMenu(tr("C&onfiguration"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
 
     // File menu
@@ -164,6 +165,16 @@ void MainWindow::setupUi() {
     quitAction->setShortcut(QKeySequence::fromString("Alt+F4"));
     connect(quitAction, &QAction::triggered, this, &QWidget::close);
     fileMenu->addAction(quitAction);
+
+    // Configuration menu
+    QAction* editConfigAction = new QAction(tr("Change Settings Files Directly..."), this);
+    connect(editConfigAction, &QAction::triggered, this, [this]() {
+        QString configPath = Config::instance().configPath();
+        if (!configPath.isEmpty()) {
+            openEditorForFile(configPath);
+        }
+    });
+    configMenu->addAction(editConfigAction);
 
     // Commands menu - Search action (no shortcut here, managed by KeyRouter/TOML)
     m_searchAction = new QAction(tr("Search files..."), this);
