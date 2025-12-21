@@ -28,6 +28,7 @@
 #include <QProcess>
 #include <QStandardPaths>
 #include <QMessageBox>
+#include <QGuiApplication>
 #include <QStorageInfo>
 #include <QFileDialog>
 #include <QToolButton>
@@ -80,7 +81,19 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     // Save window geometry before closing
-    Config::instance().setWindowGeometry(x(), y(), width(), height());
+    // Use frameGeometry for position (includes window decorations)
+    QRect frame = frameGeometry();
+    int winX = frame.x();
+    int winY = frame.y();
+
+    // On Wayland, window positions are not reliable - don't save them
+    // On X11 (xcb), negative positions are valid (e.g., monitor to the left)
+    bool isWayland = QGuiApplication::platformName() == QLatin1String("wayland");
+    if (isWayland) {
+        winX = -1;  // Mark as "not set" - Wayland doesn't support positioning
+        winY = -1;
+    }
+    Config::instance().setWindowGeometry(winX, winY, width(), height());
     Config::instance().save();
 
     if (!Config::instance().confirmExit()) {
