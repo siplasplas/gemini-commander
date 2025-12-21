@@ -51,6 +51,9 @@ private slots:
     void onCloseCurrentTabTriggered();
     void onAboutTriggered();
     void onToggleSpecialChars(bool checked);
+    void onFindTriggered();
+    void onFindNextTriggered();
+    void onFindPrevTriggered();
 
 private:
     MruTabWidget *m_editorTabWidget;
@@ -65,6 +68,9 @@ private:
     QAction *m_exitAction;
     QAction *m_aboutAction;
     QAction *m_showSpecialCharsAction;
+    QAction *m_findAction;
+    QAction *m_findNextAction;
+    QAction *m_findPrevAction;
 
     void viewFileInEditor(const QString& filePath);
     int findTabByPath(const QString& filePath);

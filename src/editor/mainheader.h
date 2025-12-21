@@ -31,9 +31,14 @@ public:
      * @param exitApp Action for exiting application
      * @param showSpecialChars Action for showing special characters
      * @param aboutApp Action for about dialog
+     * @param findAction Action for Find (Ctrl+F)
+     * @param findNextAction Action for Find Next (F3)
+     * @param findPrevAction Action for Find Previous (Shift+F3)
      */
     void setupMenus(QAction* openFile, QAction* closeFile,
-                    QAction* exitApp, QAction* showSpecialChars, QAction* aboutApp);
+                    QAction* exitApp, QAction* showSpecialChars, QAction* aboutApp,
+                    QAction* findAction = nullptr, QAction* findNextAction = nullptr,
+                    QAction* findPrevAction = nullptr);
 
     /**
      * @brief Configures toolbar buttons

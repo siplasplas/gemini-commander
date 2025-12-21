@@ -69,8 +69,8 @@ EditorFrame::EditorFrame(QWidget* parent)
 
     createActions();
     m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
-                             m_exitAction, m_showSpecialCharsAction, m_aboutAction);
-
+                             m_exitAction, m_showSpecialCharsAction, m_aboutAction,
+                             m_findAction, m_findNextAction, m_findPrevAction);
 
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
@@ -138,6 +138,17 @@ void EditorFrame::createActions()
     m_showSpecialCharsAction->setCheckable(true);
     m_showSpecialCharsAction->setChecked(false);
     connect(m_showSpecialCharsAction, &QAction::toggled, this, &EditorFrame::onToggleSpecialChars);
+
+    // Note: KTextEditor already handles Ctrl+F, F3, Shift+F3 internally
+    // We just add menu entries that trigger the same actions
+    m_findAction = new QAction(tr("&Find...\tCtrl+F"), this);
+    connect(m_findAction, &QAction::triggered, this, &EditorFrame::onFindTriggered);
+
+    m_findNextAction = new QAction(tr("Find &Next\tF3"), this);
+    connect(m_findNextAction, &QAction::triggered, this, &EditorFrame::onFindNextTriggered);
+
+    m_findPrevAction = new QAction(tr("Find &Previous\tShift+F3"), this);
+    connect(m_findPrevAction, &QAction::triggered, this, &EditorFrame::onFindPrevTriggered);
 }
 
 /**
@@ -394,6 +405,40 @@ void EditorFrame::closeEvent(QCloseEvent* event)
     } else {
         event->accept();
     }
+}
+
+void EditorFrame::onFindTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view())
+        return;
+
+    // Use KTextEditor's built-in search bar (appears at bottom of view)
+    QAction* findAction = editor->view()->action("edit_find");
+    if (findAction)
+        findAction->trigger();
+}
+
+void EditorFrame::onFindNextTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view())
+        return;
+
+    QAction* findNextAction = editor->view()->action("edit_find_next");
+    if (findNextAction)
+        findNextAction->trigger();
+}
+
+void EditorFrame::onFindPrevTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view())
+        return;
+
+    QAction* findPrevAction = editor->view()->action("edit_find_prev");
+    if (findPrevAction)
+        findPrevAction->trigger();
 }
 
 #include  "EditorFrame_impl.inc"

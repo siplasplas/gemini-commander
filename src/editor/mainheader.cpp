@@ -26,7 +26,8 @@ void MainHeader::setupUi()
 }
 
 void MainHeader::setupMenus(QAction* openFile, QAction* closeFile,
-                             QAction* exitApp, QAction* showSpecialChars, QAction* aboutApp)
+                             QAction* exitApp, QAction* showSpecialChars, QAction* aboutApp,
+                             QAction* findAction, QAction* findNextAction, QAction* findPrevAction)
 {
     QMenu* fileMenu = m_menuBar->addMenu(tr("&File"));
     fileMenu->addAction(openFile);
@@ -34,6 +35,14 @@ void MainHeader::setupMenus(QAction* openFile, QAction* closeFile,
     fileMenu->addAction(closeFile);
     fileMenu->addSeparator();
     fileMenu->addAction(exitApp);
+
+    QMenu* searchMenu = m_menuBar->addMenu(tr("&Search"));
+    if (findAction)
+        searchMenu->addAction(findAction);
+    if (findNextAction)
+        searchMenu->addAction(findNextAction);
+    if (findPrevAction)
+        searchMenu->addAction(findPrevAction);
 
     QMenu* viewMenu = m_menuBar->addMenu(tr("&View"));
     viewMenu->addAction(showSpecialChars);
