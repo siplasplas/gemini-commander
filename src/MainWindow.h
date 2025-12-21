@@ -8,6 +8,7 @@
 #include <QTableView>
 #include <QProgressDialog>
 #include <QToolButton>
+#include <QFileSystemWatcher>
 
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
@@ -88,6 +89,10 @@ private:
 
     void applyConfigGeometry();
 
+    // Directory monitoring
+    QFileSystemWatcher* m_dirWatcher = nullptr;
+    void updateWatchedDirectories();
+
 public slots:
     void onConfigSaved();
 
@@ -96,6 +101,7 @@ private slots:
     void onExternalToolClicked();
     void onExternalToolContextMenu(const QPoint& pos);
     void configureExternalTool();
+    void onDirectoryChanged(const QString& path);
 };
 
 #endif // MAINWINDOW_H

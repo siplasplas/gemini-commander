@@ -77,6 +77,18 @@ MainWindow::MainWindow(QWidget *parent)
     keyMap.load(":/config/keys.toml");
     KeyRouter::instance().setKeyMap(&keyMap);
     KeyRouter::instance().installOn(qApp, this);
+
+    // Directory monitoring
+    m_dirWatcher = new QFileSystemWatcher(this);
+    connect(m_dirWatcher, &QFileSystemWatcher::directoryChanged,
+            this, &MainWindow::onDirectoryChanged);
+
+    // Update watched dirs when panels change directory
+    for (auto* panel : allFilePanels()) {
+        connect(panel, &FilePanel::directoryChanged,
+                this, &MainWindow::updateWatchedDirectories);
+    }
+    updateWatchedDirectories();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -1446,6 +1458,62 @@ void MainWindow::updateCurrentPathLabel() {
     // Elide text if too long
     QString displayPath = fm.elidedText(path, Qt::ElideLeft, availableWidth);
     currentPathLabel->setText(displayPath);
+}
+
+void MainWindow::updateWatchedDirectories()
+{
+    if (!m_dirWatcher)
+        return;
+
+    // Get current directories from both panels
+    QSet<QString> neededDirs;
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+    FilePanel* rightPanel = filePanelForSide(Side::Right);
+
+    if (leftPanel && !leftPanel->currentPath.isEmpty())
+        neededDirs.insert(leftPanel->currentPath);
+    if (rightPanel && !rightPanel->currentPath.isEmpty())
+        neededDirs.insert(rightPanel->currentPath);
+
+    // Get currently watched directories
+    QStringList currentlyWatched = m_dirWatcher->directories();
+    QSet<QString> currentSet(currentlyWatched.begin(), currentlyWatched.end());
+
+    // Remove directories no longer needed
+    for (const QString& dir : currentlyWatched) {
+        if (!neededDirs.contains(dir)) {
+            m_dirWatcher->removePath(dir);
+        }
+    }
+
+    // Add new directories
+    for (const QString& dir : neededDirs) {
+        if (!currentSet.contains(dir)) {
+            m_dirWatcher->addPath(dir);
+        }
+    }
+}
+
+void MainWindow::onDirectoryChanged(const QString& path)
+{
+    // Refresh panels showing this directory
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+    FilePanel* rightPanel = filePanelForSide(Side::Right);
+
+    if (leftPanel && leftPanel->currentPath == path) {
+        leftPanel->loadDirectory();
+    }
+    if (rightPanel && rightPanel->currentPath == path) {
+        rightPanel->loadDirectory();
+    }
+
+    // Re-add path to watcher (some systems like Linux inotify remove it after change)
+    // Check if already watched to avoid unnecessary call
+    if (m_dirWatcher && QDir(path).exists()) {
+        if (!m_dirWatcher->directories().contains(path)) {
+            m_dirWatcher->addPath(path);
+        }
+    }
 }
 
 #include "MainWindow_impl.inc"
