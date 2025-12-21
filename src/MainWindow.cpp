@@ -76,10 +76,15 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
+    if (!Config::instance().confirmExit()) {
+        event->accept();
+        return;
+    }
+
     QMessageBox::StandardButton reply = QMessageBox::question(
                     this,
-                    tr("Unsaved Changes"),
-                    "Exit?",
+                    tr("Exit"),
+                    tr("Exit Gemini Commander?"),
                     QMessageBox::Yes|QMessageBox::Cancel,
                     QMessageBox::Yes
                 );

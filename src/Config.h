@@ -43,6 +43,9 @@ public:
   QString externalToolPath() const { return m_externalToolPath; }
   void setExternalToolPath(const QString& path) { m_externalToolPath = path; }
 
+  bool confirmExit() const { return m_confirmExit; }
+  void setConfirmExit(bool confirm) { m_confirmExit = confirm; }
+
 private:
   Config() = default;
 
@@ -50,6 +53,7 @@ private:
   QVector<FavoriteDir> m_favorites;
   IconMode m_iconMode = IconMode::Extension;
   QString m_externalToolPath;
+  bool m_confirmExit = true;
 };
 
 #endif

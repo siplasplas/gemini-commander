@@ -62,6 +62,7 @@ bool Config::load(const QString& path)
     m_favorites.clear();
     m_iconMode = IconMode::Extension;
     m_externalToolPath.clear();
+    m_confirmExit = true;
 
     QFile f(path);
     if (!f.exists()) {
@@ -84,6 +85,13 @@ bool Config::load(const QString& path)
             auto& tool = *tbl["external_tool"].as_table();
             if (auto path = tool["path"].value<std::string>())
                 m_externalToolPath = QString::fromStdString(*path);
+        }
+
+        // [general] section
+        if (tbl.contains("general")) {
+            auto& general = *tbl["general"].as_table();
+            if (auto confirm = general["confirm_exit"].value<bool>())
+                m_confirmExit = *confirm;
         }
 
         if (tbl.contains("favorites")) {
@@ -136,6 +144,11 @@ bool Config::save() const
         return false;
 
     toml::table tbl;
+
+    // [general] section
+    toml::table generalTbl;
+    generalTbl.insert("confirm_exit", m_confirmExit);
+    tbl.insert("general", generalTbl);
 
     // [icons] section
     toml::table iconsTbl;
