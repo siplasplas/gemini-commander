@@ -56,6 +56,7 @@ private slots:
     void onFindNextTriggered();
     void onFindPrevTriggered();
     void onReplaceTriggered();
+    void onGotoTriggered();
     void onInsertDateTriggered();
     void onInsertTimeTriggered();
     void onInsertBothTriggered();
@@ -77,6 +78,7 @@ private:
     QAction *m_findNextAction;
     QAction *m_findPrevAction;
     QAction *m_replaceAction;
+    QAction *m_gotoAction;
     QAction *m_insertDateAction;
     QAction *m_insertTimeAction;
     QAction *m_insertBothAction;

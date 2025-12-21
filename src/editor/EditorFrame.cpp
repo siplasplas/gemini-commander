@@ -11,6 +11,7 @@
 #include <QtGlobal>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QShortcut>
 #include <QClipboard>
 #include <QShowEvent>
@@ -73,7 +74,8 @@ EditorFrame::EditorFrame(QWidget* parent)
     createActions();
     m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
                              m_exitAction, m_showSpecialCharsAction, m_aboutAction,
-                             m_findAction, m_findNextAction, m_findPrevAction, m_replaceAction);
+                             m_findAction, m_findNextAction, m_findPrevAction, m_replaceAction,
+                             m_gotoAction);
     m_mainHeader->setupToolsMenu(m_insertDateAction, m_insertTimeAction, m_insertBothAction);
 
     m_mainLayout->addWidget(m_editorTabWidget);
@@ -157,6 +159,10 @@ void EditorFrame::createActions()
     m_replaceAction = new QAction(tr("&Replace...\tCtrl+H"), this);
     connect(m_replaceAction, &QAction::triggered, this, &EditorFrame::onReplaceTriggered);
 
+    m_gotoAction = new QAction(tr("&Goto..."), this);
+    m_gotoAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
+    connect(m_gotoAction, &QAction::triggered, this, &EditorFrame::onGotoTriggered);
+
     m_insertDateAction = new QAction(tr("Insert &Date"), this);
     connect(m_insertDateAction, &QAction::triggered, this, &EditorFrame::onInsertDateTriggered);
 
@@ -218,6 +224,12 @@ void EditorFrame::openFile(const QString& fileName)
     m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
     auto view = qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view();
     ObjectRegistry::add(view, "Editor");
+
+    // Disable KTextEditor's built-in Ctrl+G (go_goto_line) so we can use our own Goto dialog
+    if (QAction* gotoLineAction = view->action("go_goto_line")) {
+        gotoLineAction->setShortcut(QKeySequence());
+    }
+
     view->setFocus();
 }
 
@@ -508,6 +520,45 @@ void EditorFrame::onReplaceTriggered()
     QAction* replaceAction = editor->view()->action("edit_replace");
     if (replaceAction)
         replaceAction->trigger();
+}
+
+void EditorFrame::onGotoTriggered()
+{
+    Editor* editor = currentEditor();
+    if (!editor || !editor->view())
+        return;
+
+    bool ok;
+    QString text = QInputDialog::getText(this, tr("Goto Line"),
+                                         tr("Line[:Column] (1-based):"),
+                                         QLineEdit::Normal,
+                                         "1:1", &ok);
+    if (!ok || text.isEmpty())
+        return;
+
+    // Parse line:column format
+    int line = 1;
+    int column = 1;
+
+    QStringList parts = text.split(':');
+    if (!parts.isEmpty()) {
+        bool lineOk;
+        int parsedLine = parts[0].trimmed().toInt(&lineOk);
+        if (lineOk && parsedLine >= 1)
+            line = parsedLine;
+
+        if (parts.size() > 1) {
+            bool colOk;
+            int parsedCol = parts[1].trimmed().toInt(&colOk);
+            if (colOk && parsedCol >= 1)
+                column = parsedCol;
+        }
+    }
+
+    // KTextEditor uses 0-based line and column
+    KTextEditor::Cursor cursor(line - 1, column - 1);
+    editor->view()->setCursorPosition(cursor);
+    editor->view()->setFocus();
 }
 
 static const char* daysOfWeek[] = {
