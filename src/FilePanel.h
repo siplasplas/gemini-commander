@@ -51,7 +51,7 @@ enum class FileType {
 struct PanelEntry {
     QFileInfo info;
     bool isMarked = false;
-    EntryContentState contentState;
+    EntryContentState contentState = EntryContentState::NotDirectory;
     std::size_t totalSizeBytes = 0;
     TotalSizeStatus hasTotalSize = TotalSizeStatus::Unknown;
     PanelEntry() = default;
