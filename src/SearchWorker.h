@@ -4,18 +4,53 @@
 #include <QString>
 #include <QRegularExpression>
 #include <QDateTime>
+#include <QVector>
+
+enum class ItemTypeFilter {
+    FilesAndDirectories,  // Search both files and directories
+    FilesOnly,            // Only files
+    DirectoriesOnly       // Only directories
+};
 
 struct SearchCriteria {
     QString searchPath;
     QString fileNamePattern;      // wildcard pattern (e.g., "*.txt")
     bool fileNameCaseSensitive = false;
     bool partOfName = true;       // add * before and after pattern
+    bool negateFileName = false;  // Invert filename match
+
     QString containingText;
     bool textCaseSensitive = false;
     bool wholeWords = false;
+    bool negateContainingText = false;  // Invert text content match
+
     qint64 minSize = -1;          // -1 means no limit
     qint64 maxSize = -1;          // -1 means no limit
-    bool directoriesOnly = false; // search only directories
+
+    ItemTypeFilter itemTypeFilter = ItemTypeFilter::FilesAndDirectories;  // Replaces directoriesOnly
+
+    // File type filters
+    bool filterTextFiles = false;       // Enable text file filtering
+    bool negateTextFiles = false;       // Invert text file match
+    bool filterELFBinaries = false;     // Enable ELF binary filtering
+    bool negateELFBinaries = false;     // Invert ELF binary match
+
+    // Executable bits filter
+    enum class ExecutableBitsFilter {
+        NotSpecified,     // Don't check (default)
+        Executable,       // Any exec bit set
+        NotExecutable,    // No exec bits set
+        AllExecutable     // Owner+Group+Other all set
+    };
+    ExecutableBitsFilter executableBits = ExecutableBitsFilter::NotSpecified;
+
+    // Shebang detection
+    bool filterShebang = false;         // Enable shebang filtering
+    bool negateShebang = false;         // Invert shebang match
+
+    // Search in results mode
+    bool searchInResults = false;       // Hybrid filtering mode
+    QVector<QString> previousResultPaths;  // Full paths from previous search
 };
 
 class SearchWorker : public QObject {
@@ -37,6 +72,10 @@ private:
     bool matchesFileName(const QString& fileName) const;
     bool matchesFileSize(qint64 size) const;
     bool matchesContainingText(const QString& filePath) const;
+    bool matchesItemType(bool isDir, bool isFile) const;
+    bool matchesFileType(const QString& filePath) const;
+    bool matchesExecutableBits(const QString& filePath) const;
+    bool matchesShebang(const QString& filePath) const;
 
     SearchCriteria m_criteria;
     QRegularExpression m_fileNameRegex;

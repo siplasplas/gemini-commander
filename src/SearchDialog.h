@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialog>
 #include <QLabel>
 #include <QLineEdit>
@@ -103,16 +104,32 @@ private:
     QPushButton* m_browseButton;
     QLineEdit* m_fileNameEdit;
     QCheckBox* m_fileNameCaseSensitiveCheck;
-    QCheckBox* m_directoriesOnlyCheck;
+    QComboBox* m_itemTypeCombo;
     QCheckBox* m_partOfNameCheck;
+    QCheckBox* m_negateFileNameCheck;
     QLineEdit* m_containingTextEdit;
     QCheckBox* m_textCaseSensitiveCheck;
     QCheckBox* m_wholeWordsCheck;
+    QCheckBox* m_negateContainingTextCheck;
+    QCheckBox* m_searchInResultsCheck;
 
     // Advanced tab
     QWidget* m_advancedTab;
     QLineEdit* m_minSizeEdit;
     QLineEdit* m_maxSizeEdit;
+
+    // File type group
+    QCheckBox* m_textFileCheck;
+    QCheckBox* m_negateTextFileCheck;
+    QCheckBox* m_elfBinaryCheck;
+    QCheckBox* m_negateElfBinaryCheck;
+
+    // File attributes group
+    QComboBox* m_executableBitsCombo;
+
+    // Script detection group
+    QCheckBox* m_shebangCheck;
+    QCheckBox* m_negateShebangCheck;
 
     // Results tab
     QWidget* m_resultsTab;
@@ -131,4 +148,5 @@ private:
 
     QString m_startPath;
     int m_foundCount;
+    bool m_hasResults;  // Track if we have previous results (for search-in-results mode)
 };

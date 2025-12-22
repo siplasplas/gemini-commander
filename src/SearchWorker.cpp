@@ -1,5 +1,6 @@
 #include "SearchWorker.h"
 #include "SortedDirIterator.h"
+#include "quitls.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -40,6 +41,79 @@ void SearchWorker::startSearch()
 {
     m_shouldStop = false;
 
+    // ─────────────────────────────────────────────────────────
+    // MODE 1: Search in results
+    // ─────────────────────────────────────────────────────────
+    if (m_criteria.searchInResults && !m_criteria.previousResultPaths.isEmpty()) {
+        int searchedFiles = 0;
+        int foundFiles = 0;
+
+        for (const QString& path : m_criteria.previousResultPaths) {
+            if (m_shouldStop)
+                break;
+
+            QFileInfo info(path);
+            if (!info.exists())
+                continue;
+
+            searchedFiles++;
+
+            // Update progress periodically
+            if (searchedFiles % 100 == 0)
+                emit progressUpdate(searchedFiles, foundFiles);
+
+            bool isDir = info.isDir();
+            bool isFile = info.isFile();
+
+            // Apply all filters
+            if (!matchesItemType(isDir, isFile))
+                continue;
+
+            // Filename pattern (with negation)
+            bool nameMatches = matchesFileName(info.fileName());
+            if (m_criteria.negateFileName)
+                nameMatches = !nameMatches;
+            if (!nameMatches)
+                continue;
+
+            // Size filter (files only)
+            if (isFile && !matchesFileSize(info.size()))
+                continue;
+
+            // Text content filter (files only)
+            if (isFile && !m_criteria.containingText.isEmpty()) {
+                bool textMatches = matchesContainingText(info.absoluteFilePath());
+                if (m_criteria.negateContainingText)
+                    textMatches = !textMatches;
+                if (!textMatches)
+                    continue;
+            }
+
+            // File type filters (files only)
+            if (isFile && !matchesFileType(info.absoluteFilePath()))
+                continue;
+
+            // Executable bits filter
+            if (!matchesExecutableBits(info.absoluteFilePath()))
+                continue;
+
+            // Shebang filter (files only)
+            if (isFile && !matchesShebang(info.absoluteFilePath()))
+                continue;
+
+            // All filters passed
+            foundFiles++;
+            emit resultFound(info.absoluteFilePath(), info.size(), info.lastModified());
+        }
+
+        emit progressUpdate(searchedFiles, foundFiles);
+        emit searchFinished();
+        return;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // MODE 2: Normal filesystem search
+    // ─────────────────────────────────────────────────────────
     QDir::Filters filters = QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden;
 
     SortedDirIterator it(m_criteria.searchPath, filters);
@@ -53,42 +127,57 @@ void SearchWorker::startSearch()
         bool isDir = info.isDir();
         bool isFile = info.isFile();
 
-        // Count files and directories
         if (isFile || isDir)
             searchedFiles++;
 
-        // Update progress periodically (every 1000 items)
+        // Update progress periodically
         if (searchedFiles % 1000 == 0)
             emit progressUpdate(searchedFiles, foundFiles);
 
-        // Directories only filter
-        if (m_criteria.directoriesOnly && !isDir)
+        // Item type filter
+        if (!matchesItemType(isDir, isFile))
             continue;
 
-        // Check file/directory name pattern
-        if (!matchesFileName(info.fileName()))
+        // Filename pattern (with negation)
+        bool nameMatches = matchesFileName(info.fileName());
+        if (m_criteria.negateFileName)
+            nameMatches = !nameMatches;
+        if (!nameMatches)
             continue;
 
-        // For files: check size and content
+        // For files: check size, content, and advanced filters
         if (isFile) {
-            // Check file size
+            // Size filter
             if (!matchesFileSize(info.size()))
                 continue;
 
-            // Check containing text if specified
+            // Text content filter
             if (!m_criteria.containingText.isEmpty()) {
-                if (!matchesContainingText(info.absoluteFilePath()))
+                bool textMatches = matchesContainingText(info.absoluteFilePath());
+                if (m_criteria.negateContainingText)
+                    textMatches = !textMatches;
+                if (!textMatches)
                     continue;
             }
+
+            // File type filters
+            if (!matchesFileType(info.absoluteFilePath()))
+                continue;
+
+            // Shebang filter
+            if (!matchesShebang(info.absoluteFilePath()))
+                continue;
         }
 
-        // For directories: skip size/content checks, but report if name matches
-        // Item (file or directory) matches all applicable criteria
+        // Executable bits filter (applies to both files and directories)
+        if (!matchesExecutableBits(info.absoluteFilePath()))
+            continue;
+
+        // All filters passed
         foundFiles++;
         emit resultFound(info.absoluteFilePath(), info.size(), info.lastModified());
     }
 
-    // Final update
     emit progressUpdate(searchedFiles, foundFiles);
     emit searchFinished();
 }
@@ -149,4 +238,86 @@ bool SearchWorker::matchesContainingText(const QString& filePath) const
     }
 
     return false;
+}
+
+bool SearchWorker::matchesItemType(bool isDir, bool isFile) const
+{
+    switch (m_criteria.itemTypeFilter) {
+        case ItemTypeFilter::FilesAndDirectories:
+            return isFile || isDir;
+        case ItemTypeFilter::FilesOnly:
+            return isFile && !isDir;
+        case ItemTypeFilter::DirectoriesOnly:
+            return isDir && !isFile;
+    }
+    return false;
+}
+
+bool SearchWorker::matchesFileType(const QString& filePath) const
+{
+    // Text file check
+    if (m_criteria.filterTextFiles) {
+        bool isText = isTextFile(filePath);
+        bool result = m_criteria.negateTextFiles ? !isText : isText;
+        if (!result)
+            return false;
+    }
+
+    // ELF binary check
+    if (m_criteria.filterELFBinaries) {
+        ExecutableType type = getExecutableType(filePath);
+        bool isELF = (type == ExecutableType::ELFBinary);
+        bool result = m_criteria.negateELFBinaries ? !isELF : isELF;
+        if (!result)
+            return false;
+    }
+
+    return true;
+}
+
+bool SearchWorker::matchesExecutableBits(const QString& filePath) const
+{
+    using EBF = SearchCriteria::ExecutableBitsFilter;
+
+    if (m_criteria.executableBits == EBF::NotSpecified)
+        return true;  // Don't check
+
+    QFileInfo info(filePath);
+    QFile::Permissions perms = info.permissions();
+
+    bool ownerExec = perms & QFile::ExeOwner;
+    bool groupExec = perms & QFile::ExeGroup;
+    bool otherExec = perms & QFile::ExeOther;
+
+    bool anyExec = ownerExec || groupExec || otherExec;
+    bool allExec = ownerExec && groupExec && otherExec;
+
+    switch (m_criteria.executableBits) {
+        case EBF::Executable:
+            return anyExec;
+        case EBF::NotExecutable:
+            return !anyExec;
+        case EBF::AllExecutable:
+            return allExec;
+        case EBF::NotSpecified:
+        default:
+            return true;
+    }
+}
+
+bool SearchWorker::matchesShebang(const QString& filePath) const
+{
+    if (!m_criteria.filterShebang)
+        return true;  // Don't check
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly))
+        return m_criteria.negateShebang;  // Can't read - treat as no shebang
+
+    QByteArray header = file.read(2);
+    file.close();
+
+    bool hasShebang = (header.size() >= 2 && header[0] == '#' && header[1] == '!');
+
+    return m_criteria.negateShebang ? !hasShebang : hasShebang;
 }

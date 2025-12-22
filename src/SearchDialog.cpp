@@ -263,6 +263,7 @@ SearchDialog::SearchDialog(const QString& startPath, QWidget* parent)
     , m_foundCount(0)
     , m_searchThread(nullptr)
     , m_searchWorker(nullptr)
+    , m_hasResults(false)
 {
     ObjectRegistry::add(this, "SearchDialog");
     setWindowTitle(tr("Find Files"));
@@ -350,26 +351,48 @@ void SearchDialog::createStandardTab()
     auto* criteriaGroup = new QGroupBox(tr("Search criteria:"), m_standardTab);
     auto* criteriaLayout = new QVBoxLayout(criteriaGroup);
 
-    // File name row
+    // File name row with Not checkbox
     auto* fileNameLayout = new QHBoxLayout();
     fileNameLayout->addWidget(new QLabel(tr("File name:")), 0);
     m_fileNameEdit = new QLineEdit(criteriaGroup);
     m_fileNameEdit->setPlaceholderText(tr("e.g., test or *.txt"));
     fileNameLayout->addWidget(m_fileNameEdit, 1);
+
+    // Not checkbox for filename
+    m_negateFileNameCheck = new QCheckBox(tr("Not"), criteriaGroup);
+    m_negateFileNameCheck->setToolTip(tr("Invert filename match"));
+    fileNameLayout->addWidget(m_negateFileNameCheck, 0);
+
     criteriaLayout->addLayout(fileNameLayout);
 
-    // File name options row: Case sensitive, Directories only, Part of name
+    // File name options row: Case sensitive, Part of name
     auto* fileNameOptionsLayout = new QHBoxLayout();
     fileNameOptionsLayout->addSpacing(20);
     m_fileNameCaseSensitiveCheck = new QCheckBox(tr("Case sensitive"), criteriaGroup);
-    m_directoriesOnlyCheck = new QCheckBox(tr("Directories only"), criteriaGroup);
     m_partOfNameCheck = new QCheckBox(tr("Part of name"), criteriaGroup);
     m_partOfNameCheck->setChecked(true);  // default ON
+
     fileNameOptionsLayout->addWidget(m_fileNameCaseSensitiveCheck);
-    fileNameOptionsLayout->addWidget(m_directoriesOnlyCheck);
     fileNameOptionsLayout->addWidget(m_partOfNameCheck);
     fileNameOptionsLayout->addStretch();
+
     criteriaLayout->addLayout(fileNameOptionsLayout);
+
+    // Item type row (replaces "Directories only")
+    auto* itemTypeLayout = new QHBoxLayout();
+    itemTypeLayout->addSpacing(20);
+    itemTypeLayout->addWidget(new QLabel(tr("Item type:"), criteriaGroup));
+
+    m_itemTypeCombo = new QComboBox(criteriaGroup);
+    m_itemTypeCombo->addItem(tr("Files and directories"));  // index 0
+    m_itemTypeCombo->addItem(tr("Files only"));             // index 1
+    m_itemTypeCombo->addItem(tr("Directories only"));       // index 2
+    m_itemTypeCombo->setCurrentIndex(0);  // default: Files and directories
+
+    itemTypeLayout->addWidget(m_itemTypeCombo);
+    itemTypeLayout->addStretch();
+
+    criteriaLayout->addLayout(itemTypeLayout);
 
     // Hide "Part of name" when filename contains wildcard (*)
     connect(m_fileNameEdit, &QLineEdit::textChanged, this, [this](const QString& text) {
@@ -382,12 +405,18 @@ void SearchDialog::createStandardTab()
 
     criteriaLayout->addSpacing(10);
 
-    // Containing text row
+    // Containing text row with Not checkbox
     auto* textLayout = new QHBoxLayout();
     textLayout->addWidget(new QLabel(tr("Containing text:")), 0);
     m_containingTextEdit = new QLineEdit(criteriaGroup);
     m_containingTextEdit->setPlaceholderText(tr("Text to search in files (optional)"));
     textLayout->addWidget(m_containingTextEdit, 1);
+
+    // Not checkbox for text content
+    m_negateContainingTextCheck = new QCheckBox(tr("Not"), criteriaGroup);
+    m_negateContainingTextCheck->setToolTip(tr("Invert text match"));
+    textLayout->addWidget(m_negateContainingTextCheck, 0);
+
     criteriaLayout->addLayout(textLayout);
 
     // Text options row
@@ -401,6 +430,13 @@ void SearchDialog::createStandardTab()
     criteriaLayout->addLayout(textOptionsLayout);
 
     layout->addWidget(criteriaGroup);
+
+    // Search in results checkbox (shown only when results exist)
+    m_searchInResultsCheck = new QCheckBox(tr("Search in results"), m_standardTab);
+    m_searchInResultsCheck->setToolTip(tr("Filter existing results instead of full filesystem search"));
+    m_searchInResultsCheck->setVisible(false);  // Initially hidden
+    layout->addWidget(m_searchInResultsCheck);
+
     layout->addStretch();
 
     // Browse button connection
@@ -421,7 +457,7 @@ void SearchDialog::createAdvancedTab()
     m_advancedTab = new QWidget();
     auto* layout = new QVBoxLayout(m_advancedTab);
 
-    // File size
+    // File size (existing)
     auto* sizeGroup = new QGroupBox(tr("File size:"), m_advancedTab);
     auto* sizeLayout = new QFormLayout(sizeGroup);
 
@@ -434,6 +470,59 @@ void SearchDialog::createAdvancedTab()
     sizeLayout->addRow(tr("Maximum (bytes):"), m_maxSizeEdit);
 
     layout->addWidget(sizeGroup);
+
+    // File type (NEW)
+    auto* fileTypeGroup = new QGroupBox(tr("File type:"), m_advancedTab);
+    auto* fileTypeLayout = new QVBoxLayout(fileTypeGroup);
+
+    // Text file row
+    auto* textFileLayout = new QHBoxLayout();
+    m_textFileCheck = new QCheckBox(tr("Text file"), fileTypeGroup);
+    m_negateTextFileCheck = new QCheckBox(tr("Not"), fileTypeGroup);
+    textFileLayout->addWidget(m_textFileCheck);
+    textFileLayout->addWidget(m_negateTextFileCheck);
+    textFileLayout->addStretch();
+    fileTypeLayout->addLayout(textFileLayout);
+
+    // ELF binary row
+    auto* elfLayout = new QHBoxLayout();
+    m_elfBinaryCheck = new QCheckBox(tr("ELF binary"), fileTypeGroup);
+    m_negateElfBinaryCheck = new QCheckBox(tr("Not"), fileTypeGroup);
+    elfLayout->addWidget(m_elfBinaryCheck);
+    elfLayout->addWidget(m_negateElfBinaryCheck);
+    elfLayout->addStretch();
+    fileTypeLayout->addLayout(elfLayout);
+
+    layout->addWidget(fileTypeGroup);
+
+    // File attributes (NEW)
+    auto* attributesGroup = new QGroupBox(tr("File attributes:"), m_advancedTab);
+    auto* attributesLayout = new QFormLayout(attributesGroup);
+
+    m_executableBitsCombo = new QComboBox(attributesGroup);
+    m_executableBitsCombo->addItem(tr("Not specified"));                    // index 0
+    m_executableBitsCombo->addItem(tr("Executable"));                       // index 1
+    m_executableBitsCombo->addItem(tr("Not executable"));                   // index 2
+    m_executableBitsCombo->addItem(tr("Owner+Group+Other executable"));    // index 3
+    m_executableBitsCombo->setCurrentIndex(0);  // default: Not specified
+
+    attributesLayout->addRow(tr("Executable bits:"), m_executableBitsCombo);
+
+    layout->addWidget(attributesGroup);
+
+    // Script detection (NEW)
+    auto* scriptGroup = new QGroupBox(tr("Script detection:"), m_advancedTab);
+    auto* scriptLayout = new QHBoxLayout(scriptGroup);
+
+    m_shebangCheck = new QCheckBox(tr("Has shebang (#!)"), scriptGroup);
+    m_negateShebangCheck = new QCheckBox(tr("Not"), scriptGroup);
+
+    scriptLayout->addWidget(m_shebangCheck);
+    scriptLayout->addWidget(m_negateShebangCheck);
+    scriptLayout->addStretch();
+
+    layout->addWidget(scriptGroup);
+
     layout->addStretch();
 }
 
@@ -492,23 +581,48 @@ void SearchDialog::onStartSearch()
         return;
     }
 
-    // Clear previous results
-    m_resultsModel->clear();
+    // Check if "Search in results" mode
+    bool searchInResults = m_searchInResultsCheck->isVisible() &&
+                          m_searchInResultsCheck->isChecked();
+
+    // Collect previous results if in search-in-results mode
+    QVector<QString> previousResults;
+    if (searchInResults) {
+        int count = m_resultsModel->resultCount();
+        previousResults.reserve(count);
+        for (int i = 0; i < count; ++i) {
+            const SearchResult& result = m_resultsModel->resultAt(i);
+            previousResults.append(result.dir + "/" + result.name);
+        }
+    }
+
+    // Clear results only if not searching in results
+    if (!searchInResults) {
+        m_resultsModel->clear();
+    }
     m_foundCount = 0;
 
+    // ─────────────────────────────────────────────────────────
     // Prepare search criteria
+    // ─────────────────────────────────────────────────────────
     SearchCriteria criteria;
     criteria.searchPath = searchPath;
+
+    // File name pattern
     criteria.fileNamePattern = m_fileNameEdit->text().trimmed();
     if (criteria.fileNamePattern.isEmpty())
         criteria.fileNamePattern = "*";
     criteria.fileNameCaseSensitive = m_fileNameCaseSensitiveCheck->isChecked();
     criteria.partOfName = m_partOfNameCheck->isChecked();
+    criteria.negateFileName = m_negateFileNameCheck->isChecked();
+
+    // Containing text
     criteria.containingText = m_containingTextEdit->text();
     criteria.textCaseSensitive = m_textCaseSensitiveCheck->isChecked();
     criteria.wholeWords = m_wholeWordsCheck->isChecked();
+    criteria.negateContainingText = m_negateContainingTextCheck->isChecked();
 
-    // Advanced criteria
+    // File size
     bool ok;
     if (!m_minSizeEdit->text().isEmpty()) {
         criteria.minSize = m_minSizeEdit->text().toLongLong(&ok);
@@ -518,9 +632,53 @@ void SearchDialog::onStartSearch()
         criteria.maxSize = m_maxSizeEdit->text().toLongLong(&ok);
         if (!ok) criteria.maxSize = -1;
     }
-    criteria.directoriesOnly = m_directoriesOnlyCheck->isChecked();
 
+    // Item type filter (replaces directoriesOnly)
+    switch (m_itemTypeCombo->currentIndex()) {
+        case 0:
+            criteria.itemTypeFilter = ItemTypeFilter::FilesAndDirectories;
+            break;
+        case 1:
+            criteria.itemTypeFilter = ItemTypeFilter::FilesOnly;
+            break;
+        case 2:
+            criteria.itemTypeFilter = ItemTypeFilter::DirectoriesOnly;
+            break;
+    }
+
+    // File type filters
+    criteria.filterTextFiles = m_textFileCheck->isChecked();
+    criteria.negateTextFiles = m_negateTextFileCheck->isChecked();
+    criteria.filterELFBinaries = m_elfBinaryCheck->isChecked();
+    criteria.negateELFBinaries = m_negateElfBinaryCheck->isChecked();
+
+    // Executable bits filter
+    switch (m_executableBitsCombo->currentIndex()) {
+        case 0:
+            criteria.executableBits = SearchCriteria::ExecutableBitsFilter::NotSpecified;
+            break;
+        case 1:
+            criteria.executableBits = SearchCriteria::ExecutableBitsFilter::Executable;
+            break;
+        case 2:
+            criteria.executableBits = SearchCriteria::ExecutableBitsFilter::NotExecutable;
+            break;
+        case 3:
+            criteria.executableBits = SearchCriteria::ExecutableBitsFilter::AllExecutable;
+            break;
+    }
+
+    // Shebang filter
+    criteria.filterShebang = m_shebangCheck->isChecked();
+    criteria.negateShebang = m_negateShebangCheck->isChecked();
+
+    // Search in results mode
+    criteria.searchInResults = searchInResults;
+    criteria.previousResultPaths = previousResults;
+
+    // ─────────────────────────────────────────────────────────
     // Create worker and thread
+    // ─────────────────────────────────────────────────────────
     m_searchThread = new QThread(this);
     m_searchWorker = new SearchWorker(criteria);
     m_searchWorker->moveToThread(m_searchThread);
@@ -539,7 +697,12 @@ void SearchDialog::onStartSearch()
     // Update UI
     m_startButton->setEnabled(false);
     m_stopButton->setEnabled(true);
-    m_statusLabel->setText(tr("Searching..."));
+
+    if (searchInResults) {
+        m_statusLabel->setText(tr("Filtering results..."));
+    } else {
+        m_statusLabel->setText(tr("Searching..."));
+    }
 
     // Switch to results tab
     m_tabWidget->setCurrentWidget(m_resultsTab);
@@ -573,6 +736,10 @@ void SearchDialog::onSearchFinished()
     // Get final count from model
     int finalCount = m_resultsModel->resultCount();
     m_statusLabel->setText(tr("Search finished. Found %1 file(s).").arg(finalCount));
+
+    // Show "Search in results" checkbox if we have results
+    m_hasResults = (finalCount > 0);
+    m_searchInResultsCheck->setVisible(m_hasResults);
 
     m_searchWorker = nullptr;
     m_searchThread = nullptr;
