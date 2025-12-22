@@ -141,6 +141,19 @@ void FilePaneWidget::updateStatusLabel()
         }
     }
 
+    // In branch mode with nothing marked, show branch+filename for current entry
+    if (panel->branchMode && selectedFileCount == 0 && selectedDirCount == 0) {
+        auto p = panel->currentEntryRow();
+        if (p.first) {
+            QString branchFile = p.first->branch;
+            if (!branchFile.isEmpty() && !branchFile.endsWith('/'))
+                branchFile += '/';
+            branchFile += p.first->info.fileName();
+            m_statusLabel->setText(branchFile);
+            return;
+        }
+    }
+
     // Format sizes using SizeFormat
     QString selectedSizeStr = QString::fromStdString(SizeFormat::formatSize(selectedBytes, false));
     QString totalSizeStr = QString::fromStdString(SizeFormat::formatSize(totalBytes, false));

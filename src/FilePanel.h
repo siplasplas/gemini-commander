@@ -50,13 +50,14 @@ enum class FileType {
 
 struct PanelEntry {
     QFileInfo info;
+    QString branch;  // Relative path from base directory (used in Branch Mode)
     bool isMarked = false;
     EntryContentState contentState = EntryContentState::NotDirectory;
     std::size_t totalSizeBytes = 0;
     TotalSizeStatus hasTotalSize = TotalSizeStatus::Unknown;
     PanelEntry() = default;
-    explicit PanelEntry(const QFileInfo& fi)
-        : info(fi)
+    explicit PanelEntry(const QFileInfo& fi, const QString& branchPath = QString())
+        : info(fi), branch(branchPath)
     {
         if (info.isDir())
             contentState = EntryContentState::DirUnknown;
@@ -91,6 +92,7 @@ public:
     QStandardItemModel* model = nullptr;
     QString currentPath;
     QList<PanelEntry> entries;
+    bool branchMode = false;  // Branch View mode (flat list of files from subdirectories)
 
     int sortColumn = COLUMN_NAME;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;

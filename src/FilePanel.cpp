@@ -501,6 +501,26 @@ void FilePanel::selectFirstEntry()
 }
 
 void FilePanel::trigger(const QString &name) {
+    // Handle branch mode navigation
+    if (branchMode) {
+        auto p = currentEntryRow();
+        if (p.first) {
+            PanelEntry* entry = p.first;
+            if (entry->info.isDir()) {
+                // Enter directory - exit branch mode and navigate there
+                branchMode = false;
+                currentPath = entry->info.absoluteFilePath();
+                loadDirectory();
+                selectFirstEntry();
+            } else {
+                // Open file with full path
+                activate(entry->info.absoluteFilePath());
+            }
+        }
+        return;
+    }
+
+    // Normal mode navigation
     QString selectedName;
     QDir dir(currentPath);
     if (name.isEmpty()) {
@@ -1357,6 +1377,13 @@ std::pair<PanelEntry*, int> FilePanel::currentEntryRow() {
         return {nullptr, -1};
 
     const int row = idx.row();
+
+    // In branch mode there's no [..] entry
+    if (branchMode) {
+        if (row < 0 || row >= entries.size())
+            return {nullptr, row};
+        return {&entries[row], row};
+    }
 
     if (!dir)
         return {nullptr, row};

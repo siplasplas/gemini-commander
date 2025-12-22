@@ -1,8 +1,67 @@
 bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doBranchViewWithSubdirs";
-    return false;
+
+    // Toggle: if already in branch mode, exit it
+    if (branchMode) {
+        branchMode = false;
+        loadDirectory();
+        return true;
+    }
+
+    // Enter branch mode: scan all files recursively
+    m_cancelOperation = false;
+    KeyRouter::instance().setOperationInProgress(true);
+
+    entries.clear();
+    QString basePath = currentPath;
+    if (!basePath.endsWith('/'))
+        basePath += '/';
+
+    QDirIterator it(currentPath,
+                    QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden,
+                    QDirIterator::Subdirectories);
+
+    int count = 0;
+    while (it.hasNext() && !m_cancelOperation) {
+        it.next();
+        QFileInfo info = it.fileInfo();
+
+        // Calculate branch (relative path from currentPath to file's directory)
+        QString filePath = info.absolutePath();
+        QString branch;
+        if (filePath.startsWith(basePath)) {
+            branch = filePath.mid(basePath.length());
+        }
+
+        entries.append(PanelEntry(info, branch));
+
+        // Process events periodically to allow ESC handling
+        if (++count % 100 == 0) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        }
+    }
+
+    KeyRouter::instance().setOperationInProgress(false);
+
+    if (m_cancelOperation) {
+        // Cancelled - revert to normal mode
+        entries.clear();
+        loadDirectory();
+        return true;
+    }
+
+    // Successfully scanned - enter branch mode
+    branchMode = true;
+    sortEntries();
+    model->removeRows(0, model->rowCount());
+    // No [..] entry in branch mode
+    addEntries();
+    setRootIndex(QModelIndex());
+    selectFirstEntry();
+    emit selectionChanged();
+
+    return true;
 }
 
 bool FilePanel::doCancelOperation(QObject *obj, QKeyEvent *keyEvent) {
