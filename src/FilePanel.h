@@ -90,6 +90,7 @@ public:
 #include "FilePanel_decl.inc"
     QStandardItemModel* model = nullptr;
     QString currentPath;
+    QList<PanelEntry> entries;
 
     int sortColumn = COLUMN_NAME;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
@@ -163,7 +164,6 @@ private:
     EntryContentState ensureContentState(PanelEntry&entry)const;
     bool mixedHidden = true;//filenames with dot, are between others
     // Search UI and logic
-    QList<PanelEntry> entries;
     QDir *dir = nullptr;
     void sortEntries();
     void addFirstEntry(bool isRoot);

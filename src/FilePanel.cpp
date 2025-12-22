@@ -456,6 +456,7 @@ void FilePanel::loadDirectory()
     }
     addAllEntries();
     emit directoryChanged(currentPath);
+    emit selectionChanged();
 }
 
 QString FilePanel::getRowName(int row) const {
@@ -1388,6 +1389,8 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow)
             scrollTo(nextIdx);
         }
     }
+
+    emit selectionChanged();
 }
 
 QStringList FilePanel::getMarkedNames() const

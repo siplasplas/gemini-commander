@@ -1,5 +1,6 @@
 #include "FilePaneWidget.h"
 #include "SearchEdit.h"
+#include "SizeFormat.h"
 
 #include <QItemSelectionModel>
 #include <QStandardItemModel>
@@ -68,7 +69,6 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
 
     // initial
     setCurrentPath(m_filePanel->currentPath);
-    updateStatusLabel();
 }
 
 void FilePaneWidget::setCurrentPath(const QString& path)
@@ -97,43 +97,62 @@ void FilePaneWidget::onSelectionChanged()
 
 void FilePaneWidget::updateStatusLabel()
 {
-    auto* view = m_filePanel;
-    auto* model = view->model;
-    auto* selModel = view->selectionModel();
-    if (!model || !selModel) {
+    auto* panel = m_filePanel;
+    if (!panel) {
         m_statusLabel->clear();
         return;
     }
 
-    const QModelIndexList rows = selModel->selectedRows(COLUMN_NAME);
-
+    // Iterate over all entries
+    qint64 selectedBytes = 0;
     qint64 totalBytes = 0;
-    int fileCount = 0;
-    int dirCount = 0;
+    int selectedFileCount = 0;
+    int selectedDirCount = 0;
+    int totalFileCount = 0;
+    int totalDirCount = 0;
 
-    for (const QModelIndex& idx : rows) {
-        int row = idx.row();
-        const QString type = model->item(row, COLUMN_EXT)->text();
-        const QString sizeStr = model->item(row, COLUMN_SIZE)->text();
+    for (const auto& entry : panel->entries) {
+        bool isDir = entry.info.isDir();
 
-        if (type == "<DIR>" || type == "Directory") {
-            ++dirCount;
+        // Calculate size for this entry
+        qint64 entrySize = 0;
+        if (entry.hasTotalSize == TotalSizeStatus::Has) {
+            entrySize = entry.totalSizeBytes;
         } else {
-            ++fileCount;
-            bool ok = false;
-            qint64 sz = sizeStr.toLongLong(&ok);
-            if (ok)
-                totalBytes += sz;
+            entrySize = entry.info.size();
+        }
+
+        // Total stats
+        if (isDir) {
+            ++totalDirCount;
+        } else {
+            ++totalFileCount;
+        }
+        totalBytes += entrySize;
+
+        // Selected stats (only if marked)
+        if (entry.isMarked) {
+            if (isDir) {
+                ++selectedDirCount;
+            } else {
+                ++selectedFileCount;
+            }
+            selectedBytes += entrySize;
         }
     }
 
-    const int totalRows = model->rowCount();
-    QString text = QString("Selected %1 bytes, %2 file(s), %3 dir(s), %4 of %5 items")
-            .arg(totalBytes)
-            .arg(fileCount)
-            .arg(dirCount)
-            .arg(rows.size())
-            .arg(totalRows);
+    // Format sizes using SizeFormat
+    QString selectedSizeStr = QString::fromStdString(SizeFormat::formatSize(selectedBytes, false));
+    QString totalSizeStr = QString::fromStdString(SizeFormat::formatSize(totalBytes, false));
+
+    // Format: "59 k / 1.31 M in 1 / 2 file(s), 0 / 1 dir(s)"
+    QString text = QString("%1 / %2 in %3 / %4 file(s), %5 / %6 dir(s)")
+            .arg(selectedSizeStr)
+            .arg(totalSizeStr)
+            .arg(selectedFileCount)
+            .arg(totalFileCount)
+            .arg(selectedDirCount)
+            .arg(totalDirCount);
     m_statusLabel->setText(text);
 }
 
