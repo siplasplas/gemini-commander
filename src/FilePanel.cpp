@@ -576,7 +576,8 @@ void FilePanel::activate(const QString &commandLine) {
     if (info.exists()) {
         // Check if it's an executable file (even without execute permission set)
         if (info.isFile() && info.isExecutable()) {
-            QProcess::startDetached(absPath, args, currentPath);
+            if (!QProcess::startDetached(absPath, args, currentPath))
+                QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));//incorrectly set attribute executable
         } else {
             // Open with default application (documents, images, etc.)
             QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
