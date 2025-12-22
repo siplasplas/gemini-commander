@@ -80,6 +80,7 @@ signals:
     void requestEdit(const QString& filePath);
     void requestView(const QString& filePath);
     void requestGoToFile(const QString& dir, const QString& name);
+    void requestFeedToListbox(const QVector<SearchResult>& results, const QString& searchPath);
 
 private slots:
     void onStartSearch();
@@ -136,6 +137,7 @@ private:
     QTableView* m_resultsView;
     SearchResultsModel* m_resultsModel;
     QLabel* m_statusLabel;
+    QPushButton* m_feedToListboxButton;
 
     // Control buttons
     QPushButton* m_startButton;

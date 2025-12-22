@@ -32,6 +32,7 @@
 #include "SizeFormat.h"
 #include "keys/KeyRouter.h"
 #include "SortedDirIterator.h"
+#include "SearchDialog.h"
 #include <QProcess>
 #include <QStandardPaths>
 
@@ -1614,6 +1615,34 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
         }
     }
     return true;
+}
+
+void FilePanel::feedSearchResults(const QVector<SearchResult>& results, const QString& searchPath)
+{
+    entries.clear();
+    QString basePath = searchPath;
+    if (!basePath.endsWith('/'))
+        basePath += '/';
+
+    for (const SearchResult& r : results) {
+        QString fullPath = r.dir + "/" + r.name;
+        QFileInfo info(fullPath);
+        // Branch is relative to search path
+        QString branch;
+        if (r.dir.startsWith(basePath))
+            branch = r.dir.mid(basePath.length());
+        else
+            branch = r.dir;  // fallback to absolute if not under search path
+        entries.append(PanelEntry(info, branch));
+    }
+
+    branchMode = true;
+    sortEntries();
+    model->removeRows(0, model->rowCount());
+    addEntries();
+    setRootIndex(QModelIndex());
+    selectFirstEntry();
+    emit selectionChanged();
 }
 
 

@@ -9,8 +9,10 @@
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QProgressDialog>
+#include <QVector>
 
 class QStandardItem;
+struct SearchResult;
 QT_BEGIN_NAMESPACE
 class QTableView;
 class QStandardItemModel;
@@ -134,6 +136,7 @@ public:
     void updateColumn(int row, PanelEntry& entry);
     QList<QStandardItem*> entryToRow(PanelEntry& entry);
     Side side() {return m_side;}
+    void feedSearchResults(const QVector<SearchResult>& results, const QString& searchPath);
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;

@@ -43,6 +43,10 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     connect(m_filePanel, &FilePanel::selectionChanged,
             this, &FilePaneWidget::onSelectionChanged);
 
+    // Update status on keyboard navigation (up/down, page up/down, etc.)
+    connect(m_filePanel->selectionModel(), &QItemSelectionModel::currentChanged,
+            this, &FilePaneWidget::onSelectionChanged);
+
     connect(m_searchEdit, &QLineEdit::textChanged,
             m_filePanel,  &FilePanel::updateSearch);
 

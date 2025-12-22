@@ -561,9 +561,31 @@ void SearchDialog::createResultsTab()
         }
     });
 
-    // Status label
+    // Bottom row: status label and feed button
+    auto* bottomLayout = new QHBoxLayout();
     m_statusLabel = new QLabel(tr("Ready"), m_resultsTab);
-    layout->addWidget(m_statusLabel);
+    bottomLayout->addWidget(m_statusLabel, 1);
+
+    m_feedToListboxButton = new QPushButton(tr("Feed to listbox"), m_resultsTab);
+    m_feedToListboxButton->setEnabled(false);
+    bottomLayout->addWidget(m_feedToListboxButton, 0);
+
+    layout->addLayout(bottomLayout);
+
+    connect(m_feedToListboxButton, &QPushButton::clicked, this, [this]() {
+        int count = m_resultsModel->resultCount();
+        if (count == 0)
+            return;
+
+        QVector<SearchResult> results;
+        results.reserve(count);
+        for (int i = 0; i < count; ++i) {
+            results.append(m_resultsModel->resultAt(i));
+        }
+
+        hide();
+        emit requestFeedToListbox(results, m_searchInEdit->text());
+    });
 }
 
 void SearchDialog::onStartSearch()
@@ -737,9 +759,10 @@ void SearchDialog::onSearchFinished()
     int finalCount = m_resultsModel->resultCount();
     m_statusLabel->setText(tr("Search finished. Found %1 file(s).").arg(finalCount));
 
-    // Show "Search in results" checkbox if we have results
+    // Show "Search in results" checkbox and enable "Feed to listbox" if we have results
     m_hasResults = (finalCount > 0);
     m_searchInResultsCheck->setVisible(m_hasResults);
+    m_feedToListboxButton->setEnabled(m_hasResults);
 
     m_searchWorker = nullptr;
     m_searchThread = nullptr;

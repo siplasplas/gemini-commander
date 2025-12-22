@@ -271,6 +271,10 @@ bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
         connect(m_searchDialog, &SearchDialog::requestEdit, this, &MainWindow::openEditorForFile);
         connect(m_searchDialog, &SearchDialog::requestView, this, &MainWindow::openViewerForFile);
         connect(m_searchDialog, &SearchDialog::requestGoToFile, this, &MainWindow::goToFile);
+        connect(m_searchDialog, &SearchDialog::requestFeedToListbox, this, [this](const QVector<SearchResult>& results, const QString& searchPath) {
+            currentFilePanel()->feedSearchResults(results, searchPath);
+            currentFilePanel()->setFocus();
+        });
     }
 
     m_searchDialog->show();
