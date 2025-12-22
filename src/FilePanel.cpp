@@ -466,6 +466,50 @@ QString FilePanel::getRowName(int row) const {
     return model->item(row, COLUMN_NAME)->data(Qt::UserRole).toString();
 }
 
+QString FilePanel::getRowRelPath(int row) const {
+    if (!branchMode)
+        return getRowName(row);
+
+    if (row < 0 || row >= entries.size())
+        return {};
+
+    const PanelEntry& entry = entries[row];
+    if (entry.branch.isEmpty())
+        return entry.info.fileName();
+    return entry.branch + "/" + entry.info.fileName();
+}
+
+void FilePanel::selectEntryByRelPath(const QString& relPath)
+{
+    if (relPath.isEmpty()) {
+        selectFirstEntry();
+        return;
+    }
+
+    // Search entries for matching branch + filename
+    for (int i = 0; i < entries.size(); ++i) {
+        const PanelEntry& entry = entries[i];
+        QString entryRelPath;
+        if (entry.branch.isEmpty())
+            entryRelPath = entry.info.fileName();
+        else
+            entryRelPath = entry.branch + "/" + entry.info.fileName();
+
+        if (entryRelPath == relPath) {
+            // In branch mode, row == entry index; otherwise account for [..]
+            int row = branchMode ? i : i + 1;
+            m_lastSelectedRow = row;
+            if (hasFocus())
+                restoreSelectionFromMemory();
+            return;
+        }
+    }
+
+    // Fallback: try to match just the filename
+    QString fileName = relPath.section('/', -1);
+    selectEntryByName(fileName);
+}
+
 void FilePanel::selectEntryByName(const QString& fullName)
 {
     m_lastSelectedRow = -1;

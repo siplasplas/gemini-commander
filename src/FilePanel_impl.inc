@@ -4,10 +4,28 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
 
     // Toggle: if already in branch mode, exit it
     if (branchMode) {
+        // Remember current selection
+        QModelIndex idx = currentIndex();
+        QString relPath = idx.isValid() ? getRowRelPath(idx.row()) : QString();
+
+        // Get current entry to check if we should navigate to its branch directory
+        auto p = currentEntryRow();
+        if (p.first && !p.first->branch.isEmpty()) {
+            // Navigate to the branch directory
+            currentPath = currentPath + "/" + p.first->branch;
+            QDir d(currentPath);
+            currentPath = d.canonicalPath();  // Normalize path
+        }
+
         branchMode = false;
         loadDirectory();
+        selectEntryByRelPath(relPath);
         return true;
     }
+
+    // Remember current selection before entering branch mode
+    QModelIndex idx = currentIndex();
+    QString relPath = idx.isValid() ? getRowRelPath(idx.row()) : QString();
 
     // Enter branch mode: scan all files recursively
     m_cancelOperation = false;
@@ -58,7 +76,7 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
     // No [..] entry in branch mode
     addEntries();
     setRootIndex(QModelIndex());
-    selectFirstEntry();
+    selectEntryByRelPath(relPath);
     emit selectionChanged();
 
     return true;
