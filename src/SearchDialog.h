@@ -119,18 +119,11 @@ private:
     QLineEdit* m_minSizeEdit;
     QLineEdit* m_maxSizeEdit;
 
-    // File type group
-    QCheckBox* m_textFileCheck;
-    QCheckBox* m_negateTextFileCheck;
-    QCheckBox* m_elfBinaryCheck;
-    QCheckBox* m_negateElfBinaryCheck;
+    // File content filter (unified combobox)
+    QComboBox* m_fileContentFilterCombo;
 
     // File attributes group
     QComboBox* m_executableBitsCombo;
-
-    // Script detection group
-    QCheckBox* m_shebangCheck;
-    QCheckBox* m_negateShebangCheck;
 
     // Results tab
     QWidget* m_resultsTab;

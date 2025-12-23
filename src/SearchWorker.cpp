@@ -89,16 +89,12 @@ void SearchWorker::startSearch()
                     continue;
             }
 
-            // File type filters (files only)
-            if (isFile && !matchesFileType(info.absoluteFilePath()))
+            // File content filter (files only)
+            if (isFile && !matchesFileContentFilter(info.absoluteFilePath(), info.size()))
                 continue;
 
             // Executable bits filter
             if (!matchesExecutableBits(info.absoluteFilePath()))
-                continue;
-
-            // Shebang filter (files only)
-            if (isFile && !matchesShebang(info.absoluteFilePath()))
                 continue;
 
             // All filters passed
@@ -160,12 +156,8 @@ void SearchWorker::startSearch()
                     continue;
             }
 
-            // File type filters
-            if (!matchesFileType(info.absoluteFilePath()))
-                continue;
-
-            // Shebang filter
-            if (!matchesShebang(info.absoluteFilePath()))
+            // File content filter
+            if (!matchesFileContentFilter(info.absoluteFilePath(), info.size()))
                 continue;
         }
 
@@ -253,25 +245,70 @@ bool SearchWorker::matchesItemType(bool isDir, bool isFile) const
     return false;
 }
 
-bool SearchWorker::matchesFileType(const QString& filePath) const
+bool SearchWorker::matchesFileContentFilter(const QString& filePath, qint64 fileSize) const
 {
-    // Text file check
-    if (m_criteria.filterTextFiles) {
-        bool isText = isTextFile(filePath);
-        bool result = m_criteria.negateTextFiles ? !isText : isText;
-        if (!result)
-            return false;
-    }
+    switch (m_criteria.fileContentFilter) {
+        case FileContentFilter::Any:
+            return true;
 
-    // ELF binary check
-    if (m_criteria.filterELFBinaries) {
-        ExecutableType type = getExecutableType(filePath);
-        bool isELF = (type == ExecutableType::ELFBinary);
-        bool result = m_criteria.negateELFBinaries ? !isELF : isELF;
-        if (!result)
-            return false;
-    }
+        case FileContentFilter::TextFile:
+            return isTextFile(filePath);
 
+        case FileContentFilter::ELFBinary: {
+            ExecutableType type = getExecutableType(filePath);
+            return (type == ExecutableType::ELFBinary);
+        }
+
+        case FileContentFilter::HasShebang: {
+            QFile file(filePath);
+            if (!file.open(QIODevice::ReadOnly))
+                return false;
+            QByteArray header = file.read(2);
+            file.close();
+            return (header.size() >= 2 && header[0] == '#' && header[1] == '!');
+        }
+
+        case FileContentFilter::ZeroFilled: {
+            // Empty files are not considered zero-filled
+            if (fileSize == 0)
+                return false;
+
+            QFile file(filePath);
+            if (!file.open(QIODevice::ReadOnly))
+                return false;
+
+            // Adaptive chunk sizes: 4 KiB -> 64 KiB -> 1 MiB
+            constexpr qint64 initialChunk = 4 * 1024;
+            constexpr qint64 mediumChunk = 64 * 1024;
+            constexpr qint64 largeChunk = 1024 * 1024;
+
+            QByteArray buffer;
+            int chunksRead = 0;
+
+            while (!file.atEnd() && !m_shouldStop) {
+                qint64 chunkSize;
+                if (chunksRead == 0)
+                    chunkSize = initialChunk;
+                else if (chunksRead <= 2)
+                    chunkSize = mediumChunk;
+                else
+                    chunkSize = largeChunk;
+
+                buffer = file.read(chunkSize);
+                chunksRead++;
+
+                for (char byte : buffer) {
+                    if (byte != 0) {
+                        file.close();
+                        return false;
+                    }
+                }
+            }
+
+            file.close();
+            return !m_shouldStop;
+        }
+    }
     return true;
 }
 
@@ -303,21 +340,4 @@ bool SearchWorker::matchesExecutableBits(const QString& filePath) const
         default:
             return true;
     }
-}
-
-bool SearchWorker::matchesShebang(const QString& filePath) const
-{
-    if (!m_criteria.filterShebang)
-        return true;  // Don't check
-
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly))
-        return m_criteria.negateShebang;  // Can't read - treat as no shebang
-
-    QByteArray header = file.read(2);
-    file.close();
-
-    bool hasShebang = (header.size() >= 2 && header[0] == '#' && header[1] == '!');
-
-    return m_criteria.negateShebang ? !hasShebang : hasShebang;
 }

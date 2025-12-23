@@ -457,7 +457,7 @@ void SearchDialog::createAdvancedTab()
     m_advancedTab = new QWidget();
     auto* layout = new QVBoxLayout(m_advancedTab);
 
-    // File size (existing)
+    // File size
     auto* sizeGroup = new QGroupBox(tr("File size:"), m_advancedTab);
     auto* sizeLayout = new QFormLayout(sizeGroup);
 
@@ -471,31 +471,23 @@ void SearchDialog::createAdvancedTab()
 
     layout->addWidget(sizeGroup);
 
-    // File type (NEW)
-    auto* fileTypeGroup = new QGroupBox(tr("File type:"), m_advancedTab);
-    auto* fileTypeLayout = new QVBoxLayout(fileTypeGroup);
+    // File content filter (unified combobox)
+    auto* contentGroup = new QGroupBox(tr("File content filter:"), m_advancedTab);
+    auto* contentLayout = new QFormLayout(contentGroup);
 
-    // Text file row
-    auto* textFileLayout = new QHBoxLayout();
-    m_textFileCheck = new QCheckBox(tr("Text file"), fileTypeGroup);
-    m_negateTextFileCheck = new QCheckBox(tr("Not"), fileTypeGroup);
-    textFileLayout->addWidget(m_textFileCheck);
-    textFileLayout->addWidget(m_negateTextFileCheck);
-    textFileLayout->addStretch();
-    fileTypeLayout->addLayout(textFileLayout);
+    m_fileContentFilterCombo = new QComboBox(contentGroup);
+    m_fileContentFilterCombo->addItem(tr("Any"));                                  // index 0
+    m_fileContentFilterCombo->addItem(tr("Text file"));                            // index 1
+    m_fileContentFilterCombo->addItem(tr("ELF binary"));                           // index 2
+    m_fileContentFilterCombo->addItem(tr("Has shebang (#!)"));                     // index 3
+    m_fileContentFilterCombo->addItem(tr("Zero-filled (USB write failure)"));      // index 4
+    m_fileContentFilterCombo->setCurrentIndex(0);  // default: Any
 
-    // ELF binary row
-    auto* elfLayout = new QHBoxLayout();
-    m_elfBinaryCheck = new QCheckBox(tr("ELF binary"), fileTypeGroup);
-    m_negateElfBinaryCheck = new QCheckBox(tr("Not"), fileTypeGroup);
-    elfLayout->addWidget(m_elfBinaryCheck);
-    elfLayout->addWidget(m_negateElfBinaryCheck);
-    elfLayout->addStretch();
-    fileTypeLayout->addLayout(elfLayout);
+    contentLayout->addRow(tr("Filter:"), m_fileContentFilterCombo);
 
-    layout->addWidget(fileTypeGroup);
+    layout->addWidget(contentGroup);
 
-    // File attributes (NEW)
+    // File attributes
     auto* attributesGroup = new QGroupBox(tr("File attributes:"), m_advancedTab);
     auto* attributesLayout = new QFormLayout(attributesGroup);
 
@@ -509,19 +501,6 @@ void SearchDialog::createAdvancedTab()
     attributesLayout->addRow(tr("Executable bits:"), m_executableBitsCombo);
 
     layout->addWidget(attributesGroup);
-
-    // Script detection (NEW)
-    auto* scriptGroup = new QGroupBox(tr("Script detection:"), m_advancedTab);
-    auto* scriptLayout = new QHBoxLayout(scriptGroup);
-
-    m_shebangCheck = new QCheckBox(tr("Has shebang (#!)"), scriptGroup);
-    m_negateShebangCheck = new QCheckBox(tr("Not"), scriptGroup);
-
-    scriptLayout->addWidget(m_shebangCheck);
-    scriptLayout->addWidget(m_negateShebangCheck);
-    scriptLayout->addStretch();
-
-    layout->addWidget(scriptGroup);
 
     layout->addStretch();
 }
@@ -655,7 +634,26 @@ void SearchDialog::onStartSearch()
         if (!ok) criteria.maxSize = -1;
     }
 
-    // Item type filter (replaces directoriesOnly)
+    // File content filter
+    switch (m_fileContentFilterCombo->currentIndex()) {
+        case 0:
+            criteria.fileContentFilter = FileContentFilter::Any;
+            break;
+        case 1:
+            criteria.fileContentFilter = FileContentFilter::TextFile;
+            break;
+        case 2:
+            criteria.fileContentFilter = FileContentFilter::ELFBinary;
+            break;
+        case 3:
+            criteria.fileContentFilter = FileContentFilter::HasShebang;
+            break;
+        case 4:
+            criteria.fileContentFilter = FileContentFilter::ZeroFilled;
+            break;
+    }
+
+    // Item type filter
     switch (m_itemTypeCombo->currentIndex()) {
         case 0:
             criteria.itemTypeFilter = ItemTypeFilter::FilesAndDirectories;
@@ -668,11 +666,17 @@ void SearchDialog::onStartSearch()
             break;
     }
 
-    // File type filters
-    criteria.filterTextFiles = m_textFileCheck->isChecked();
-    criteria.negateTextFiles = m_negateTextFileCheck->isChecked();
-    criteria.filterELFBinaries = m_elfBinaryCheck->isChecked();
-    criteria.negateELFBinaries = m_negateElfBinaryCheck->isChecked();
+    // Validate: file content filter requires files, conflicts with "directories only"
+    if (criteria.fileContentFilter != FileContentFilter::Any) {
+        if (criteria.itemTypeFilter == ItemTypeFilter::DirectoriesOnly) {
+            QMessageBox::warning(this, tr("Search"),
+                tr("Conflict: File content filter requires searching files, "
+                   "but 'Directories only' is selected on the Standard tab."));
+            return;
+        }
+        // Force files-only when content filter is active
+        criteria.itemTypeFilter = ItemTypeFilter::FilesOnly;
+    }
 
     // Executable bits filter
     switch (m_executableBitsCombo->currentIndex()) {
@@ -689,10 +693,6 @@ void SearchDialog::onStartSearch()
             criteria.executableBits = SearchCriteria::ExecutableBitsFilter::AllExecutable;
             break;
     }
-
-    // Shebang filter
-    criteria.filterShebang = m_shebangCheck->isChecked();
-    criteria.negateShebang = m_negateShebangCheck->isChecked();
 
     // Search in results mode
     criteria.searchInResults = searchInResults;

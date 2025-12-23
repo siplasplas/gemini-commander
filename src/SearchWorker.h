@@ -12,6 +12,14 @@ enum class ItemTypeFilter {
     DirectoriesOnly       // Only directories
 };
 
+enum class FileContentFilter {
+    Any,           // Don't check file content (can also search directories)
+    TextFile,      // Text file (not binary)
+    ELFBinary,     // ELF executable
+    HasShebang,    // Script with #! header
+    ZeroFilled     // Zero-filled file (USB write failure)
+};
+
 struct SearchCriteria {
     QString searchPath;
     QString fileNamePattern;      // wildcard pattern (e.g., "*.txt")
@@ -29,11 +37,8 @@ struct SearchCriteria {
 
     ItemTypeFilter itemTypeFilter = ItemTypeFilter::FilesAndDirectories;  // Replaces directoriesOnly
 
-    // File type filters
-    bool filterTextFiles = false;       // Enable text file filtering
-    bool negateTextFiles = false;       // Invert text file match
-    bool filterELFBinaries = false;     // Enable ELF binary filtering
-    bool negateELFBinaries = false;     // Invert ELF binary match
+    // File content filter (unified: text, ELF, shebang, zero-filled)
+    FileContentFilter fileContentFilter = FileContentFilter::Any;
 
     // Executable bits filter
     enum class ExecutableBitsFilter {
@@ -43,10 +48,6 @@ struct SearchCriteria {
         AllExecutable     // Owner+Group+Other all set
     };
     ExecutableBitsFilter executableBits = ExecutableBitsFilter::NotSpecified;
-
-    // Shebang detection
-    bool filterShebang = false;         // Enable shebang filtering
-    bool negateShebang = false;         // Invert shebang match
 
     // Search in results mode
     bool searchInResults = false;       // Hybrid filtering mode
@@ -73,9 +74,8 @@ private:
     bool matchesFileSize(qint64 size) const;
     bool matchesContainingText(const QString& filePath) const;
     bool matchesItemType(bool isDir, bool isFile) const;
-    bool matchesFileType(const QString& filePath) const;
+    bool matchesFileContentFilter(const QString& filePath, qint64 fileSize) const;
     bool matchesExecutableBits(const QString& filePath) const;
-    bool matchesShebang(const QString& filePath) const;
 
     SearchCriteria m_criteria;
     QRegularExpression m_fileNameRegex;
