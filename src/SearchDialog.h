@@ -76,6 +76,9 @@ public:
     // Get currently selected file path (dir + name)
     QString currentPanelPath() const;
 
+    // Update search path (called before showing dialog)
+    void setSearchPath(const QString& path);
+
 signals:
     void requestEdit(const QString& filePath);
     void requestView(const QString& filePath);
@@ -85,6 +88,8 @@ signals:
 private slots:
     void onStartSearch();
     void onStopSearch();
+    void onResetOptions();
+    void onClearAll();
     void onResultFound(const QString& path, qint64 size, const QDateTime& modified);
     void onSearchFinished();
     void onProgressUpdate(int searchedFiles, int foundFiles);
@@ -135,6 +140,8 @@ private:
     // Control buttons
     QPushButton* m_startButton;
     QPushButton* m_stopButton;
+    QPushButton* m_resetButton;
+    QPushButton* m_clearButton;
     QPushButton* m_closeButton;
 
     // Search worker

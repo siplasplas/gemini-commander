@@ -277,6 +277,8 @@ bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
         });
     }
 
+    // Always update search path from current panel
+    m_searchDialog->setSearchPath(startPath);
     m_searchDialog->show();
     m_searchDialog->raise();
     m_searchDialog->activateWindow();

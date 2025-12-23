@@ -309,12 +309,18 @@ void SearchDialog::setupUi()
 
     m_startButton = new QPushButton(tr("Start"), this);
     m_stopButton = new QPushButton(tr("Stop"), this);
+    m_resetButton = new QPushButton(tr("Reset"), this);
+    m_clearButton = new QPushButton(tr("Clear"), this);
     m_closeButton = new QPushButton(tr("Close"), this);
 
     m_stopButton->setEnabled(false);
+    m_resetButton->setToolTip(tr("Reset options to defaults (keep results)"));
+    m_clearButton->setToolTip(tr("Reset options and clear results"));
 
     buttonLayout->addWidget(m_startButton);
     buttonLayout->addWidget(m_stopButton);
+    buttonLayout->addWidget(m_resetButton);
+    buttonLayout->addWidget(m_clearButton);
     buttonLayout->addWidget(m_closeButton);
     buttonLayout->addStretch();
 
@@ -323,6 +329,8 @@ void SearchDialog::setupUi()
     // Connections
     connect(m_startButton, &QPushButton::clicked, this, &SearchDialog::onStartSearch);
     connect(m_stopButton, &QPushButton::clicked, this, &SearchDialog::onStopSearch);
+    connect(m_resetButton, &QPushButton::clicked, this, &SearchDialog::onResetOptions);
+    connect(m_clearButton, &QPushButton::clicked, this, &SearchDialog::onClearAll);
     connect(m_closeButton, &QPushButton::clicked, this, &QDialog::accept);
 
     connect(m_resultsView, &QTableView::activated, this, [this](const QModelIndex& index) {
@@ -830,5 +838,51 @@ bool SearchDialog::doView(QObject *obj, QKeyEvent *keyEvent) {
 
     emit requestView(fullPath);
     return true;
+}
+
+void SearchDialog::setSearchPath(const QString& path)
+{
+    m_startPath = path;
+    m_searchInEdit->setText(path);
+}
+
+void SearchDialog::onResetOptions()
+{
+    // Reset all options to defaults (keep results)
+    m_searchInEdit->setText(m_startPath);
+
+    // Standard tab
+    m_fileNameEdit->clear();
+    m_fileNameCaseSensitiveCheck->setChecked(false);
+    m_partOfNameCheck->setChecked(true);
+    m_negateFileNameCheck->setChecked(false);
+    m_itemTypeCombo->setCurrentIndex(0);  // Files and directories
+    m_containingTextEdit->clear();
+    m_textCaseSensitiveCheck->setChecked(false);
+    m_wholeWordsCheck->setChecked(false);
+    m_negateContainingTextCheck->setChecked(false);
+    m_searchInResultsCheck->setChecked(false);
+
+    // Advanced tab
+    m_minSizeEdit->clear();
+    m_maxSizeEdit->clear();
+    m_fileContentFilterCombo->setCurrentIndex(0);  // Any
+    m_executableBitsCombo->setCurrentIndex(0);     // Not specified
+
+    // Switch to Standard tab
+    m_tabWidget->setCurrentWidget(m_standardTab);
+}
+
+void SearchDialog::onClearAll()
+{
+    // Reset options
+    onResetOptions();
+
+    // Clear results
+    m_resultsModel->clear();
+    m_hasResults = false;
+    m_searchInResultsCheck->setVisible(false);
+    m_feedToListboxButton->setEnabled(false);
+    m_statusLabel->setText(tr("Ready"));
 }
 
