@@ -114,7 +114,72 @@ bool FilePanel::doCDTree(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
+
+    QDir dir(currentPath);
     QModelIndex idx = currentIndex();
+    int rowToSelect = idx.isValid() ? idx.row() : 0;
+
+    // Check for marked files
+    QStringList markedPaths = getMarkedRelPaths();
+
+    if (!markedPaths.isEmpty()) {
+        // Delete all marked files permanently
+        QString question = tr("PERMANENTLY delete %1 marked item(s)? This cannot be undone!")
+            .arg(markedPaths.size());
+
+        auto reply = QMessageBox::warning(
+            window(), tr("Permanent Delete"), question,
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No
+        );
+
+        if (reply != QMessageBox::Yes)
+            return true;
+
+        QStringList failedItems;
+        for (const QString& relPath : markedPaths) {
+            if (relPath == "." || relPath == "..")
+                continue;
+
+            QString fullPath = dir.absoluteFilePath(relPath);
+            QFileInfo info(fullPath);
+            if (!info.exists())
+                continue;
+
+            bool ok = false;
+            if (info.isDir()) {
+                QDir d(fullPath);
+                ok = d.removeRecursively();
+            } else {
+                ok = QFile::remove(fullPath);
+            }
+
+            if (ok) {
+                if (branchMode)
+                    removeEntryByRelPath(relPath);
+            } else {
+                failedItems << relPath;
+            }
+        }
+
+        if (!branchMode)
+            loadDirectory();
+
+        if (!failedItems.isEmpty()) {
+            QMessageBox::warning(window(), tr("Error"),
+                tr("Could not delete %1 item(s):\n%2")
+                    .arg(failedItems.size())
+                    .arg(failedItems.join("\n")));
+        }
+
+        // Select row
+        int maxRow = model->rowCount() - 1;
+        if (maxRow >= 0)
+            selectRow(qMin(rowToSelect, maxRow));
+
+        return true;
+    }
+
+    // Single file deletion (no marked files)
     if (!idx.isValid())
         return true;
 
@@ -122,7 +187,6 @@ bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     if (name.isEmpty())
         return true;
 
-    QDir dir(currentPath);
     QString fullPath = dir.absoluteFilePath(name);
     QFileInfo info(fullPath);
     if (!info.exists())
@@ -148,18 +212,14 @@ bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
         QMessageBox::warning(window(), tr("Error"),
             tr("Could not delete '%1'").arg(name));
     } else {
-        int rowToSelect = idx.row();
         if (branchMode) {
-            // Use incremental update in branch mode
             removeEntryByRelPath(name);
         } else {
             loadDirectory();
         }
-        // Select same index or last row if we deleted the last item
         int maxRow = model->rowCount() - 1;
-        if (maxRow >= 0) {
+        if (maxRow >= 0)
             selectRow(qMin(rowToSelect, maxRow));
-        }
     }
     return true;
 }
@@ -167,7 +227,74 @@ bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
+
+    QDir dir(currentPath);
     QModelIndex idx = currentIndex();
+    int rowToSelect = idx.isValid() ? idx.row() : 0;
+
+    // Check for marked files
+    QStringList markedPaths = getMarkedRelPaths();
+
+    if (!markedPaths.isEmpty()) {
+        // Delete all marked files
+        QString question = tr("Delete %1 marked item(s) to trash?").arg(markedPaths.size());
+
+        auto reply = QMessageBox::question(
+            window(), tr("Delete"), question,
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+        );
+
+        if (reply != QMessageBox::Yes)
+            return true;
+
+        QStringList failedItems;
+        for (const QString& relPath : markedPaths) {
+            if (relPath == "." || relPath == "..")
+                continue;
+
+            QString fullPath = dir.absoluteFilePath(relPath);
+            QFileInfo info(fullPath);
+            if (!info.exists())
+                continue;
+
+            bool ok = false;
+            if (info.isDir()) {
+                QDir d(fullPath);
+                if (d.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden))
+                    ok = dir.rmdir(relPath);
+                else
+                    ok = QFile::moveToTrash(fullPath);
+            } else {
+                ok = QFile::moveToTrash(fullPath);
+            }
+
+            if (ok) {
+                if (branchMode)
+                    removeEntryByRelPath(relPath);
+            } else {
+                failedItems << relPath;
+            }
+        }
+
+        if (!branchMode)
+            loadDirectory();
+
+        if (!failedItems.isEmpty()) {
+            QMessageBox::warning(window(), tr("Error"),
+                tr("Could not delete %1 item(s):\n%2")
+                    .arg(failedItems.size())
+                    .arg(failedItems.join("\n")));
+        }
+
+        // Select row
+        int maxRow = model->rowCount() - 1;
+        if (maxRow >= 0)
+            selectRow(qMin(rowToSelect, maxRow));
+
+        return true;
+    }
+
+    // Single file deletion (no marked files)
     if (!idx.isValid())
         return true;
 
@@ -175,7 +302,6 @@ bool FilePanel::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     if (name.isEmpty())
         return true;
 
-    QDir dir(currentPath);
     QString fullPath = dir.absoluteFilePath(name);
     QFileInfo info(fullPath);
     if (!info.exists())
@@ -215,18 +341,14 @@ bool FilePanel::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
         QMessageBox::warning(window(), tr("Error"),
             tr("Could not delete '%1'").arg(name));
     } else {
-        int rowToSelect = idx.row();
         if (branchMode) {
-            // Use incremental update in branch mode
             removeEntryByRelPath(name);
         } else {
             loadDirectory();
         }
-        // Select same index or last row if we deleted the last item
         int maxRow = model->rowCount() - 1;
-        if (maxRow >= 0) {
+        if (maxRow >= 0)
             selectRow(qMin(rowToSelect, maxRow));
-        }
     }
     return true;
 }

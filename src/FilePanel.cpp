@@ -1476,6 +1476,20 @@ QStringList FilePanel::getMarkedNames() const
     return result;
 }
 
+QStringList FilePanel::getMarkedRelPaths() const
+{
+    QStringList result;
+    for (const auto& entry : entries) {
+        if (entry.isMarked) {
+            if (entry.branch.isEmpty())
+                result << entry.info.fileName();
+            else
+                result << entry.branch + "/" + entry.info.fileName();
+        }
+    }
+    return result;
+}
+
 bool FilePanel::hasMarkedEntries() const
 {
     for (const auto& entry : entries) {

@@ -329,198 +329,30 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
 }
 
 bool MainWindow::doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
-    if (panel) {
-        panel->toggleMarkOnCurrent(true);
-    }
+    if (panel)
+        return panel->doToggleMarkDown(obj, keyEvent);
     return true;
 }
 
 bool MainWindow::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
-    if (panel) {
-        panel->createNewDirectory(this);
-    }
-    return true;
-}
-
-// Helper: check if path is safely inside baseDir (not parent, not sibling, not self)
-static bool isPathSafeToDelete(const QString& path, const QString& baseDir, QString& errorMsg) {
-    QFileInfo pathInfo(path);
-    QFileInfo baseInfo(baseDir);
-
-    // Get canonical paths (resolves symlinks, .., etc.)
-    QString canonicalPath = pathInfo.canonicalFilePath();
-    QString canonicalBase = baseInfo.canonicalFilePath();
-
-    if (canonicalPath.isEmpty() || canonicalBase.isEmpty()) {
-        errorMsg = QObject::tr("Cannot resolve path.");
-        return false;
-    }
-
-    // Path must start with baseDir + "/" (be inside it)
-    if (!canonicalPath.startsWith(canonicalBase + "/")) {
-        errorMsg = QObject::tr("Cannot delete items outside the current directory.\n"
-                               "Item: %1\nCurrent dir: %2").arg(canonicalPath, canonicalBase);
-        return false;
-    }
-
+    if (panel)
+        return panel->doMakeDirectory(obj, keyEvent);
     return true;
 }
 
 bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
-    if (!panel)
-        return true;
-
-    QModelIndex currentIndex = panel->currentIndex();
-    if (!currentIndex.isValid())
-        return true;
-
-    QString name = panel->getRowRelPath(currentIndex.row());
-    if (name.isEmpty())
-        return true;
-
-    // Block "." and ".."
-    if (name == "." || name == "..") {
-        QMessageBox::warning(this, tr("Delete"),
-            tr("Cannot delete '%1'.").arg(name));
-        return true;
-    }
-
-    QDir dir(panel->currentPath);
-    QString fullPath = dir.absoluteFilePath(name);
-    QFileInfo info(fullPath);
-    if (!info.exists())
-        return true;
-
-    // For directories, verify it's inside current directory
-    if (info.isDir()) {
-        QString errorMsg;
-        if (!isPathSafeToDelete(fullPath, panel->currentPath, errorMsg)) {
-            QMessageBox::warning(this, tr("Delete"), errorMsg);
-            return true;
-        }
-    }
-
-    QString question;
-    bool useTrash = true;
-
-    if (info.isDir()) {
-        QDir d(fullPath);
-        bool empty = d.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
-
-        if (empty) {
-            question = tr("Delete selected empty dir '%1'?").arg(name);
-            useTrash = false;
-        } else {
-            question = tr("Delete selected non empty dir '%1' into trashcan?").arg(name);
-        }
-    } else {
-        question = tr("Delete selected '%1' into trashcan?").arg(name);
-    }
-
-    auto reply = QMessageBox::question(
-        this, tr("Delete"), question,
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
-    );
-
-    if (reply != QMessageBox::Yes)
-        return true;
-
-    bool ok = false;
-    if (info.isDir() && !useTrash) {
-        ok = dir.rmdir(name);
-    } else {
-        ok = QFile::moveToTrash(fullPath);
-    }
-
-    if (!ok) {
-        QMessageBox::warning(this, tr("Error"),
-            tr("Could not delete '%1'").arg(name));
-    } else {
-        // In branch mode, use incremental update instead of full reload
-        if (panel->branchMode) {
-            panel->removeEntryByRelPath(name);
-        } else {
-            panel->loadDirectory();
-        }
-    }
+    if (panel)
+        return panel->doDeleteToTrash(obj, keyEvent);
     return true;
 }
 
 bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
-    if (!panel)
-        return true;
-
-    QModelIndex currentIndex = panel->currentIndex();
-    if (!currentIndex.isValid())
-        return true;
-
-    QString name = panel->getRowRelPath(currentIndex.row());
-    if (name.isEmpty())
-        return true;
-
-    // Block "." and ".."
-    if (name == "." || name == "..") {
-        QMessageBox::warning(this, tr("Delete"),
-            tr("Cannot delete '%1'.").arg(name));
-        return true;
-    }
-
-    QDir dir(panel->currentPath);
-    QString fullPath = dir.absoluteFilePath(name);
-    QFileInfo info(fullPath);
-    if (!info.exists())
-        return true;
-
-    // For directories, verify it's inside current directory
-    if (info.isDir()) {
-        QString errorMsg;
-        if (!isPathSafeToDelete(fullPath, panel->currentPath, errorMsg)) {
-            QMessageBox::warning(this, tr("Delete"), errorMsg);
-            return true;
-        }
-    }
-
-    QString question = tr("PERMANENTLY delete '%1'? This cannot be undone!").arg(name);
-
-    auto reply = QMessageBox::warning(
-        this, tr("Permanent Delete"), question,
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::No
-    );
-
-    if (reply != QMessageBox::Yes)
-        return true;
-
-    bool ok = false;
-    if (info.isDir()) {
-        QDir d(fullPath);
-        ok = d.removeRecursively();
-    } else {
-        ok = QFile::remove(fullPath);
-    }
-
-    if (!ok) {
-        QMessageBox::warning(this, tr("Error"),
-            tr("Could not delete '%1'").arg(name));
-    } else {
-        // In branch mode, use incremental update instead of full reload
-        if (panel->branchMode) {
-            panel->removeEntryByRelPath(name);
-        } else {
-            panel->loadDirectory();
-        }
-    }
+    if (panel)
+        return panel->doDeletePermanently(obj, keyEvent);
     return true;
 }
 
