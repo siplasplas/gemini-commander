@@ -1511,13 +1511,14 @@ void MainWindow::updateWatchedDirectories()
 void MainWindow::onDirectoryChanged(const QString& path)
 {
     // Refresh panels showing this directory
+    // Skip panels in branchMode - they use incremental updates
     FilePanel* leftPanel = filePanelForSide(Side::Left);
     FilePanel* rightPanel = filePanelForSide(Side::Right);
 
-    if (leftPanel && leftPanel->currentPath == path) {
+    if (leftPanel && leftPanel->currentPath == path && !leftPanel->branchMode) {
         leftPanel->loadDirectory();
     }
-    if (rightPanel && rightPanel->currentPath == path) {
+    if (rightPanel && rightPanel->currentPath == path && !rightPanel->branchMode) {
         rightPanel->loadDirectory();
     }
 

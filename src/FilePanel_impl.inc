@@ -149,7 +149,12 @@ bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
             tr("Could not delete '%1'").arg(name));
     } else {
         int rowToSelect = idx.row();
-        loadDirectory();
+        if (branchMode) {
+            // Use incremental update in branch mode
+            removeEntryByRelPath(name);
+        } else {
+            loadDirectory();
+        }
         // Select same index or last row if we deleted the last item
         int maxRow = model->rowCount() - 1;
         if (maxRow >= 0) {
@@ -211,7 +216,12 @@ bool FilePanel::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
             tr("Could not delete '%1'").arg(name));
     } else {
         int rowToSelect = idx.row();
-        loadDirectory();
+        if (branchMode) {
+            // Use incremental update in branch mode
+            removeEntryByRelPath(name);
+        } else {
+            loadDirectory();
+        }
         // Select same index or last row if we deleted the last item
         int maxRow = model->rowCount() - 1;
         if (maxRow >= 0) {

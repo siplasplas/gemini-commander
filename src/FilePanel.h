@@ -140,6 +140,12 @@ public:
     Side side() {return m_side;}
     void feedSearchResults(const QVector<SearchResult>& results, const QString& searchPath);
 
+    // Branch mode incremental updates (avoid full reload)
+    bool removeEntryByRelPath(const QString& relPath);
+    bool renameEntry(const QString& oldRelPath, const QString& newRelPath);
+    bool updateEntryBranch(const QString& relPath, const QString& newBranch);
+    bool addEntryFromPath(const QString& fullPath, const QString& branch = QString());
+
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
 

@@ -443,7 +443,12 @@ bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
         QMessageBox::warning(this, tr("Error"),
             tr("Could not delete '%1'").arg(name));
     } else {
-        panel->loadDirectory();
+        // In branch mode, use incremental update instead of full reload
+        if (panel->branchMode) {
+            panel->removeEntryByRelPath(name);
+        } else {
+            panel->loadDirectory();
+        }
     }
     return true;
 }
@@ -507,7 +512,12 @@ bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
         QMessageBox::warning(this, tr("Error"),
             tr("Could not delete '%1'").arg(name));
     } else {
-        panel->loadDirectory();
+        // In branch mode, use incremental update instead of full reload
+        if (panel->branchMode) {
+            panel->removeEntryByRelPath(name);
+        } else {
+            panel->loadDirectory();
+        }
     }
     return true;
 }

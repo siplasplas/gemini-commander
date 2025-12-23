@@ -1689,5 +1689,124 @@ void FilePanel::feedSearchResults(const QVector<SearchResult>& results, const QS
     emit selectionChanged();
 }
 
+// ============================================================================
+// Branch mode incremental updates (avoid full reload)
+// ============================================================================
+
+bool FilePanel::removeEntryByRelPath(const QString& relPath)
+{
+    // Find entry by relative path
+    for (int i = 0; i < entries.size(); ++i) {
+        QString entryRelPath;
+        if (entries[i].branch.isEmpty()) {
+            entryRelPath = entries[i].info.fileName();
+        } else {
+            entryRelPath = entries[i].branch + "/" + entries[i].info.fileName();
+        }
+
+        if (entryRelPath == relPath) {
+            // Found - remove from entries and model
+            entries.removeAt(i);
+
+            // In branch mode, row == entry index; otherwise +1 for [..]
+            int modelRow = branchMode ? i : i + 1;
+            model->removeRow(modelRow);
+
+            return true;
+        }
+    }
+    return false;
+}
+
+bool FilePanel::renameEntry(const QString& oldRelPath, const QString& newRelPath)
+{
+    // Find entry by old relative path
+    for (int i = 0; i < entries.size(); ++i) {
+        QString entryRelPath;
+        if (entries[i].branch.isEmpty()) {
+            entryRelPath = entries[i].info.fileName();
+        } else {
+            entryRelPath = entries[i].branch + "/" + entries[i].info.fileName();
+        }
+
+        if (entryRelPath == oldRelPath) {
+            // Found - update entry
+            QDir baseDir(currentPath);
+            QString newFullPath = baseDir.absoluteFilePath(newRelPath);
+            QFileInfo newInfo(newFullPath);
+
+            // Update entry
+            entries[i].info = newInfo;
+
+            // Update branch if path changed
+            int lastSlash = newRelPath.lastIndexOf('/');
+            if (lastSlash >= 0) {
+                entries[i].branch = newRelPath.left(lastSlash);
+            } else {
+                entries[i].branch.clear();
+            }
+
+            // Update model row
+            int modelRow = branchMode ? i : i + 1;
+            updateColumn(modelRow, entries[i]);
+
+            return true;
+        }
+    }
+    return false;
+}
+
+bool FilePanel::updateEntryBranch(const QString& relPath, const QString& newBranch)
+{
+    // Find entry by relative path
+    for (int i = 0; i < entries.size(); ++i) {
+        QString entryRelPath;
+        if (entries[i].branch.isEmpty()) {
+            entryRelPath = entries[i].info.fileName();
+        } else {
+            entryRelPath = entries[i].branch + "/" + entries[i].info.fileName();
+        }
+
+        if (entryRelPath == relPath) {
+            // Found - update branch
+            entries[i].branch = newBranch;
+
+            // Update info to point to new location
+            QDir baseDir(currentPath);
+            QString newRelPathFull = newBranch.isEmpty()
+                ? entries[i].info.fileName()
+                : newBranch + "/" + entries[i].info.fileName();
+            entries[i].info = QFileInfo(baseDir.absoluteFilePath(newRelPathFull));
+
+            // Update model row
+            int modelRow = branchMode ? i : i + 1;
+            updateColumn(modelRow, entries[i]);
+
+            return true;
+        }
+    }
+    return false;
+}
+
+bool FilePanel::addEntryFromPath(const QString& fullPath, const QString& branch)
+{
+    QFileInfo info(fullPath);
+    if (!info.exists()) {
+        return false;
+    }
+
+    // Create new entry
+    PanelEntry entry(info, branch);
+
+    // Add to entries list
+    entries.append(entry);
+
+    // Create model row and add to model
+    QList<QStandardItem*> row = entryToRow(entry);
+    model->appendRow(row);
+
+    return true;
+}
+
 
 #include "FilePanel_impl.inc"
