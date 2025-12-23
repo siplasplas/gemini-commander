@@ -381,7 +381,7 @@ bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     if (!currentIndex.isValid())
         return true;
 
-    QString name = panel->getRowName(currentIndex.row());
+    QString name = panel->getRowRelPath(currentIndex.row());
     if (name.isEmpty())
         return true;
 
@@ -459,7 +459,7 @@ bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     if (!currentIndex.isValid())
         return true;
 
-    QString name = panel->getRowName(currentIndex.row());
+    QString name = panel->getRowRelPath(currentIndex.row());
     if (name.isEmpty())
         return true;
 

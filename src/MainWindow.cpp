@@ -997,16 +997,12 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
             suggested = targetDir;
         }
     } else {
-        // Single file: get current item
+        // Single file: get current item (use getRowRelPath for Branch mode compatibility)
         QModelIndex currentIndex = srcPanel->currentIndex();
         if (!currentIndex.isValid())
             return;
 
-        QStandardItem* item = srcPanel->model->item(currentIndex.row(), COLUMN_NAME);
-        if (!item)
-            return;
-
-        currentName = item->data(Qt::UserRole).toString();
+        currentName = srcPanel->getRowRelPath(currentIndex.row());
         if (currentName.isEmpty())
             return; // [..]
 
@@ -1267,15 +1263,12 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
             suggested = targetDir;
         }
     } else {
+        // Single file: get current item (use getRowRelPath for Branch mode compatibility)
         QModelIndex currentIndex = srcPanel->currentIndex();
         if (!currentIndex.isValid())
             return;
 
-        QStandardItem* item = srcPanel->model->item(currentIndex.row(), COLUMN_NAME);
-        if (!item)
-            return;
-
-        currentName = item->data(Qt::UserRole).toString();
+        currentName = srcPanel->getRowRelPath(currentIndex.row());
         if (currentName.isEmpty())
             return;
 
@@ -1451,7 +1444,7 @@ QString MainWindow::currentPanelName() {
     if (!currentIndex.isValid()) {
         return QString{};
     }
-    return currentFilePanel()->getRowName(currentIndex.row());
+    return currentFilePanel()->getRowRelPath(currentIndex.row());
 }
 
 QString MainWindow::currentPanelPath() {

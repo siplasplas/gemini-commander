@@ -118,7 +118,7 @@ bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     if (!idx.isValid())
         return true;
 
-    QString name = getRowName(idx.row());
+    QString name = getRowRelPath(idx.row());
     if (name.isEmpty())
         return true;
 
@@ -166,7 +166,7 @@ bool FilePanel::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     if (!idx.isValid())
         return true;
 
-    QString name = getRowName(idx.row());
+    QString name = getRowRelPath(idx.row());
     if (name.isEmpty())
         return true;
 
@@ -341,7 +341,7 @@ bool FilePanel::doRefresh(QObject *obj, QKeyEvent *keyEvent) {
     // Remember current position
     QModelIndex idx = currentIndex();
     int currentRow = idx.isValid() ? idx.row() : 0;
-    QString currentName = idx.isValid() ? getRowName(currentRow) : QString();
+    QString currentName = idx.isValid() ? getRowRelPath(currentRow) : QString();
 
     // Reload directory
     loadDirectory();

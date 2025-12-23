@@ -802,12 +802,12 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     QString firstName;
     {
         int row = selectedRows.first().row();
-        firstName = getRowName(row);
+        firstName = getRowRelPath(row);
     }
 
     for (const QModelIndex& idx : selectedRows) {
         int row = idx.row();
-        QString name = getRowName(row);
+        QString name = getRowRelPath(row);
         if (name.isEmpty())
             continue; // skip parent entry "[..]" / empty name
 
