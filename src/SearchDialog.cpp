@@ -844,6 +844,7 @@ void SearchDialog::setSearchPath(const QString& path)
 {
     m_startPath = path;
     m_searchInEdit->setText(path);
+    m_startButton->setFocus();
 }
 
 void SearchDialog::onResetOptions()
