@@ -12,6 +12,7 @@
 
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
+#include "udisks/UDisksDeviceManager.h"
 
 class FunctionBar;
 class ViewerFrame;
@@ -69,7 +70,6 @@ private:
     QAction* m_externalToolAction = nullptr;
 
     void createMountsToolbar();
-    QStringList listMountPoints() const;
     void copyFromPanel(FilePanel* srcPanel, bool inPlace = false);
     void moveFromPanel(FilePanel* srcPanel, bool inPlace = false);
     KeyMap keyMap;
@@ -94,11 +94,11 @@ private:
     QFileSystemWatcher* m_dirWatcher = nullptr;
     void updateWatchedDirectories();
 
-    // Mounts monitoring (polling-based for reliability)
-    QTimer* m_mountsPollTimer = nullptr;
-    QStringList m_lastMountPoints;
+    // Mounts monitoring via UDisks2
+    UDisksDeviceManager* m_udisksManager = nullptr;
     void refreshMountsToolbar();
-    void checkMountsChanged();
+    void onDeviceMounted(const QString &objectPath, const QString &mountPoint);
+    void onDeviceUnmounted(const QString &objectPath);
 
     // Function bar
     FunctionBar* m_functionBar = nullptr;

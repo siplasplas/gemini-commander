@@ -43,6 +43,7 @@
 #include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"
 #include "quitls.h"
+#include "udisks/UDisksDeviceManager.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
@@ -50,6 +51,34 @@ MainWindow::MainWindow(QWidget *parent)
     QString cfg = Config::instance().defaultConfigPath();
     Config::instance().load(cfg);
     Config::instance().setConfigPath(cfg);
+
+    // Initialize UDisks2 BEFORE setupUi() so mounts toolbar can be populated
+    m_udisksManager = new UDisksDeviceManager(this);
+
+    connect(m_udisksManager, &UDisksDeviceManager::deviceAdded,
+            this, [this](const BlockDeviceInfo &) {
+                refreshMountsToolbar();
+            });
+
+    connect(m_udisksManager, &UDisksDeviceManager::deviceRemoved,
+            this, [this](const QString &, const QString &) {
+                refreshMountsToolbar();
+            });
+
+    connect(m_udisksManager, &UDisksDeviceManager::deviceMounted,
+            this, &MainWindow::onDeviceMounted);
+
+    connect(m_udisksManager, &UDisksDeviceManager::deviceUnmounted,
+            this, &MainWindow::onDeviceUnmounted);
+
+    connect(m_udisksManager, &UDisksDeviceManager::errorOccurred,
+            this, [](const QString &operation, const QString &errorMessage) {
+                qWarning() << "UDisks error during" << operation << ":" << errorMessage;
+            });
+
+    if (!m_udisksManager->start()) {
+        qWarning() << "Failed to start UDisks device manager - mounts toolbar will be empty";
+    }
 
     setupUi();
 
@@ -91,17 +120,6 @@ MainWindow::MainWindow(QWidget *parent)
                 this, &MainWindow::updateWatchedDirectories);
     }
     updateWatchedDirectories();
-
-    // Mounts monitoring - use polling timer because:
-    // 1. /proc/mounts doesn't work with inotify (procfs)
-    // 2. Directory watching is unreliable - inotify events may fire before /proc/mounts is updated
-    // 3. User directories like /run/media/$USER may not exist at startup
-    m_lastMountPoints = listMountPoints();
-
-    m_mountsPollTimer = new QTimer(this);
-    m_mountsPollTimer->setInterval(500); // Check every 500ms for responsive mount detection
-    connect(m_mountsPollTimer, &QTimer::timeout, this, &MainWindow::checkMountsChanged);
-    m_mountsPollTimer->start();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -942,98 +960,14 @@ QString MainWindow::extractIconFromDesktop(const QString& desktopFilePath)
     return QString();
 }
 
-QStringList MainWindow::listMountPoints() const
-{
-    QStringList pts;
-
-    QFile f("/proc/mounts");
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
-        return pts;
-
-    QTextStream in(&f);
-
-    const QString user = qEnvironmentVariable("USER");
-    const QString userMedia1 = user.isEmpty()
-        ? QString()
-        : ("/media/" + user + "/");
-    const QString userMedia2 = user.isEmpty()
-        ? QString()
-        : ("/run/media/" + user + "/");
-
-    while (true) {
-        const QString line = in.readLine();
-        if (line.isNull())
-            break; // EOF
-
-        const QString trimmed = line.trimmed();
-        if (trimmed.isEmpty() || trimmed.startsWith('#'))
-            continue;
-
-        const auto parts = trimmed.split(' ', Qt::SkipEmptyParts);
-        if (parts.size() < 3)
-            continue;
-
-        const QString device     = parts[0];
-        const QString mountPoint = parts[1];
-        const QString fsType     = parts[2];
-
-        static const QSet<QString> goodFsTypes = {
-            "ext4",
-            "exfat",
-            "vfat",
-            "ntfs",
-            "btrfs",
-            "xfs"
-        };
-        if (!goodFsTypes.contains(fsType))
-            continue;
-
-        if (!user.isEmpty()) {
-            if (!mountPoint.startsWith(userMedia1) &&
-                !mountPoint.startsWith(userMedia2))
-            {
-                // eq. /boot/efi (vfat) will skipped
-                continue;
-            }
-        } else {
-            // fallback if USER is not set:
-            if (!mountPoint.startsWith("/media/") &&
-                !mountPoint.startsWith("/run/media/"))
-            {
-                continue;
-            }
-        }
-
-        pts << mountPoint;
-    }
-
-    pts.removeDuplicates();
-    pts.sort();
-    return pts;
-}
-
 void MainWindow::createMountsToolbar()
 {
     m_mountsToolBar = addToolBar(tr("Mounts"));
     m_mountsToolBar->setMovable(true);
 
-    QStringList pts = listMountPoints();
-    for (const QString& mp : pts) {
-        QString label = QFileInfo(mp).fileName();
-        QAction* act = new QAction(label, m_mountsToolBar);
-        act->setToolTip(mp);
-
-        connect(act, &QAction::triggered, this, [this, mp]() {
-            FilePanel* panel = currentFilePanel();
-            if (!panel)
-                return;
-
-            panel->currentPath = mp;
-            panel->loadDirectory();
-        });
-
-        m_mountsToolBar->addAction(act);
-    }
+    // Initial population will happen after UDisks manager starts
+    // in the constructor
+    refreshMountsToolbar();
 }
 
 void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
@@ -1603,39 +1537,80 @@ void MainWindow::onDirectoryChanged(const QString& path)
     }
 }
 
-void MainWindow::checkMountsChanged()
-{
-    QStringList currentMounts = listMountPoints();
-    if (currentMounts != m_lastMountPoints) {
-        m_lastMountPoints = currentMounts;
-        refreshMountsToolbar();
-    }
-}
-
 void MainWindow::refreshMountsToolbar()
 {
-    if (!m_mountsToolBar)
+    if (!m_mountsToolBar || !m_udisksManager)
         return;
 
     // Clear and rebuild toolbar
     m_mountsToolBar->clear();
 
-    for (const QString& mp : m_lastMountPoints) {
-        QString label = QFileInfo(mp).fileName();
-        QAction* act = new QAction(label, m_mountsToolBar);
-        act->setToolTip(mp);
+    // Get all devices (both mounted and unmounted) from UDisks
+    auto devices = m_udisksManager->getDevices(false); // false = exclude system partitions
 
-        connect(act, &QAction::triggered, this, [this, mp]() {
+    for (const BlockDeviceInfo& dev : devices) {
+        // Use displayId() - returns label if available, otherwise UUID
+        QString label = dev.displayId();
+
+        // Show mount status in tooltip
+        QString tooltip = QString("%1: %2 (%3)")
+            .arg(dev.device)
+            .arg(dev.isMounted ? dev.mountPoint : tr("Not mounted"))
+            .arg(dev.fsType);
+
+        QAction* act = new QAction(label, m_mountsToolBar);
+        act->setToolTip(tooltip);
+
+        // Store device info in action data for click handler
+        act->setData(dev.objectPath);
+
+        // If unmounted, show with different style
+        if (!dev.isMounted) {
+            QFont font = act->font();
+            font.setItalic(true);
+            act->setFont(font);
+        }
+
+        connect(act, &QAction::triggered, this, [this, dev]() {
             FilePanel* panel = currentFilePanel();
             if (!panel)
                 return;
 
-            panel->currentPath = mp;
-            panel->loadDirectory();
+            // If not mounted, mount it first
+            if (!dev.isMounted) {
+                qDebug() << "Mounting device" << dev.displayId();
+                QString mountPoint = m_udisksManager->mountDevice(dev.objectPath);
+                if (mountPoint.isEmpty()) {
+                    QMessageBox::warning(this, tr("Mount Error"),
+                        tr("Failed to mount device: %1").arg(dev.displayId()));
+                    return;
+                }
+                // Navigate to mount point (will be set in onDeviceMounted signal)
+                panel->currentPath = mountPoint;
+                panel->loadDirectory();
+            } else {
+                // Already mounted, just navigate
+                panel->currentPath = dev.mountPoint;
+                panel->loadDirectory();
+            }
         });
 
         m_mountsToolBar->addAction(act);
     }
+}
+
+void MainWindow::onDeviceMounted(const QString &objectPath, const QString &mountPoint)
+{
+    Q_UNUSED(objectPath)
+    qDebug() << "Device mounted at:" << mountPoint;
+    refreshMountsToolbar();
+}
+
+void MainWindow::onDeviceUnmounted(const QString &objectPath)
+{
+    Q_UNUSED(objectPath)
+    qDebug() << "Device unmounted";
+    refreshMountsToolbar();
 }
 
 #include "MainWindow_impl.inc"

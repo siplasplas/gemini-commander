@@ -35,7 +35,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets DBus)
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 find_package(PkgConfig REQUIRED)
@@ -138,6 +138,8 @@ add_executable(${PROJECT_NAME}
         src/keys/ObjectRegistry.cpp
         src/qutils.cpp
         src/quitls.h
+        src/udisks/UDisksDeviceManager.cpp
+        src/udisks/UDisksDeviceManager.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
@@ -148,6 +150,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
 target_link_libraries(${PROJECT_NAME} PRIVATE
         core
         Qt${QT_MAJOR_VERSION}::Widgets
+        Qt${QT_MAJOR_VERSION}::DBus
         KF${KF_MAJOR_VERSION}::TextEditor
         KF${KF_MAJOR_VERSION}::CoreAddons
         KF${KF_MAJOR_VERSION}::I18n
