@@ -737,6 +737,14 @@ void SearchDialog::onStopSearch()
 {
     if (m_searchWorker)
         m_searchWorker->stopSearch();
+
+    // Enable "Feed to listbox" button if we have any results (even if search was interrupted)
+    int currentCount = m_resultsModel->resultCount();
+    if (currentCount > 0) {
+        m_hasResults = true;
+        m_searchInResultsCheck->setVisible(true);
+        m_feedToListboxButton->setEnabled(true);
+    }
 }
 
 void SearchDialog::onResultFound(const QString& path, qint64 size, const QDateTime& modified)
