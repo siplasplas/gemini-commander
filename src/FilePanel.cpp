@@ -1,9 +1,12 @@
-#include <unicode/unistr.h>
-#include <unicode/translit.h>
-#include <unicode/utypes.h>
 #include <algorithm>
+#include <unicode/translit.h>
+#include <unicode/unistr.h>
+#include <unicode/utypes.h>
 
+#include <QComboBox>
 #include <QDesktopServices>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QDirIterator>
 #include <QDrag>
@@ -11,37 +14,33 @@
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
-#include <QComboBox>
-#include <QDialog>
-#include <QDialogButtonBox>
-#include <QLabel>
 #include <QProgressDialog>
 #include <QRegularExpression>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <QStorageInfo>
 #include <QUrl>
-#include "FilePanel.h"
+#include <QVBoxLayout>
 #include "Config.h"
+#include "FilePanel.h"
 #include "quitls.h"
 
-#include "SizeFormat.h"
-#include "keys/KeyRouter.h"
-#include "SortedDirIterator.h"
-#include "SearchDialog.h"
 #include <QProcess>
 #include <QStandardPaths>
+#include "SearchDialog.h"
+#include "SizeFormat.h"
+#include "SortedDirIterator.h"
+#include "keys/KeyRouter.h"
 
 namespace {
 
 // Parse command line into program and arguments, handling quotes
 // Returns: {program, arguments}
-std::pair<QString, QStringList> parseCommandLine(const QString& cmdLine)
-{
+std::pair<QString, QStringList> parseCommandLine(const QString &cmdLine) {
     QStringList parts;
     QString current;
     bool inSingleQuote = false;
@@ -96,8 +95,7 @@ std::pair<QString, QStringList> parseCommandLine(const QString& cmdLine)
 }
 
 // Find executable in PATH or return absolute path if it exists
-QString resolveExecutable(const QString& program, const QString& workingDir)
-{
+QString resolveExecutable(const QString &program, const QString &workingDir) {
     // If program contains path separator, treat as path
     if (program.contains('/')) {
         QString path = program;
@@ -122,8 +120,7 @@ QString resolveExecutable(const QString& program, const QString& workingDir)
 }
 
 // Check if file is executable (has execute permission)
-bool isExecutableFile(const QString& path)
-{
+bool isExecutableFile(const QString &path) {
     QFileInfo info(path);
     return info.exists() && info.isFile() && info.isExecutable();
 }
@@ -131,27 +128,25 @@ bool isExecutableFile(const QString& path)
 } // anonymous namespace
 
 // Static pattern history shared between select/unselect group dialogs
-QStringList FilePanel::s_patternHistory = { "*" };
+QStringList FilePanel::s_patternHistory = {"*"};
 
-QString FilePanel::showPatternDialog(QWidget* parent, const QString& title, const QString& label)
-{
+QString FilePanel::showPatternDialog(QWidget *parent, const QString &title, const QString &label) {
     QDialog dialog(parent);
     dialog.setWindowTitle(title);
 
-    auto* layout = new QVBoxLayout(&dialog);
+    auto *layout = new QVBoxLayout(&dialog);
 
-    auto* labelWidget = new QLabel(label, &dialog);
+    auto *labelWidget = new QLabel(label, &dialog);
     layout->addWidget(labelWidget);
 
-    auto* comboBox = new QComboBox(&dialog);
+    auto *comboBox = new QComboBox(&dialog);
     comboBox->setEditable(true);
     comboBox->addItems(s_patternHistory);
     comboBox->setCurrentIndex(0);
     comboBox->lineEdit()->selectAll();
     layout->addWidget(comboBox);
 
-    auto* buttonBox = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     layout->addWidget(buttonBox);
@@ -179,20 +174,15 @@ QString FilePanel::showPatternDialog(QWidget* parent, const QString& title, cons
     return pattern;
 }
 
-QString stripLeadingDot(const QString& s)
-{
+QString stripLeadingDot(const QString &s) {
     if (!s.isEmpty() && s.startsWith('.'))
         return s.mid(1);
     return s;
 }
 
-
-void MarkedItemDelegate::paint(QPainter* painter,
-                               const QStyleOptionViewItem& option,
-                               const QModelIndex& index) const
-{
+void MarkedItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
     QStyleOptionViewItem opt(option);
-    initStyleOption(&opt, index);  // takes into account QSS, selection, etc.
+    initStyleOption(&opt, index); // takes into account QSS, selection, etc.
 
     // Get color from Qt::ForegroundRole (e.g., red for marked)
     QVariant fgVar = index.data(Qt::ForegroundRole);
@@ -212,14 +202,10 @@ void MarkedItemDelegate::paint(QPainter* painter,
 // FilePanelModel - virtual model reading directly from FilePanel::entries
 // ============================================================================
 
-FilePanelModel::FilePanelModel(FilePanel* panel, QObject* parent)
-    : QAbstractTableModel(parent)
-    , m_panel(panel)
-{
+FilePanelModel::FilePanelModel(FilePanel *panel, QObject *parent) : QAbstractTableModel(parent), m_panel(panel) {
 }
 
-bool FilePanelModel::hasParentEntry() const
-{
+bool FilePanelModel::hasParentEntry() const {
     // [..] entry exists when: not in branch mode AND not in root directory
     if (m_panel->branchMode)
         return false;
@@ -228,42 +214,37 @@ bool FilePanelModel::hasParentEntry() const
     return !m_panel->dir->isRoot();
 }
 
-int FilePanelModel::rowToEntryIndex(int row) const
-{
+int FilePanelModel::rowToEntryIndex(int row) const {
     if (hasParentEntry()) {
         if (row == 0)
-            return -1;  // [..] row
+            return -1; // [..] row
         return row - 1;
     }
     return row;
 }
 
-int FilePanelModel::entryIndexToRow(int entryIndex) const
-{
+int FilePanelModel::entryIndexToRow(int entryIndex) const {
     if (hasParentEntry())
         return entryIndex + 1;
     return entryIndex;
 }
 
-int FilePanelModel::rowCount(const QModelIndex& parent) const
-{
+int FilePanelModel::rowCount(const QModelIndex &parent) const {
     if (parent.isValid())
         return 0;
     int count = m_panel->entries.size();
     if (hasParentEntry())
-        count += 1;  // +1 for [..] row
+        count += 1; // +1 for [..] row
     return count;
 }
 
-int FilePanelModel::columnCount(const QModelIndex& parent) const
-{
+int FilePanelModel::columnCount(const QModelIndex &parent) const {
     if (parent.isValid())
         return 0;
-    return 5;  // ID, Name, Ext, Size, Date
+    return 5; // ID, Name, Ext, Size, Date
 }
 
-QVariant FilePanelModel::data(const QModelIndex& index, int role) const
-{
+QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
     if (!index.isValid())
         return {};
 
@@ -275,10 +256,14 @@ QVariant FilePanelModel::data(const QModelIndex& index, int role) const
     if (entryIdx < 0) {
         if (role == Qt::DisplayRole) {
             switch (col) {
-                case COLUMN_ID: return QString();
-                case COLUMN_NAME: return QStringLiteral("[..]");
-                case COLUMN_EXT: return QString();
-                case COLUMN_SIZE: return QStringLiteral("<DIR>");
+                case COLUMN_ID:
+                    return QString();
+                case COLUMN_NAME:
+                    return QStringLiteral("[..]");
+                case COLUMN_EXT:
+                    return QString();
+                case COLUMN_SIZE:
+                    return QStringLiteral("<DIR>");
                 case COLUMN_DATE: {
                     QFileInfo info(".");
                     return info.lastModified().toString("yyyy-MM-dd hh:mm");
@@ -289,7 +274,7 @@ QVariant FilePanelModel::data(const QModelIndex& index, int role) const
             return m_panel->style()->standardIcon(QStyle::SP_FileDialogToParent);
         }
         if (role == Qt::UserRole && col == COLUMN_NAME) {
-            return QString();  // empty fullName for [..]
+            return QString(); // empty fullName for [..]
         }
         return {};
     }
@@ -298,14 +283,17 @@ QVariant FilePanelModel::data(const QModelIndex& index, int role) const
     if (entryIdx >= m_panel->entries.size())
         return {};
 
-    PanelEntry& entry = m_panel->entries[entryIdx];
+    PanelEntry &entry = m_panel->entries[entryIdx];
 
     if (role == Qt::DisplayRole) {
         auto [base, ext] = splitFileName(entry.info);
         switch (col) {
-            case COLUMN_ID: return QString();
-            case COLUMN_NAME: return base;
-            case COLUMN_EXT: return ext;
+            case COLUMN_ID:
+                return QString();
+            case COLUMN_NAME:
+                return base;
+            case COLUMN_EXT:
+                return ext;
             case COLUMN_SIZE: {
                 if (!entry.info.isDir()) {
                     return QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
@@ -341,130 +329,126 @@ QVariant FilePanelModel::data(const QModelIndex& index, int role) const
     return {};
 }
 
-QVariant FilePanelModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
+QVariant FilePanelModel::headerData(int section, Qt::Orientation orientation, int role) const {
     if (orientation != Qt::Horizontal || role != Qt::DisplayRole)
         return {};
 
     switch (section) {
-        case COLUMN_ID: return QStringLiteral("id");
-        case COLUMN_NAME: return QStringLiteral("Name");
-        case COLUMN_EXT: return QStringLiteral("Ext");
-        case COLUMN_SIZE: return QStringLiteral("Size");
-        case COLUMN_DATE: return QStringLiteral("Date");
+        case COLUMN_ID:
+            return QStringLiteral("id");
+        case COLUMN_NAME:
+            return QStringLiteral("Name");
+        case COLUMN_EXT:
+            return QStringLiteral("Ext");
+        case COLUMN_SIZE:
+            return QStringLiteral("Size");
+        case COLUMN_DATE:
+            return QStringLiteral("Date");
     }
     return {};
 }
 
-void FilePanelModel::refresh()
-{
+void FilePanelModel::refresh() {
     beginResetModel();
     endResetModel();
 }
 
-void FilePanelModel::refreshRow(int row)
-{
+void FilePanelModel::refreshRow(int row) {
     if (row < 0 || row >= rowCount())
         return;
     emit dataChanged(index(row, 0), index(row, columnCount() - 1));
 }
 
 void FilePanel::sortEntries() {
-  // --------------------------
-  // Sorting (TC-like)
-  // --------------------------
-  std::sort(entries.begin(), entries.end(),
-            [this](const PanelEntry &c, const PanelEntry &d) {
-              auto a = c.info;
-              auto b = d.info;
-              const bool aDir = a.isDir();
-              const bool bDir = b.isDir();
+    // --------------------------
+    // Sorting (TC-like)
+    // --------------------------
+    std::sort(entries.begin(), entries.end(), [this](const PanelEntry &c, const PanelEntry &d) {
+        auto a = c.info;
+        auto b = d.info;
+        const bool aDir = a.isDir();
+        const bool bDir = b.isDir();
 
-              // Directories always on top
-              if (aDir != bDir)
-                return aDir && !bDir;
+        // Directories always on top
+        if (aDir != bDir)
+            return aDir && !bDir;
 
-              auto lessCI = [](const QString &x, const QString &y) {
-                return x.compare(y, Qt::CaseInsensitive) < 0;
-              };
-              auto greaterCI = [](const QString &x, const QString &y) {
-                return x.compare(y, Qt::CaseInsensitive) > 0;
-              };
+        auto lessCI = [](const QString &x, const QString &y) { return x.compare(y, Qt::CaseInsensitive) < 0; };
+        auto greaterCI = [](const QString &x, const QString &y) { return x.compare(y, Qt::CaseInsensitive) > 0; };
 
-              const bool asc = (sortOrder == Qt::AscendingOrder);
+        const bool asc = (sortOrder == Qt::AscendingOrder);
 
-              auto cmpNames = [&](bool ascLocal) {
-                  QString na = a.fileName();
-                  QString nb = b.fileName();
-                  if (mixedHidden) {
-                      na = stripLeadingDot(na);
-                      nb = stripLeadingDot(nb);
-                  }
-                  return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
-              };
+        auto cmpNames = [&](bool ascLocal) {
+            QString na = a.fileName();
+            QString nb = b.fileName();
+            if (mixedHidden) {
+                na = stripLeadingDot(na);
+                nb = stripLeadingDot(nb);
+            }
+            return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
+        };
 
-              switch (sortColumn) {
+        switch (sortColumn) {
 
-              case COLUMN_NAME:
+            case COLUMN_NAME:
                 return cmpNames(asc);
 
-              case COLUMN_EXT:
+            case COLUMN_EXT:
                 if (aDir && bDir) {
-                  return cmpNames(asc);
+                    return cmpNames(asc);
                 } else if (!aDir && !bDir) {
-                  // Use splitFileName to handle hidden files consistently
-                  auto [baseA, ea] = splitFileName(a);
-                  auto [baseB, eb] = splitFileName(b);
-                  int cmp = ea.compare(eb, Qt::CaseInsensitive);
-                  if (cmp != 0)
-                    return asc ? (cmp < 0) : (cmp > 0);
-                  return cmpNames(asc);
+                    // Use splitFileName to handle hidden files consistently
+                    auto [baseA, ea] = splitFileName(a);
+                    auto [baseB, eb] = splitFileName(b);
+                    int cmp = ea.compare(eb, Qt::CaseInsensitive);
+                    if (cmp != 0)
+                        return asc ? (cmp < 0) : (cmp > 0);
+                    return cmpNames(asc);
                 } else {
-                  return cmpNames(asc);
+                    return cmpNames(asc);
                 }
 
-                  case COLUMN_SIZE:
-                      if (aDir && bDir) {
-                          const bool aHas = c.hasTotalSize == TotalSizeStatus::Has;
-                          const bool bHas = d.hasTotalSize == TotalSizeStatus::Has;
+            case COLUMN_SIZE:
+                if (aDir && bDir) {
+                    const bool aHas = c.hasTotalSize == TotalSizeStatus::Has;
+                    const bool bHas = d.hasTotalSize == TotalSizeStatus::Has;
 
-                          // 1) directories with calculated size always at the top,
-                          // regardless of asc/desc
-                          if (aHas != bHas) {
-                              return aHas; // true < false → counted before uncountable
-                          }
+                    // 1) directories with calculated size always at the top,
+                    // regardless of asc/desc
+                    if (aHas != bHas) {
+                        return aHas; // true < false → counted before uncountable
+                    }
 
-                          // 2) both have their size calculated → we sort by totalSizeBytes
-                          if (aHas && bHas) {
-                              if (c.totalSizeBytes != d.totalSizeBytes)
-                                  return asc ? (c.totalSizeBytes < d.totalSizeBytes)
-                                             : (c.totalSizeBytes > d.totalSizeBytes);
-                              return cmpNames(asc);
-                          }
+                    // 2) both have their size calculated → we sort by totalSizeBytes
+                    if (aHas && bHas) {
+                        if (c.totalSizeBytes != d.totalSizeBytes)
+                            return asc ? (c.totalSizeBytes < d.totalSizeBytes) : (c.totalSizeBytes > d.totalSizeBytes);
+                        return cmpNames(asc);
+                    }
 
-                          if (c.info.size() != d.info.size())
-                              return asc ? (c.info.size() < d.info.size())
-                                         : (c.info.size() > d.info.size());
-                          return cmpNames(asc);
-                      } else if (!aDir && !bDir) {
-                          if (a.size() != b.size())
-                              return asc ? (a.size() < b.size()) : (a.size() > b.size());
-                          return cmpNames(asc);
-                      }
-                      return aDir; // dirs before files
-              case COLUMN_DATE: {
+                    if (c.info.size() != d.info.size())
+                        return asc ? (c.info.size() < d.info.size()) : (c.info.size() > d.info.size());
+                    return cmpNames(asc);
+                } else if (!aDir && !bDir) {
+                    if (a.size() != b.size())
+                        return asc ? (a.size() < b.size()) : (a.size() > b.size());
+                    return cmpNames(asc);
+                }
+                return aDir; // dirs before files
+            case COLUMN_DATE: {
                 QDateTime da = a.lastModified();
                 QDateTime db = b.lastModified();
                 if (da != db)
-                  return asc ? (da < db) : (da > db);
+                    return asc ? (da < db) : (da > db);
                 return cmpNames(asc);
-              }
+            }
 
-              default:
+            default:
                 return cmpNames(asc);
-              }
-            });
+        }
+    });
 }
+
 void FilePanel::addAllEntries() {
     QString selectedName;
     auto rows = selectionModel()->selectedRows();
@@ -477,7 +461,8 @@ void FilePanel::addAllEntries() {
 }
 
 void FilePanel::trigger(const QModelIndex &index) {
-    if (!index.isValid()) return;
+    if (!index.isValid())
+        return;
     trigger(getRowName(index.row()));
 }
 
@@ -486,14 +471,14 @@ void FilePanel::triggerCurrentEntry() {
     trigger(rows.first());
 }
 
-void FilePanel::loadDirectory()
-{
+void FilePanel::loadDirectory() {
     dir = new QDir(currentPath);
     if (!dir->exists()) {
         return;
     }
     entries.clear();
-    QDirIterator it(currentPath, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden, QDirIterator::NoIteratorFlags);
+    QDirIterator it(currentPath, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden,
+                    QDirIterator::NoIteratorFlags);
     while (it.hasNext()) {
         it.next();
         QFileInfo info = it.fileInfo();
@@ -520,14 +505,13 @@ QString FilePanel::getRowRelPath(int row) const {
     if (row < 0 || row >= entries.size())
         return {};
 
-    const PanelEntry& entry = entries[row];
+    const PanelEntry &entry = entries[row];
     if (entry.branch.isEmpty())
         return entry.info.fileName();
     return entry.branch + "/" + entry.info.fileName();
 }
 
-void FilePanel::selectEntryByRelPath(const QString& relPath)
-{
+void FilePanel::selectEntryByRelPath(const QString &relPath) {
     if (relPath.isEmpty()) {
         selectFirstEntry();
         return;
@@ -535,7 +519,7 @@ void FilePanel::selectEntryByRelPath(const QString& relPath)
 
     // Search entries for matching branch + filename
     for (int i = 0; i < entries.size(); ++i) {
-        const PanelEntry& entry = entries[i];
+        const PanelEntry &entry = entries[i];
         QString entryRelPath;
         if (entry.branch.isEmpty())
             entryRelPath = entry.info.fileName();
@@ -557,8 +541,7 @@ void FilePanel::selectEntryByRelPath(const QString& relPath)
     selectEntryByName(fileName);
 }
 
-void FilePanel::selectEntryByName(const QString& fullName)
-{
+void FilePanel::selectEntryByName(const QString &fullName) {
     m_lastSelectedRow = -1;
     // For "[..]" / going up we expect empty fullName
     if (fullName.isEmpty()) {
@@ -566,13 +549,11 @@ void FilePanel::selectEntryByName(const QString& fullName)
             m_lastSelectedRow = 0;
     } else {
         QModelIndex start = model->index(0, COLUMN_NAME);
-        QModelIndexList matches = model->match(
-            start,
-            Qt::UserRole,             // search fullName stored in UserRole
-            fullName,
-            1,                        // first match only
-            Qt::MatchExactly
-        );
+        QModelIndexList matches = model->match(start,
+                                               Qt::UserRole, // search fullName stored in UserRole
+                                               fullName,
+                                               1, // first match only
+                                               Qt::MatchExactly);
 
         if (matches.isEmpty())
             return;
@@ -584,8 +565,7 @@ void FilePanel::selectEntryByName(const QString& fullName)
         restoreSelectionFromMemory();
 }
 
-void FilePanel::selectFirstEntry()
-{
+void FilePanel::selectFirstEntry() {
     if (model->rowCount() > 0) {
         m_lastSelectedRow = 0;
         restoreSelectionFromMemory();
@@ -597,7 +577,7 @@ void FilePanel::trigger(const QString &name) {
     if (branchMode) {
         auto p = currentEntryRow();
         if (p.first) {
-            PanelEntry* entry = p.first;
+            PanelEntry *entry = p.first;
             if (entry->info.isDir()) {
                 // Enter directory - exit branch mode and navigate there
                 branchMode = false;
@@ -690,7 +670,7 @@ void FilePanel::activate(const QString &commandLine) {
         // Check if it's an executable file (even without execute permission set)
         if (info.isFile() && info.isExecutable()) {
             if (!QProcess::startDetached(absPath, args, currentPath))
-                QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));//incorrectly set attribute executable
+                QDesktopServices::openUrl(QUrl::fromLocalFile(absPath)); // incorrectly set attribute executable
         } else {
             // Open with default application (documents, images, etc.)
             QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
@@ -699,7 +679,7 @@ void FilePanel::activate(const QString &commandLine) {
     }
 }
 
-FilePanel::FilePanel(Side side, QWidget* parent): QTableView(parent), m_side(side) {
+FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(side) {
     model = new FilePanelModel(this, this);
     currentPath = QDir::currentPath();
     setModel(model);
@@ -709,8 +689,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): QTableView(parent), m_side(sid
     m_visibilityDebounceTimer = new QTimer(this);
     m_visibilityDebounceTimer->setSingleShot(true);
     m_visibilityDebounceTimer->setInterval(1000);
-    connect(m_visibilityDebounceTimer, &QTimer::timeout,
-            this, &FilePanel::emitVisibleFiles);
+    connect(m_visibilityDebounceTimer, &QTimer::timeout, this, &FilePanel::emitVisibleFiles);
 
     hideColumn(COLUMN_ID);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -720,7 +699,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): QTableView(parent), m_side(sid
     verticalHeader()->hide();
 
     QFont f("Ubuntu", 11);
-    f.setStyleHint(QFont::SansSerif);  // fallback if Ubuntu unavailable
+    f.setStyleHint(QFont::SansSerif); // fallback if Ubuntu unavailable
     setFont(f);
 
     QFontMetrics fm(font());
@@ -731,7 +710,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): QTableView(parent), m_side(sid
     // Note: Sorting is handled manually in loadDirectory, so disable view sorting
     setSortingEnabled(false);
 
-    QHeaderView* header = horizontalHeader();
+    QHeaderView *header = horizontalHeader();
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);
     header->setHighlightSections(false);
@@ -756,12 +735,9 @@ FilePanel::FilePanel(Side side, QWidget* parent): QTableView(parent), m_side(sid
     // Show initial sort indicator
     header->setSortIndicator(sortColumn, sortOrder);
 
-    connect(header, &QHeaderView::sectionClicked,
-            this, &FilePanel::onHeaderSectionClicked);
+    connect(header, &QHeaderView::sectionClicked, this, &FilePanel::onHeaderSectionClicked);
 
-    connect(this, &QTableView::doubleClicked, [this](const QModelIndex &index) {
-        trigger(index);
-    });
+    connect(this, &QTableView::doubleClicked, [this](const QModelIndex &index) { trigger(index); });
 
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::DragOnly);
@@ -772,8 +748,7 @@ FilePanel::~FilePanel() {
     delete model;
 }
 
-QString FilePanel::normalizeForSearch(const QString& s) const
-{
+QString FilePanel::normalizeForSearch(const QString &s) const {
     if (s.isEmpty())
         return {};
 
@@ -784,27 +759,21 @@ QString FilePanel::normalizeForSearch(const QString& s) const
         tmp.remove(0, 1);
 
     // QString (UTF-16) -> ICU UnicodeString (UTF-16)
-    icu::UnicodeString ustr(
-        reinterpret_cast<const UChar*>(tmp.utf16()),
-        tmp.length()
-    );
+    icu::UnicodeString ustr(reinterpret_cast<const UChar *>(tmp.utf16()), tmp.length());
 
     // Unicode case folding (full Unicode, not only ASCII)
     ustr.foldCase();
 
     // Create transliterator once (static) to strip diacritics:
     // "NFD; [:Nonspacing Mark:] Remove; NFC"
-    static icu::Transliterator* accentStripper = nullptr;
+    static icu::Transliterator *accentStripper = nullptr;
     static bool translitInitTried = false;
 
     if (!translitInitTried) {
         translitInitTried = true;
         UErrorCode status = U_ZERO_ERROR;
-        accentStripper = icu::Transliterator::createInstance(
-            "NFD; [:Nonspacing Mark:] Remove; NFC",
-            UTRANS_FORWARD,
-            status
-        );
+        accentStripper =
+                icu::Transliterator::createInstance("NFD; [:Nonspacing Mark:] Remove; NFC", UTRANS_FORWARD, status);
         if (U_FAILURE(status)) {
             accentStripper = nullptr; // fallback: no accent stripping
         }
@@ -821,13 +790,10 @@ QString FilePanel::normalizeForSearch(const QString& s) const
     return QString::fromUtf8(utf8.data(), static_cast<int>(utf8.size()));
 }
 
-void FilePanel::onHeaderSectionClicked(int logicalIndex)
-{
+void FilePanel::onHeaderSectionClicked(int logicalIndex) {
     if (sortColumn == logicalIndex) {
         // Toggle direction
-        sortOrder = (sortOrder == Qt::AscendingOrder)
-                    ? Qt::DescendingOrder
-                    : Qt::AscendingOrder;
+        sortOrder = (sortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
     } else {
         sortColumn = logicalIndex;
         // For Date and Size, default to Descending (newest/largest first)
@@ -842,8 +808,7 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex)
     addAllEntries();
 }
 
-void FilePanel::startDrag(Qt::DropActions supportedActions)
-{
+void FilePanel::startDrag(Qt::DropActions supportedActions) {
     QModelIndexList selectedRows = selectionModel()->selectedRows(COLUMN_NAME);
     if (selectedRows.isEmpty())
         return;
@@ -858,7 +823,7 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
         firstName = getRowRelPath(row);
     }
 
-    for (const QModelIndex& idx : selectedRows) {
+    for (const QModelIndex &idx: selectedRows) {
         int row = idx.row();
         QString name = getRowRelPath(row);
         if (name.isEmpty())
@@ -872,10 +837,10 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     if (urls.isEmpty())
         return;
 
-    QMimeData* mimeData = new QMimeData();
+    QMimeData *mimeData = new QMimeData();
     mimeData->setUrls(urls); // text/uri-list
 
-    QDrag* drag = new QDrag(this);
+    QDrag *drag = new QDrag(this);
     drag->setMimeData(mimeData);
 
     // --- Custom drag pixmap (big icon + filename) ---
@@ -894,12 +859,11 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     p.drawRoundedRect(rect.adjusted(4, 4, -4, -4), 12, 12);
 
     // Draw file icon (you can use your own QIcon)
-    QStyle* st = style();
+    QStyle *st = style();
     QIcon fileIcon = st->standardIcon(QStyle::SP_FileIcon);
 
     QPixmap iconPixmap = fileIcon.pixmap(48, 48);
-    QPoint iconPos((size - iconPixmap.width()) / 2,
-                   (size - iconPixmap.height()) / 2 - 10);
+    QPoint iconPos((size - iconPixmap.width()) / 2, (size - iconPixmap.height()) / 2 - 10);
     p.drawPixmap(iconPos, iconPixmap);
 
     // Draw file name (only base, trimmed)
@@ -912,8 +876,7 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     QFontMetrics fm(f);
     text = fm.elidedText(text, Qt::ElideRight, size - 10);
 
-    p.drawText(QRect(5, size - fm.height() - 8, size - 10, fm.height() + 4),
-               Qt::AlignCenter, text);
+    p.drawText(QRect(5, size - fm.height() - 8, size - 10, fm.height() + 4), Qt::AlignCenter, text);
 
     p.end();
 
@@ -929,8 +892,7 @@ void FilePanel::startDrag(Qt::DropActions supportedActions)
     drag->exec(actions, Qt::CopyAction);
 }
 
-FileType FilePanel::classifyFileType(const QFileInfo& info)
-{
+FileType FilePanel::classifyFileType(const QFileInfo &info) {
     static QMimeDatabase db;
 
     const QString fileName = info.fileName();
@@ -946,11 +908,7 @@ FileType FilePanel::classifyFileType(const QFileInfo& info)
         if (file.open(QIODevice::ReadOnly)) {
             QByteArray header = file.read(4);
             file.close();
-            if (header.size() >= 4 &&
-                header[0] == 0x7f &&
-                header[1] == 'E' &&
-                header[2] == 'L' &&
-                header[3] == 'F') {
+            if (header.size() >= 4 && header[0] == 0x7f && header[1] == 'E' && header[2] == 'L' && header[3] == 'F') {
                 return FileType::Executable;
             }
         }
@@ -981,40 +939,31 @@ FileType FilePanel::classifyFileType(const QFileInfo& info)
         return FileType::Video;
 
     // Disk image types
-    static const QStringList diskImageExts = {
-        "iso", "img", "bin", "nrg", "mdf", "mds", "dmg", "cue", "toast", "vcd"
-    };
+    static const QStringList diskImageExts = {"iso", "img", "bin", "nrg", "mdf", "mds", "dmg", "cue", "toast", "vcd"};
     if (diskImageExts.contains(ext) || mimeName.contains("iso9660") || mimeName.contains("disk-image"))
         return FileType::DiskImage;
 
     // Archive types
-    static const QStringList archiveExts = {
-        "zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz", "tbz2", "txz", "cab"
-    };
+    static const QStringList archiveExts = {"zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz", "tbz2", "txz", "cab"};
     if (archiveExts.contains(ext) || mimeName.contains("archive") || mimeName.contains("compressed"))
         return FileType::Archive;
 
     // Document types
-    static const QStringList docExts = {
-        "pdf", "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "rtf"
-    };
-    if (docExts.contains(ext) || mimeName.startsWith("application/pdf") ||
-        mimeName.contains("document") || mimeName.contains("spreadsheet") ||
-        mimeName.contains("presentation"))
+    static const QStringList docExts = {"pdf", "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "rtf"};
+    if (docExts.contains(ext) || mimeName.startsWith("application/pdf") || mimeName.contains("document") ||
+        mimeName.contains("spreadsheet") || mimeName.contains("presentation"))
         return FileType::Document;
 
     // Text/source code types
     if (mimeName.startsWith("text/") || mimeName.contains("json") || mimeName.contains("xml") ||
-        mimeName.contains("javascript") || mimeName.contains("x-python") ||
-        mimeName.contains("x-perl") || mimeName.contains("x-ruby") ||
-        mimeName.contains("x-shellscript"))
+        mimeName.contains("javascript") || mimeName.contains("x-python") || mimeName.contains("x-perl") ||
+        mimeName.contains("x-ruby") || mimeName.contains("x-shellscript"))
         return FileType::Text;
 
     return FileType::Unknown;
 }
 
-QIcon FilePanel::getIconForFileType(FileType type)
-{
+QIcon FilePanel::getIconForFileType(FileType type) {
     static QHash<int, QIcon> cache;
 
     int key = static_cast<int>(type);
@@ -1061,11 +1010,10 @@ QIcon FilePanel::getIconForFileType(FileType type)
     return icon;
 }
 
-QIcon FilePanel::getIconForEntry(const QFileInfo& info, EntryContentState contentState)
-{
+QIcon FilePanel::getIconForEntry(const QFileInfo &info, EntryContentState contentState) {
     static QFileIconProvider provider;
     static QMimeDatabase db;
-    static QHash<QString, QIcon> extCache;   // for Extension mode
+    static QHash<QString, QIcon> extCache; // for Extension mode
     static QHash<int, QIcon> folderCache;
 
     // --- folders (same for all modes) ---
@@ -1120,8 +1068,7 @@ QIcon FilePanel::getIconForEntry(const QFileInfo& info, EntryContentState conten
     return icon;
 }
 
-void FilePanel::updateSearch(const QString& text)
-{
+void FilePanel::updateSearch(const QString &text) {
     m_lastSearchText = text;
 
     if (text.isEmpty()) {
@@ -1134,14 +1081,12 @@ void FilePanel::updateSearch(const QString& text)
         return;
 
     // Start from current row if no previous match
-    int startRow = m_lastSearchRow >= 0
-                   ? m_lastSearchRow
-                   : currentIndex().row();
+    int startRow = m_lastSearchRow >= 0 ? m_lastSearchRow : currentIndex().row();
 
     int row = startRow;
 
-    auto normalize = [&](const QString& s) {
-        return normalizeForSearch(s);  // Twoja istniejąca funkcja
+    auto normalize = [&](const QString &s) {
+        return normalizeForSearch(s); // Twoja istniejąca funkcja
     };
 
     const QString needle = normalize(text);
@@ -1163,8 +1108,7 @@ void FilePanel::updateSearch(const QString& text)
     // No match found
 }
 
-void FilePanel::nextMatch()
-{
+void FilePanel::nextMatch() {
     if (m_lastSearchText.isEmpty())
         return;
 
@@ -1172,13 +1116,9 @@ void FilePanel::nextMatch()
     if (rowCount == 0)
         return;
 
-    int row = (m_lastSearchRow >= 0)
-              ? m_lastSearchRow
-              : currentIndex().row();
+    int row = (m_lastSearchRow >= 0) ? m_lastSearchRow : currentIndex().row();
 
-    auto normalize = [&](const QString& s) {
-        return normalizeForSearch(s);
-    };
+    auto normalize = [&](const QString &s) { return normalizeForSearch(s); };
 
     QString needle = normalize(m_lastSearchText);
 
@@ -1199,8 +1139,7 @@ void FilePanel::nextMatch()
     } while (row != start);
 }
 
-void FilePanel::prevMatch()
-{
+void FilePanel::prevMatch() {
     if (m_lastSearchText.isEmpty())
         return;
 
@@ -1208,13 +1147,9 @@ void FilePanel::prevMatch()
     if (rowCount == 0)
         return;
 
-    int row = (m_lastSearchRow >= 0)
-              ? m_lastSearchRow
-              : currentIndex().row();
+    int row = (m_lastSearchRow >= 0) ? m_lastSearchRow : currentIndex().row();
 
-    auto normalize = [&](const QString& s) {
-        return normalizeForSearch(s);
-    };
+    auto normalize = [&](const QString &s) { return normalizeForSearch(s); };
 
     QString needle = normalize(m_lastSearchText);
 
@@ -1235,8 +1170,7 @@ void FilePanel::prevMatch()
     } while (row != start);
 }
 
-void FilePanel::jumpWithControl(int direction)
-{
+void FilePanel::jumpWithControl(int direction) {
     // direction: +1 = Ctrl+Down, -1 = Ctrl+Up
     if (!model || model->rowCount() == 0)
         return;
@@ -1272,8 +1206,7 @@ void FilePanel::jumpWithControl(int direction)
             } else {
                 row = rowCount - 1; // no files
             }
-        }
-        else {
+        } else {
             // we are in the files → go to the bottom
             row = rowCount - 1;
         }
@@ -1290,15 +1223,14 @@ void FilePanel::jumpWithControl(int direction)
                 row = lastDirRow;
             else
                 row = 0; // no directories
-        }
-        else {
+        } else {
             // we are in the directories → go to the top
             row = 0;
         }
     }
     QModelIndex idx = model->index(row, COLUMN_NAME);
 
-    QItemSelectionModel* sm = selectionModel();
+    QItemSelectionModel *sm = selectionModel();
     if (sm) {
         sm->clearSelection();
         sm->setCurrentIndex(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
@@ -1307,11 +1239,9 @@ void FilePanel::jumpWithControl(int direction)
     }
 
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
-
 }
 
-EntryContentState FilePanel::ensureContentState(PanelEntry& entry) const
-{
+EntryContentState FilePanel::ensureContentState(PanelEntry &entry) const {
     if (entry.contentState != EntryContentState::DirUnknown)
         return entry.contentState;
 
@@ -1322,14 +1252,13 @@ EntryContentState FilePanel::ensureContentState(PanelEntry& entry) const
 
     QDir dir(entry.info.absoluteFilePath());
     entry.contentState = dir.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden)
-        ? EntryContentState::DirEmpty
-        : EntryContentState::DirNotEmpty;
+                                 ? EntryContentState::DirEmpty
+                                 : EntryContentState::DirNotEmpty;
 
     return entry.contentState;
 }
 
-void FilePanel::createNewDirectory(QWidget* dialogParent)
-{
+void FilePanel::createNewDirectory(QWidget *dialogParent) {
     if (!dir)
         return;
 
@@ -1339,20 +1268,14 @@ void FilePanel::createNewDirectory(QWidget* dialogParent)
     if (current_index.isValid()) {
         QString fullName = getRowName(current_index.row());
         if (!fullName.isEmpty())
-            suggestedName = fullName;      // poprawna nazwa pliku/katalogu
+            suggestedName = fullName; // poprawna nazwa pliku/katalogu
     }
 
-    QWidget* parent = dialogParent ? dialogParent : this;
+    QWidget *parent = dialogParent ? dialogParent : this;
 
     bool ok = false;
-    QString name = QInputDialog::getText(
-        parent,
-        tr("Create new directory"),
-        tr("Input new name:"),
-        QLineEdit::Normal,
-        suggestedName,
-        &ok
-    );
+    QString name = QInputDialog::getText(parent, tr("Create new directory"), tr("Input new name:"), QLineEdit::Normal,
+                                         suggestedName, &ok);
 
     if (!ok || name.isEmpty())
         return;
@@ -1367,8 +1290,7 @@ void FilePanel::createNewDirectory(QWidget* dialogParent)
     selectEntryByName(firstPart);
 }
 
-void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultTargetDir)
-{
+void FilePanel::renameOrMoveEntry(QWidget *dialogParent, const QString &defaultTargetDir) {
     if (!dir)
         return;
 
@@ -1381,7 +1303,7 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
         return;
     }
 
-    QWidget* parent = dialogParent ? dialogParent : this;
+    QWidget *parent = dialogParent ? dialogParent : this;
 
     QString suggested = fullName;
 
@@ -1391,14 +1313,8 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
     }
 
     bool ok = false;
-    QString newName = QInputDialog::getText(
-        parent,
-        tr("Rename / move"),
-        tr("New name or path:"),
-        QLineEdit::Normal,
-        suggested,
-        &ok
-    );
+    QString newName = QInputDialog::getText(parent, tr("Rename / move"), tr("New name or path:"), QLineEdit::Normal,
+                                            suggested, &ok);
 
     if (!ok || newName.isEmpty() || newName == fullName)
         return;
@@ -1418,32 +1334,21 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
     QStorageInfo dstInfo(defaultTargetDir);
 
     if (!srcInfo.isValid() || !dstInfo.isValid()) {
-        QMessageBox::warning(
-            parent,
-            tr("Error"),
-            tr("Cannot determine storage devices for source or destination.")
-        );
+        QMessageBox::warning(parent, tr("Error"), tr("Cannot determine storage devices for source or destination."));
         return;
     }
 
     if (srcInfo.device() != dstInfo.device()) {
-        QMessageBox::warning(
-            parent,
-            tr("Error"),
-            tr("Source and destination are on different devices.\n"
-               "Move operation is not supported in this mode.")
-        );
+        QMessageBox::warning(parent, tr("Error"),
+                             tr("Source and destination are on different devices.\n"
+                                "Move operation is not supported in this mode."));
         return;
     }
 
     // Próba rename/move w obrębie jednego filesystemu
     QFile file(srcPath);
     if (!file.rename(dstPath)) {
-        QMessageBox::warning(
-            parent,
-            tr("Error"),
-            tr("Failed to rename/move:\n%1\nto\n%2").arg(srcPath, dstPath)
-        );
+        QMessageBox::warning(parent, tr("Error"), tr("Failed to rename/move:\n%1\nto\n%2").arg(srcPath, dstPath));
         return;
     }
 
@@ -1456,8 +1361,7 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
         selectEntryByName(leafName);
 }
 
-void FilePanel::updateRowMarking(int row, bool marked)
-{
+void FilePanel::updateRowMarking(int row, bool marked) {
     Q_UNUSED(marked);
     if (!model || row < 0 || row >= model->rowCount())
         return;
@@ -1466,7 +1370,7 @@ void FilePanel::updateRowMarking(int row, bool marked)
     model->refreshRow(row);
 }
 
-std::pair<PanelEntry*, int> FilePanel::currentEntryRow() {
+std::pair<PanelEntry *, int> FilePanel::currentEntryRow() {
     QModelIndex idx = currentIndex();
     if (!idx.isValid())
         return {nullptr, -1};
@@ -1493,8 +1397,7 @@ std::pair<PanelEntry*, int> FilePanel::currentEntryRow() {
     return {&entries[entryIndex], row};
 }
 
-void FilePanel::toggleMarkOnCurrent(bool advanceRow)
-{
+void FilePanel::toggleMarkOnCurrent(bool advanceRow) {
     auto p = currentEntryRow();
     if (!p.first)
         return;
@@ -1515,10 +1418,9 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow)
     emit selectionChanged();
 }
 
-QStringList FilePanel::getMarkedNames() const
-{
+QStringList FilePanel::getMarkedNames() const {
     QStringList result;
-    for (const auto& entry : entries) {
+    for (const auto &entry: entries) {
         if (entry.isMarked) {
             result << entry.info.fileName();
         }
@@ -1526,10 +1428,9 @@ QStringList FilePanel::getMarkedNames() const
     return result;
 }
 
-QStringList FilePanel::getMarkedRelPaths() const
-{
+QStringList FilePanel::getMarkedRelPaths() const {
     QStringList result;
-    for (const auto& entry : entries) {
+    for (const auto &entry: entries) {
         if (entry.isMarked) {
             if (entry.branch.isEmpty())
                 result << entry.info.fileName();
@@ -1540,24 +1441,21 @@ QStringList FilePanel::getMarkedRelPaths() const
     return result;
 }
 
-bool FilePanel::hasMarkedEntries() const
-{
-    for (const auto& entry : entries) {
+bool FilePanel::hasMarkedEntries() const {
+    for (const auto &entry: entries) {
         if (entry.isMarked)
             return true;
     }
     return false;
 }
 
-void FilePanel::rememberSelection()
-{
+void FilePanel::rememberSelection() {
     QModelIndex idx = currentIndex();
     if (idx.isValid())
         m_lastSelectedRow = idx.row();
 }
 
-void FilePanel::restoreSelectionFromMemory()
-{
+void FilePanel::restoreSelectionFromMemory() {
     if (!model)
         return;
 
@@ -1570,39 +1468,30 @@ void FilePanel::restoreSelectionFromMemory()
 
     setCurrentIndex(idx);
     if (selectionModel()) {
-        selectionModel()->select(
-            idx,
-            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows
-        );
+        selectionModel()->select(idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     }
     scrollTo(idx);
 }
 
 void FilePanel::styleActive() {
-    setStyleSheet(
-        "QTableView::item {"
-        "    background-color: white;"
-        "}"
-        "QTableView::item:selected {"
-        "    background-color: #3584E4;"
-        "}"
-    );
+    setStyleSheet("QTableView::item {"
+                  "    background-color: white;"
+                  "}"
+                  "QTableView::item:selected {"
+                  "    background-color: #3584E4;"
+                  "}");
 }
 
 void FilePanel::styleInactive() {
-    setStyleSheet(
-        "QTableView::item {"
-        "    background-color: white;"
-        "}"
-        "QTableView::item:selected {"
-        "    background-color: #a0a0a0;"
-        "}"
-    );
+    setStyleSheet("QTableView::item {"
+                  "    background-color: white;"
+                  "}"
+                  "QTableView::item:selected {"
+                  "    background-color: #a0a0a0;"
+                  "}");
 }
 
-
-void FilePanel::collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag)
-{
+void FilePanel::collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *cancelFlag) {
     ok = true;
 
     QFileInfo rootInfo(srcPath);
@@ -1614,8 +1503,7 @@ void FilePanel::collectCopyStats(const QString& srcPath, CopyStats& stats, bool&
     // liczymy katalog root też
     stats.totalDirs += 1;
 
-    SortedDirIterator it(srcPath,
-                    QDir::AllEntries | QDir::NoDotAndDotDot);
+    SortedDirIterator it(srcPath, QDir::AllEntries | QDir::NoDotAndDotDot);
 
     int counter = 0;
     while (it.hasNext()) {
@@ -1643,13 +1531,8 @@ void FilePanel::collectCopyStats(const QString& srcPath, CopyStats& stats, bool&
     }
 }
 
-bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
-                                        const QString& dstRoot,
-                                        const CopyStats& stats,
-                                        QProgressDialog& progress,
-                                        quint64& bytesCopied,
-                                        bool& userAbort)
-{
+bool FilePanel::copyDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, const CopyStats &stats,
+                                       QProgressDialog &progress, quint64 &bytesCopied, bool &userAbort) {
     if (userAbort)
         return false;
 
@@ -1659,28 +1542,22 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
 
     QDir dstDir;
     if (!dstDir.mkpath(dstRoot)) {
-        QMessageBox::warning(nullptr, tr("Error"),
-                             tr("Failed to create directory:\n%1").arg(dstRoot));
+        QMessageBox::warning(nullptr, tr("Error"), tr("Failed to create directory:\n%1").arg(dstRoot));
         return false;
     }
 
     QDir dir(srcRoot);
-    const QFileInfoList entries =
-        dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::NoSort);
+    const QFileInfoList entries = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::NoSort);
 
-    for (const QFileInfo& fi : entries) {
+    for (const QFileInfo &fi: entries) {
         if (userAbort)
             return false;
 
         // obsługa Cancel
         if (progress.wasCanceled()) {
-            auto reply = QMessageBox::question(
-                nullptr,
-                tr("Cancel copy"),
-                tr("Do you really want to cancel the copy operation?"),
-                QMessageBox::Yes | QMessageBox::No,
-                QMessageBox::Yes
-            );
+            auto reply = QMessageBox::question(nullptr, tr("Cancel copy"),
+                                               tr("Do you really want to cancel the copy operation?"),
+                                               QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
             if (reply == QMessageBox::Yes) {
                 userAbort = true;
                 return false;
@@ -1693,8 +1570,7 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
         const QString dstPath = QDir(dstRoot).filePath(fi.fileName());
 
         if (fi.isDir()) {
-            if (!copyDirectoryRecursive(srcPath, dstPath,
-                                        stats, progress, bytesCopied, userAbort))
+            if (!copyDirectoryRecursive(srcPath, dstPath, stats, progress, bytesCopied, userAbort))
                 return false;
         } else if (fi.isFile()) {
             // jeśli istniał – nadpisujemy
@@ -1702,11 +1578,7 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
                 QFile::remove(dstPath);
 
             if (!QFile::copy(srcPath, dstPath)) {
-                QMessageBox::warning(
-                    nullptr,
-                    tr("Error"),
-                    tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath)
-                );
+                QMessageBox::warning(nullptr, tr("Error"), tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
                 return false;
             }
             finalizeCopiedFile(srcPath, dstPath);
@@ -1714,8 +1586,7 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
             bytesCopied += static_cast<quint64>(fi.size());
 
             if (stats.totalBytes > 0) {
-                const int value = static_cast<int>(
-                    qMin<quint64>(bytesCopied, stats.totalBytes));
+                const int value = static_cast<int>(qMin<quint64>(bytesCopied, stats.totalBytes));
                 progress.setValue(value);
             }
 
@@ -1725,14 +1596,13 @@ bool FilePanel::copyDirectoryRecursive(const QString& srcRoot,
     return true;
 }
 
-void FilePanel::feedSearchResults(const QVector<SearchResult>& results, const QString& searchPath)
-{
+void FilePanel::feedSearchResults(const QVector<SearchResult> &results, const QString &searchPath) {
     entries.clear();
     QString basePath = searchPath;
     if (!basePath.endsWith('/'))
         basePath += '/';
 
-    for (const SearchResult& r : results) {
+    for (const SearchResult &r: results) {
         QString fullPath = r.dir + "/" + r.name;
         QFileInfo info(fullPath);
         // Branch is relative to search path
@@ -1740,7 +1610,7 @@ void FilePanel::feedSearchResults(const QVector<SearchResult>& results, const QS
         if (r.dir.startsWith(basePath))
             branch = r.dir.mid(basePath.length());
         else
-            branch = r.dir;  // fallback to absolute if not under search path
+            branch = r.dir; // fallback to absolute if not under search path
         entries.append(PanelEntry(info, branch));
     }
 
@@ -1755,8 +1625,7 @@ void FilePanel::feedSearchResults(const QVector<SearchResult>& results, const QS
 // Branch mode incremental updates (avoid full reload)
 // ============================================================================
 
-bool FilePanel::removeEntryByRelPath(const QString& relPath)
-{
+bool FilePanel::removeEntryByRelPath(const QString &relPath) {
     // Find entry by relative path
     for (int i = 0; i < entries.size(); ++i) {
         QString entryRelPath;
@@ -1777,8 +1646,7 @@ bool FilePanel::removeEntryByRelPath(const QString& relPath)
     return false;
 }
 
-bool FilePanel::renameEntry(const QString& oldRelPath, const QString& newRelPath)
-{
+bool FilePanel::renameEntry(const QString &oldRelPath, const QString &newRelPath) {
     // Find entry by old relative path
     for (int i = 0; i < entries.size(); ++i) {
         QString entryRelPath;
@@ -1814,8 +1682,7 @@ bool FilePanel::renameEntry(const QString& oldRelPath, const QString& newRelPath
     return false;
 }
 
-bool FilePanel::updateEntryBranch(const QString& relPath, const QString& newBranch)
-{
+bool FilePanel::updateEntryBranch(const QString &relPath, const QString &newBranch) {
     // Find entry by relative path
     for (int i = 0; i < entries.size(); ++i) {
         QString entryRelPath;
@@ -1831,9 +1698,8 @@ bool FilePanel::updateEntryBranch(const QString& relPath, const QString& newBran
 
             // Update info to point to new location
             QDir baseDir(currentPath);
-            QString newRelPathFull = newBranch.isEmpty()
-                ? entries[i].info.fileName()
-                : newBranch + "/" + entries[i].info.fileName();
+            QString newRelPathFull =
+                    newBranch.isEmpty() ? entries[i].info.fileName() : newBranch + "/" + entries[i].info.fileName();
             entries[i].info = QFileInfo(baseDir.absoluteFilePath(newRelPathFull));
 
             // Refresh model row
@@ -1845,8 +1711,7 @@ bool FilePanel::updateEntryBranch(const QString& relPath, const QString& newBran
     return false;
 }
 
-bool FilePanel::addEntryFromPath(const QString& fullPath, const QString& branch)
-{
+bool FilePanel::addEntryFromPath(const QString &fullPath, const QString &branch) {
     QFileInfo info(fullPath);
     if (!info.exists()) {
         return false;
@@ -1865,21 +1730,18 @@ bool FilePanel::addEntryFromPath(const QString& fullPath, const QString& branch)
 // Visible files tracking for file watcher
 // ============================================================================
 
-void FilePanel::scheduleVisibleFilesUpdate()
-{
+void FilePanel::scheduleVisibleFilesUpdate() {
     // Restart debounce timer - will emit after 1000ms of no changes
     m_visibilityDebounceTimer->start();
 }
 
-void FilePanel::scrollContentsBy(int dx, int dy)
-{
+void FilePanel::scrollContentsBy(int dx, int dy) {
     QTableView::scrollContentsBy(dx, dy);
     // Schedule update when scrolling changes visible files
     scheduleVisibleFilesUpdate();
 }
 
-QStringList FilePanel::getVisibleFilePaths() const
-{
+QStringList FilePanel::getVisibleFilePaths() const {
     QStringList paths;
 
     if (!model || !viewport())
@@ -1903,9 +1765,9 @@ QStringList FilePanel::getVisibleFilePaths() const
         // Get entry index from row
         int entryIdx = model->rowToEntryIndex(row);
         if (entryIdx < 0 || entryIdx >= entries.size())
-            continue;  // Skip [..] row
+            continue; // Skip [..] row
 
-        const PanelEntry& entry = entries[entryIdx];
+        const PanelEntry &entry = entries[entryIdx];
 
         // Only track files, not directories
         if (!entry.info.isDir()) {
@@ -1916,14 +1778,12 @@ QStringList FilePanel::getVisibleFilePaths() const
     return paths;
 }
 
-void FilePanel::emitVisibleFiles()
-{
+void FilePanel::emitVisibleFiles() {
     QStringList paths = getVisibleFilePaths();
     emit visibleFilesChanged(m_side, paths);
 }
 
-bool FilePanel::refreshEntryByPath(const QString& filePath)
-{
+bool FilePanel::refreshEntryByPath(const QString &filePath) {
     // Find entry by absolute path
     for (int i = 0; i < entries.size(); ++i) {
         if (entries[i].info.absoluteFilePath() == filePath) {
@@ -1938,6 +1798,5 @@ bool FilePanel::refreshEntryByPath(const QString& filePath)
     }
     return false;
 }
-
 
 #include "FilePanel_impl.inc"
