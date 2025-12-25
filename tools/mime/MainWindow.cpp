@@ -169,43 +169,79 @@ void MainWindow::addFileToTree(const QString& filePath, const QString& mimeType,
 
 QTreeWidgetItem* MainWindow::findOrCreateCategory(const QString& category)
 {
-    for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
-        QTreeWidgetItem* item = m_treeWidget->topLevelItem(i);
-        if (item->text(0) == category)
-            return item;
+        int count = m_treeWidget->topLevelItemCount();
+
+    // Binary search for existing or insertion point
+    int lo = 0, hi = count;
+    while (lo < hi) {
+        int mid = (lo + hi) / 2;
+        QString midText = m_treeWidget->topLevelItem(mid)->text(0);
+        int cmp = category.compare(midText, Qt::CaseInsensitive);
+        if (cmp == 0)
+            return m_treeWidget->topLevelItem(mid);
+        if (cmp < 0)
+            hi = mid;
+        else
+            lo = mid + 1;
     }
 
-    QTreeWidgetItem* item = new QTreeWidgetItem(m_treeWidget);
+    // Not found - insert at position lo
+    QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText(0, category);
     item->setText(2, "0");
+    m_treeWidget->insertTopLevelItem(lo, item);
     return item;
 }
 
 QTreeWidgetItem* MainWindow::findOrCreateSubType(QTreeWidgetItem* parent, const QString& subType)
 {
-    for (int i = 0; i < parent->childCount(); ++i) {
-        QTreeWidgetItem* item = parent->child(i);
-        if (item->text(0) == subType)
-            return item;
+    int count = parent->childCount();
+
+    // Binary search for existing or insertion point
+    int lo = 0, hi = count;
+    while (lo < hi) {
+        int mid = (lo + hi) / 2;
+        QString midText = parent->child(mid)->text(0);
+        int cmp = subType.compare(midText, Qt::CaseInsensitive);
+        if (cmp == 0)
+            return parent->child(mid);
+        if (cmp < 0)
+            hi = mid;
+        else
+            lo = mid + 1;
     }
 
-    QTreeWidgetItem* item = new QTreeWidgetItem(parent);
+    // Not found - insert at position lo
+    QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText(0, subType);
     item->setText(2, "0");
+    parent->insertChild(lo, item);
     return item;
 }
 
 QTreeWidgetItem* MainWindow::findOrCreateExtension(QTreeWidgetItem* parent, const QString& extension)
 {
-    for (int i = 0; i < parent->childCount(); ++i) {
-        QTreeWidgetItem* item = parent->child(i);
-        if (item->text(0) == extension)
-            return item;
+    int count = parent->childCount();
+
+    // Binary search for existing or insertion point
+    int lo = 0, hi = count;
+    while (lo < hi) {
+        int mid = (lo + hi) / 2;
+        QString midText = parent->child(mid)->text(0);
+        int cmp = extension.compare(midText, Qt::CaseInsensitive);
+        if (cmp == 0)
+            return parent->child(mid);
+        if (cmp < 0)
+            hi = mid;
+        else
+            lo = mid + 1;
     }
 
-    QTreeWidgetItem* item = new QTreeWidgetItem(parent);
+    // Not found - insert at position lo
+    QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText(0, extension);
     item->setText(2, "0");
+    parent->insertChild(lo, item);
     return item;
 }
 
