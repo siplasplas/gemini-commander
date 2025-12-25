@@ -170,6 +170,8 @@ signals:
     void selectionChanged();
     void directoryChanged(const QString& path);
     void searchRequested(const QString& initialText);
+    void goBackRequested();
+    void goForwardRequested();
 
 private:
     static QIcon getIconForEntry(const QFileInfo& info, EntryContentState contentState);

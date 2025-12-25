@@ -151,6 +151,13 @@ bool Config::load(const QString& path)
                 m_showFunctionBar = *show;
         }
 
+        // [history] section
+        if (tbl.contains("history")) {
+            auto& history = *tbl["history"].as_table();
+            if (auto size = history["max_size"].value<int64_t>())
+                m_maxHistorySize = static_cast<int>(*size);
+        }
+
         // [editor] section (position relative to main window)
         if (tbl.contains("editor")) {
             auto& editor = *tbl["editor"].as_table();
@@ -276,6 +283,11 @@ bool Config::save() const
     toml::table uiTbl;
     uiTbl.insert("showFunctionBar", m_showFunctionBar);
     tbl.insert("ui", uiTbl);
+
+    // [history] section
+    toml::table historyTbl;
+    historyTbl.insert("max_size", static_cast<int64_t>(m_maxHistorySize));
+    tbl.insert("history", historyTbl);
 
     // [editor] section (position relative to main window)
     toml::table editorTbl;

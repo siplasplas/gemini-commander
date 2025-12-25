@@ -383,15 +383,15 @@ bool FilePanel::doFileProperties(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doGoBack(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doGoBack";
-    return false;
+    emit goBackRequested();
+    return true;
 }
 
 bool FilePanel::doGoForward(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doGoForward";
-    return false;
+    emit goForwardRequested();
+    return true;
 }
 
 bool FilePanel::doGoToFirstRow(QObject *obj, QKeyEvent *keyEvent) {

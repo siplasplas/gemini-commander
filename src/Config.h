@@ -77,6 +77,10 @@ public:
   bool showFunctionBar() const { return m_showFunctionBar; }
   void setShowFunctionBar(bool show) { m_showFunctionBar = show; }
 
+  // Directory navigation history
+  int maxHistorySize() const { return m_maxHistorySize; }
+  void setMaxHistorySize(int size) { m_maxHistorySize = size; }
+
 private:
   Config() = default;
 
@@ -90,6 +94,7 @@ private:
   int m_windowX = -1;  // -1 means not set (use system default)
   int m_windowY = -1;
   bool m_showFunctionBar = true;
+  int m_maxHistorySize = 20;
 
   // Editor window geometry (relative to main window)
   int m_editorWidth = 800;

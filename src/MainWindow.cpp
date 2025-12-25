@@ -317,6 +317,28 @@ void MainWindow::setupUi() {
     commandsMenu->addAction(runTerminalAction);
 
     // Navigate menu
+    QAction* backAction = new QAction(tr("Back"), this);
+    backAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Left));
+    connect(backAction, &QAction::triggered, this, [this]() {
+        FilePanel* panel = currentFilePanel();
+        if (panel) {
+            emit panel->goBackRequested();
+        }
+    });
+    navigateMenu->addAction(backAction);
+
+    QAction* forwardAction = new QAction(tr("Forward"), this);
+    forwardAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Right));
+    connect(forwardAction, &QAction::triggered, this, [this]() {
+        FilePanel* panel = currentFilePanel();
+        if (panel) {
+            emit panel->goForwardRequested();
+        }
+    });
+    navigateMenu->addAction(forwardAction);
+
+    navigateMenu->addSeparator();
+
     QAction* goToHomeAction = new QAction(tr("Go to Home"), this);
     goToHomeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_QuoteLeft));
     connect(goToHomeAction, &QAction::triggered, this, [this]() {

@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QLineEdit>
 #include <QLabel>
+#include <QStringList>
 
 #include "FilePanel.h"
 
@@ -21,9 +22,15 @@ public:
 
    Q_INVOKABLE bool doLocalSearch(QObject *obj, QKeyEvent *keyEvent);
 
+  // Directory navigation history
+  bool canGoBack() const;
+  bool canGoForward() const;
+  void goBack();
+  void goForward();
+
 public slots:
   void onDirectoryChanged(const QString& path);
-void onSelectionChanged();
+  void onSelectionChanged();
 
 private:
   Side m_side;
@@ -34,6 +41,14 @@ private:
   SearchEdit* m_searchEdit = nullptr;
 
   void updateStatusLabel();
+
+  // Directory navigation history
+  QStringList m_history;
+  int m_historyPosition = -1;
+  bool m_navigatingHistory = false;
+
+  void addToHistory(const QString& path);
+  void trimHistoryToLimit();
 };
 
 #endif // FILEPANEWIDGET_H

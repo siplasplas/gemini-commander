@@ -1,10 +1,12 @@
 #include "FilePaneWidget.h"
 #include "SearchEdit.h"
 #include "SizeFormat.h"
+#include "Config.h"
 
 #include <QItemSelectionModel>
 #include <QStandardItemModel>
 #include <QVBoxLayout>
+#include <QDir>
 
 #include "keys/ObjectRegistry.h"
 
@@ -42,6 +44,12 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
             this, &FilePaneWidget::onDirectoryChanged);
     connect(m_filePanel, &FilePanel::selectionChanged,
             this, &FilePaneWidget::onSelectionChanged);
+
+    // Connect history navigation signals
+    connect(m_filePanel, &FilePanel::goBackRequested,
+            this, &FilePaneWidget::goBack);
+    connect(m_filePanel, &FilePanel::goForwardRequested,
+            this, &FilePaneWidget::goForward);
 
     // Update status on keyboard navigation (up/down, page up/down, etc.)
     connect(m_filePanel->selectionModel(), &QItemSelectionModel::currentChanged,
@@ -92,6 +100,7 @@ QString FilePaneWidget::currentPath() const
 void FilePaneWidget::onDirectoryChanged(const QString& path)
 {
     m_pathEdit->setText(path);
+    addToHistory(path);
 }
 
 void FilePaneWidget::onSelectionChanged()
@@ -188,3 +197,92 @@ bool FilePaneWidget::doLocalSearch(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+// Directory navigation history implementation
+
+void FilePaneWidget::addToHistory(const QString& path)
+{
+    // Don't add to history when navigating through history
+    if (m_navigatingHistory)
+        return;
+
+    QString cleanPath = QDir::cleanPath(path);
+    if (cleanPath.isEmpty())
+        return;
+
+    // Truncate forward history when navigating to new location
+    // This happens when user goes back a few times, then navigates normally
+    if (m_historyPosition >= 0 && m_historyPosition < m_history.size() - 1) {
+        m_history.erase(m_history.begin() + m_historyPosition + 1, m_history.end());
+    }
+
+    // Check if this is the same as the current position (avoid duplicates)
+    if (!m_history.isEmpty() && m_historyPosition >= 0 && m_historyPosition < m_history.size()) {
+        if (m_history[m_historyPosition] == cleanPath)
+            return;  // Same directory, don't add again
+    }
+
+    // Add to history
+    m_history.append(cleanPath);
+    m_historyPosition = m_history.size() - 1;
+
+    // Enforce size limit
+    trimHistoryToLimit();
+}
+
+void FilePaneWidget::trimHistoryToLimit()
+{
+    int maxSize = Config::instance().maxHistorySize();
+    if (maxSize <= 0)
+        maxSize = 20;  // Fallback
+
+    while (m_history.size() > maxSize) {
+        m_history.removeFirst();
+        m_historyPosition--;
+    }
+
+    // Ensure position is valid
+    if (m_historyPosition < 0 && !m_history.isEmpty())
+        m_historyPosition = 0;
+    if (m_historyPosition >= m_history.size())
+        m_historyPosition = m_history.size() - 1;
+}
+
+bool FilePaneWidget::canGoBack() const
+{
+    return m_historyPosition > 0;
+}
+
+bool FilePaneWidget::canGoForward() const
+{
+    return m_historyPosition >= 0 && m_historyPosition < m_history.size() - 1;
+}
+
+void FilePaneWidget::goBack()
+{
+    if (!canGoBack())
+        return;
+
+    m_navigatingHistory = true;
+    m_historyPosition--;
+
+    QString targetPath = m_history[m_historyPosition];
+    m_filePanel->currentPath = targetPath;
+    m_filePanel->loadDirectory();
+
+    m_navigatingHistory = false;
+}
+
+void FilePaneWidget::goForward()
+{
+    if (!canGoForward())
+        return;
+
+    m_navigatingHistory = true;
+    m_historyPosition++;
+
+    QString targetPath = m_history[m_historyPosition];
+    m_filePanel->currentPath = targetPath;
+    m_filePanel->loadDirectory();
+
+    m_navigatingHistory = false;
+}
