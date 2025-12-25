@@ -280,6 +280,7 @@ void MainWindow::setupUi() {
 
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
     QMenu* commandsMenu = menuBar()->addMenu(tr("&Commands"));
+    QMenu* navigateMenu = menuBar()->addMenu(tr("&Navigate"));
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
     QMenu* configMenu = menuBar()->addMenu(tr("C&onfiguration"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
@@ -314,6 +315,21 @@ void MainWindow::setupUi() {
     runTerminalAction->setShortcut(QKeySequence(Qt::Key_F9));
     connect(runTerminalAction, &QAction::triggered, this, &MainWindow::onOpenTerminal);
     commandsMenu->addAction(runTerminalAction);
+
+    // Navigate menu
+    QAction* goToHomeAction = new QAction(tr("Go to Home"), this);
+    goToHomeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_QuoteLeft));
+    connect(goToHomeAction, &QAction::triggered, this, [this]() {
+        doGoToHome(nullptr, nullptr);
+    });
+    navigateMenu->addAction(goToHomeAction);
+
+    QAction* goToRootAction = new QAction(tr("Go to Root"), this);
+    goToRootAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Backslash));
+    connect(goToRootAction, &QAction::triggered, this, [this]() {
+        doGoToRoot(nullptr, nullptr);
+    });
+    navigateMenu->addAction(goToRootAction);
 
     // --- TOOLBAR ---
     m_mainToolBar = addToolBar(tr("Main toolbar"));

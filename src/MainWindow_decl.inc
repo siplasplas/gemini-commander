@@ -14,6 +14,8 @@
     Q_INVOKABLE bool doEditNew(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doExtractFiles(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doFocusCommandLine(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doGoToHome(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doGoToRoot(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doMakeDirectoryOpposite(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doMove(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doMoveInPlace(QObject *obj, QKeyEvent *keyEvent);

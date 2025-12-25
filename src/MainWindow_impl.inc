@@ -186,6 +186,38 @@ bool MainWindow::doFocusCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+bool MainWindow::doGoToHome(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return true;
+
+    QString homePath = QDir::homePath();
+    panel->currentPath = homePath;
+    panel->loadDirectory();
+    panel->setFocus();
+
+    return true;
+}
+
+bool MainWindow::doGoToRoot(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return true;
+
+    QString rootPath = QDir::rootPath();
+    panel->currentPath = rootPath;
+    panel->loadDirectory();
+    panel->setFocus();
+
+    return true;
+}
+
 bool MainWindow::doMakeDirectoryOpposite(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
