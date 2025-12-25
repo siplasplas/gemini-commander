@@ -787,7 +787,7 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex)
         }
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
-    loadDirectory();
+    addAllEntries();
 }
 
 void FilePanel::startDrag(Qt::DropActions supportedActions)
