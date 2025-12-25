@@ -17,6 +17,7 @@ public:
   FilePaneWidget(Side side, QWidget* parent = nullptr);
 
   FilePanel* filePanel() const { return m_filePanel; }
+  QLineEdit* pathEdit() const { return m_pathEdit; }
 
   void setCurrentPath(const QString& path);
   QString currentPath() const;

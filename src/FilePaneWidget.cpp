@@ -25,7 +25,7 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     pathLayout->setSpacing(0);
 
     m_pathEdit = new QLineEdit(this);
-    m_pathEdit->setReadOnly(true);
+    m_pathEdit->setStyleSheet("QLineEdit { background-color: white; }");
     QFontMetrics fm(m_pathEdit->font());
     int h = fm.height() + 4;
     m_pathEdit->setFixedHeight(h);

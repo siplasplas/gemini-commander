@@ -233,6 +233,10 @@ void MainWindow::setupUi() {
         showFavoriteDirsMenu(rightPane->filePanel()->side(), pos);
     });
 
+    // Install event filter on path edits for selectAll on focus
+    leftPane->pathEdit()->installEventFilter(this);
+    rightPane->pathEdit()->installEventFilter(this);
+
     // Bottom line: currentPath label (3/4 of left panel) + command line (rest)
     auto* bottomLayout = new QHBoxLayout();
     bottomLayout->setContentsMargins(0, 0, 0, 0);
@@ -250,6 +254,7 @@ void MainWindow::setupUi() {
 
     commandLineEdit = new QLineEdit(centralWidget);
     commandLineEdit->setStyleSheet("QLineEdit { background-color: white; }");
+    commandLineEdit->installEventFilter(this);
     ObjectRegistry::add(commandLineEdit, "CommandLine");
 
     // Label: 3 units (3/4 of first panel), CommandLine: 5 units (1/4 + full second panel)
@@ -456,6 +461,25 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     // Keyboard events are handled by KeyRouter - only focus events here
     if (event->type() == QEvent::FocusIn) {
+        // Handle command line edit focus
+        if (obj == commandLineEdit) {
+            QTimer::singleShot(0, commandLineEdit, &QLineEdit::selectAll);
+            return QMainWindow::eventFilter(obj, event);
+        }
+
+        // Handle path edit focus for both panes
+        auto* leftPane = paneForSide(Side::Left);
+        auto* rightPane = paneForSide(Side::Right);
+        if (leftPane && obj == leftPane->pathEdit()) {
+            QTimer::singleShot(0, leftPane->pathEdit(), &QLineEdit::selectAll);
+            return QMainWindow::eventFilter(obj, event);
+        }
+        if (rightPane && obj == rightPane->pathEdit()) {
+            QTimer::singleShot(0, rightPane->pathEdit(), &QLineEdit::selectAll);
+            return QMainWindow::eventFilter(obj, event);
+        }
+
+        // Handle panel focus
         if (auto* panel = panelForObject(obj)) {
             Side newSide = panel->side();
             if (m_activeSide != newSide) {
