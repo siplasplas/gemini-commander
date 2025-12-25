@@ -1,6 +1,7 @@
 #ifndef PANEL_H
 #define PANEL_H
 
+#include <QAbstractTableModel>
 #include <QDir>
 #include <QTableView>
 #include <qfileinfo.h>
@@ -11,11 +12,9 @@
 #include <QProgressDialog>
 #include <QVector>
 
-class QStandardItem;
 struct SearchResult;
 QT_BEGIN_NAMESPACE
 class QTableView;
-class QStandardItemModel;
 QT_END_NAMESPACE
 
 
@@ -77,6 +76,41 @@ enum Columns {
         COLUMN_DATE = 4,
 };
 
+// Forward declaration
+class FilePanel;
+
+// Virtual model that reads directly from FilePanel::entries
+// No data copying - only displays visible rows
+class FilePanelModel : public QAbstractTableModel
+{
+    Q_OBJECT
+public:
+    explicit FilePanelModel(FilePanel* panel, QObject* parent = nullptr);
+
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+    // Call after sorting or changing entries
+    void refresh();
+
+    // Call after marking/unmarking single row
+    void refreshRow(int row);
+
+    // Helper: convert model row to entry index (-1 if [..] row)
+    int rowToEntryIndex(int row) const;
+
+    // Helper: convert entry index to model row
+    int entryIndexToRow(int entryIndex) const;
+
+    // Check if row 0 is the [..] entry
+    bool hasParentEntry() const;
+
+private:
+    FilePanel* m_panel;
+};
+
 class MarkedItemDelegate : public QStyledItemDelegate
 {
 public:
@@ -92,7 +126,7 @@ class FilePanel : public QTableView
     Q_OBJECT
 public:
 #include "FilePanel_decl.inc"
-    QStandardItemModel* model = nullptr;
+    FilePanelModel* model = nullptr;
     QString currentPath;
     QList<PanelEntry> entries;
     bool branchMode = false;  // Branch View mode (flat list of files from subdirectories)
@@ -137,8 +171,6 @@ public:
     static bool copyDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, const CopyStats &stats,
                                 QProgressDialog &progress, quint64 &bytesCopied, bool &userAbort);
     std::pair<PanelEntry*, int> currentEntryRow();
-    void updateColumn(int row, PanelEntry& entry);
-    QList<QStandardItem*> entryToRow(PanelEntry& entry);
     Side side() {return m_side;}
     void feedSearchResults(const QVector<SearchResult>& results, const QString& searchPath);
 
@@ -178,18 +210,19 @@ private:
     static QIcon getIconForEntry(const QFileInfo& info, EntryContentState contentState);
     static FileType classifyFileType(const QFileInfo& info);
     static QIcon getIconForFileType(FileType type);
-    EntryContentState ensureContentState(PanelEntry&entry)const;
-    bool mixedHidden = true;//filenames with dot, are between others
+    EntryContentState ensureContentState(PanelEntry& entry) const;
+    bool mixedHidden = true;  // filenames with dot, are between others
     // Search UI and logic
     QDir *dir = nullptr;
     void sortEntries();
-    void addFirstEntry(bool isRoot);
-    void addEntries();
     QString normalizeForSearch(const QString& s) const;
 
     // Shared pattern history for select/unselect group
     static QStringList s_patternHistory;
     static QString showPatternDialog(QWidget* parent, const QString& title, const QString& label);
+
+    // FilePanelModel needs access to private members
+    friend class FilePanelModel;
 };
 
 #endif //PANEL_H

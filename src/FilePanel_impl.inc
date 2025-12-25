@@ -72,10 +72,7 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
     // Successfully scanned - enter branch mode
     branchMode = true;
     sortEntries();
-    model->removeRows(0, model->rowCount());
-    // No [..] entry in branch mode
-    addEntries();
-    setRootIndex(QModelIndex());
+    model->refresh();
     selectEntryByRelPath(relPath);
     emit selectionChanged();
 
@@ -659,7 +656,7 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
             KeyRouter::instance().setOperationInProgress(true);
 
             entry->hasTotalSize = TotalSizeStatus::InPogress;
-            updateColumn(row, *entry);
+            model->refreshRow(row);
             collectCopyStats(entry->info.absoluteFilePath(), stats, ok, &m_cancelOperation);
             if (ok) {
                 entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
@@ -667,7 +664,7 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
             } else {
                 entry->hasTotalSize = TotalSizeStatus::Unknown;
             }
-            updateColumn(row, *entry);
+            model->refreshRow(row);
 
             // Unblock keys after operation
             KeyRouter::instance().setOperationInProgress(false);

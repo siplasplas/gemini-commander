@@ -208,6 +208,167 @@ void MarkedItemDelegate::paint(QPainter* painter,
     QStyledItemDelegate::paint(painter, opt, index);
 }
 
+// ============================================================================
+// FilePanelModel - virtual model reading directly from FilePanel::entries
+// ============================================================================
+
+FilePanelModel::FilePanelModel(FilePanel* panel, QObject* parent)
+    : QAbstractTableModel(parent)
+    , m_panel(panel)
+{
+}
+
+bool FilePanelModel::hasParentEntry() const
+{
+    // [..] entry exists when: not in branch mode AND not in root directory
+    if (m_panel->branchMode)
+        return false;
+    if (!m_panel->dir)
+        return false;
+    return !m_panel->dir->isRoot();
+}
+
+int FilePanelModel::rowToEntryIndex(int row) const
+{
+    if (hasParentEntry()) {
+        if (row == 0)
+            return -1;  // [..] row
+        return row - 1;
+    }
+    return row;
+}
+
+int FilePanelModel::entryIndexToRow(int entryIndex) const
+{
+    if (hasParentEntry())
+        return entryIndex + 1;
+    return entryIndex;
+}
+
+int FilePanelModel::rowCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+        return 0;
+    int count = m_panel->entries.size();
+    if (hasParentEntry())
+        count += 1;  // +1 for [..] row
+    return count;
+}
+
+int FilePanelModel::columnCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+        return 0;
+    return 5;  // ID, Name, Ext, Size, Date
+}
+
+QVariant FilePanelModel::data(const QModelIndex& index, int role) const
+{
+    if (!index.isValid())
+        return {};
+
+    const int row = index.row();
+    const int col = index.column();
+    const int entryIdx = rowToEntryIndex(row);
+
+    // Handle [..] row
+    if (entryIdx < 0) {
+        if (role == Qt::DisplayRole) {
+            switch (col) {
+                case COLUMN_ID: return QString();
+                case COLUMN_NAME: return QStringLiteral("[..]");
+                case COLUMN_EXT: return QString();
+                case COLUMN_SIZE: return QStringLiteral("<DIR>");
+                case COLUMN_DATE: {
+                    QFileInfo info(".");
+                    return info.lastModified().toString("yyyy-MM-dd hh:mm");
+                }
+            }
+        }
+        if (role == Qt::DecorationRole && col == COLUMN_NAME) {
+            return m_panel->style()->standardIcon(QStyle::SP_FileDialogToParent);
+        }
+        if (role == Qt::UserRole && col == COLUMN_NAME) {
+            return QString();  // empty fullName for [..]
+        }
+        return {};
+    }
+
+    // Normal entry
+    if (entryIdx >= m_panel->entries.size())
+        return {};
+
+    PanelEntry& entry = m_panel->entries[entryIdx];
+
+    if (role == Qt::DisplayRole) {
+        auto [base, ext] = splitFileName(entry.info);
+        switch (col) {
+            case COLUMN_ID: return QString();
+            case COLUMN_NAME: return base;
+            case COLUMN_EXT: return ext;
+            case COLUMN_SIZE: {
+                if (!entry.info.isDir()) {
+                    return QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
+                } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
+                    return QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
+                } else if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
+                    return QStringLiteral("....");
+                }
+                return QStringLiteral("<DIR>");
+            }
+            case COLUMN_DATE:
+                return entry.info.lastModified().toString("yyyy-MM-dd hh:mm");
+        }
+    }
+
+    if (role == Qt::DecorationRole && col == COLUMN_NAME) {
+        EntryContentState state = m_panel->ensureContentState(entry);
+        return FilePanel::getIconForEntry(entry.info, state);
+    }
+
+    if (role == Qt::UserRole && col == COLUMN_NAME) {
+        // Full filename for selection/search
+        auto [base, ext] = splitFileName(entry.info);
+        if (ext.isEmpty())
+            return base;
+        return base + "." + ext;
+    }
+
+    if (role == Qt::ForegroundRole && entry.isMarked) {
+        return QBrush(Qt::red);
+    }
+
+    return {};
+}
+
+QVariant FilePanelModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation != Qt::Horizontal || role != Qt::DisplayRole)
+        return {};
+
+    switch (section) {
+        case COLUMN_ID: return QStringLiteral("id");
+        case COLUMN_NAME: return QStringLiteral("Name");
+        case COLUMN_EXT: return QStringLiteral("Ext");
+        case COLUMN_SIZE: return QStringLiteral("Size");
+        case COLUMN_DATE: return QStringLiteral("Date");
+    }
+    return {};
+}
+
+void FilePanelModel::refresh()
+{
+    beginResetModel();
+    endResetModel();
+}
+
+void FilePanelModel::refreshRow(int row)
+{
+    if (row < 0 || row >= rowCount())
+        return;
+    emit dataChanged(index(row, 0), index(row, columnCount() - 1));
+}
+
 void FilePanel::sortEntries() {
   // --------------------------
   // Sorting (TC-like)
@@ -304,130 +465,13 @@ void FilePanel::sortEntries() {
               }
             });
 }
-void FilePanel::addFirstEntry(bool isRoot) {
-  // --------------------------
-  // Add ".." entry
-  // --------------------------
-  if (!isRoot) {
-    QList<QStandardItem *> row;
-
-    // COLUMN_ID
-    row.append(new QStandardItem(""));
-
-    // COLUMN_NAME (base)
-    auto *upItem = new QStandardItem("[..]");
-    upItem->setData(QString(""), Qt::UserRole); // full_name = "" for [..]
-    QIcon upIcon = style()->standardIcon(QStyle::SP_FileDialogToParent);
-    upItem->setIcon(upIcon);
-    row.append(upItem);
-
-    // COLUMN_TYPE (empty)
-    row.append(new QStandardItem(""));
-
-    // COLUMN_SIZE
-    row.append(new QStandardItem("<DIR>"));
-
-    // COLUMN_DATE
-    QFileInfo info(".");
-    row.append(
-        new QStandardItem(info.lastModified().toString("yyyy-MM-dd hh:mm")));
-
-    model->appendRow(row);
-  }
-}
-
-static QStringList getTextColumn(PanelEntry& entry)
-{
-    QStringList colStrings;
-    colStrings.append(""); // ID column
-
-    auto [base, ext] = splitFileName(entry.info);
-
-    colStrings.append(base);               // COLUMN_NAME
-    colStrings.append(ext);                // COLUMN_EXT
-
-    QString sizeStr;
-    if (!entry.info.isDir()) {
-        sizeStr = QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
-    } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
-        sizeStr = QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
-    } else if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
-        sizeStr = "....";
-    } else {
-        sizeStr = "<DIR>";
-    }
-    colStrings.append(sizeStr);                // COLUMN_SIZE
-
-    colStrings.append(entry.info.lastModified().toString("yyyy-MM-dd hh:mm")); // COLUMN_DATE
-
-    return colStrings;
-}
-
-QList<QStandardItem*> FilePanel::entryToRow(PanelEntry& entry)
-{
-    const auto list = getTextColumn(entry);
-    QList<QStandardItem*> row;
-
-    for (int col = COLUMN_ID; col <= COLUMN_DATE; ++col)
-        row.append(new QStandardItem(list[col]));
-
-    // fullName dla UserRole
-    QString fullName;
-    if (list[COLUMN_EXT].isEmpty())
-        fullName = list[COLUMN_NAME];
-    else
-        fullName = list[COLUMN_NAME] + "." + list[COLUMN_EXT];
-
-    row[COLUMN_NAME]->setData(fullName, Qt::UserRole);
-
-    EntryContentState state = ensureContentState(entry);
-    row[COLUMN_NAME]->setIcon(getIconForEntry(entry.info, state));
-
-    return row;
-}
-
-void FilePanel::updateColumn(int row, PanelEntry& entry)
-{
-    const auto list = getTextColumn(entry);
-
-    for (int col = COLUMN_NAME; col <= COLUMN_DATE; ++col) {
-        if (QStandardItem* item = model->item(row, col)) {
-            item->setText(list[col]);
-        }
-    }
-
-    // ikona (na wypadek gdyby state się zmienił)
-    EntryContentState state = ensureContentState(entry);
-    if (QStandardItem* nameItem = model->item(row, COLUMN_NAME)) {
-        nameItem->setIcon(getIconForEntry(entry.info, state));
-    }
-    if (viewport()) {
-        QModelIndex idx = model->index(row, COLUMN_NAME);
-        QRect r = visualRect(idx);
-        viewport()->repaint(r);
-    }
-}
-
-void FilePanel::addEntries()
-{
-    for (PanelEntry& entry : entries) {
-        const int rowIndex = model->rowCount();
-        model->appendRow(entryToRow(entry));
-        if (entry.isMarked)
-            updateRowMarking(rowIndex, true);
-    }
-}
-
 void FilePanel::addAllEntries() {
     QString selectedName;
     auto rows = selectionModel()->selectedRows();
     if (!rows.isEmpty())
         selectedName = getRowName(rows.first().row());
     sortEntries();
-    model->removeRows(0, model->rowCount());
-    addFirstEntry(dir->isRoot());
-    addEntries();
-    setRootIndex(QModelIndex());
+    model->refresh();
     selectEntryByName(selectedName);
 }
 
@@ -463,13 +507,15 @@ void FilePanel::loadDirectory()
 QString FilePanel::getRowName(int row) const {
     if (row < 0 || row >= model->rowCount())
         return {};
-    return model->item(row, COLUMN_NAME)->data(Qt::UserRole).toString();
+    QModelIndex idx = model->index(row, COLUMN_NAME);
+    return model->data(idx, Qt::UserRole).toString();
 }
 
 QString FilePanel::getRowRelPath(int row) const {
     if (!branchMode)
         return getRowName(row);
 
+    // In branch mode, row maps directly to entry index
     if (row < 0 || row >= entries.size())
         return {};
 
@@ -652,10 +698,8 @@ void FilePanel::activate(const QString &commandLine) {
     }
 }
 
-FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(parent) {
-    model = new QStandardItemModel(nullptr);
-    QStringList headers = {"id","Name", "Ext", "Size", "Date"};
-    model->setHorizontalHeaderLabels(headers);
+FilePanel::FilePanel(Side side, QWidget* parent): QTableView(parent), m_side(side) {
+    model = new FilePanelModel(this, this);
     currentPath = QDir::currentPath();
     setModel(model);
     setItemDelegate(new MarkedItemDelegate(this));
@@ -1196,7 +1240,8 @@ void FilePanel::jumpWithControl(int direction)
     int firstFileRow = rowCount;
 
     for (int r = 0; r < rowCount; ++r) {
-        QString size = model->item(r, COLUMN_SIZE)->text();
+        QModelIndex idx = model->index(r, COLUMN_SIZE);
+        QString size = model->data(idx, Qt::DisplayRole).toString();
         bool isDir = (size == "<DIR>");
         if (isDir)
             lastDirRow = r;
@@ -1284,8 +1329,7 @@ void FilePanel::createNewDirectory(QWidget* dialogParent)
     QString suggestedName;
 
     if (current_index.isValid()) {
-        QStandardItem* item = model->item(current_index.row(), COLUMN_NAME);
-        QString fullName = item->data(Qt::UserRole).toString();
+        QString fullName = getRowName(current_index.row());
         if (!fullName.isEmpty())
             suggestedName = fullName;      // poprawna nazwa pliku/katalogu
     }
@@ -1324,11 +1368,7 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
     if (!current_index.isValid())
         return;
 
-    QStandardItem* item = model->item(current_index.row(), COLUMN_NAME);
-    if (!item)
-        return;
-
-    const QString fullName = item->data(Qt::UserRole).toString();
+    const QString fullName = getRowName(current_index.row());
     if (fullName.isEmpty()) {
         return;
     }
@@ -1410,21 +1450,12 @@ void FilePanel::renameOrMoveEntry(QWidget* dialogParent, const QString& defaultT
 
 void FilePanel::updateRowMarking(int row, bool marked)
 {
+    Q_UNUSED(marked);
     if (!model || row < 0 || row >= model->rowCount())
         return;
-
-    const int cols = model->columnCount();
-    for (int col = 0; col < cols; ++col) {
-        QStandardItem* item = model->item(row, col);
-        if (!item)
-            continue;
-
-        if (marked) {
-            item->setForeground(Qt::red);
-        } else {
-            item->setForeground(QBrush()); // reset do domyślnego koloru
-        }
-    }
+    // Model returns ForegroundRole based on entry.isMarked
+    // Just signal that the row data changed
+    model->refreshRow(row);
 }
 
 std::pair<PanelEntry*, int> FilePanel::currentEntryRow() {
@@ -1707,9 +1738,7 @@ void FilePanel::feedSearchResults(const QVector<SearchResult>& results, const QS
 
     branchMode = true;
     sortEntries();
-    model->removeRows(0, model->rowCount());
-    addEntries();
-    setRootIndex(QModelIndex());
+    model->refresh();
     selectFirstEntry();
     emit selectionChanged();
 }
@@ -1730,13 +1759,10 @@ bool FilePanel::removeEntryByRelPath(const QString& relPath)
         }
 
         if (entryRelPath == relPath) {
-            // Found - remove from entries and model
+            // Found - remove from entries
             entries.removeAt(i);
-
-            // In branch mode, row == entry index; otherwise +1 for [..]
-            int modelRow = branchMode ? i : i + 1;
-            model->removeRow(modelRow);
-
+            // Refresh model to reflect the change
+            model->refresh();
             return true;
         }
     }
@@ -1771,10 +1797,9 @@ bool FilePanel::renameEntry(const QString& oldRelPath, const QString& newRelPath
                 entries[i].branch.clear();
             }
 
-            // Update model row
-            int modelRow = branchMode ? i : i + 1;
-            updateColumn(modelRow, entries[i]);
-
+            // Refresh model row
+            int modelRow = model->entryIndexToRow(i);
+            model->refreshRow(modelRow);
             return true;
         }
     }
@@ -1803,10 +1828,9 @@ bool FilePanel::updateEntryBranch(const QString& relPath, const QString& newBran
                 : newBranch + "/" + entries[i].info.fileName();
             entries[i].info = QFileInfo(baseDir.absoluteFilePath(newRelPathFull));
 
-            // Update model row
-            int modelRow = branchMode ? i : i + 1;
-            updateColumn(modelRow, entries[i]);
-
+            // Refresh model row
+            int modelRow = model->entryIndexToRow(i);
+            model->refreshRow(modelRow);
             return true;
         }
     }
@@ -1820,16 +1844,12 @@ bool FilePanel::addEntryFromPath(const QString& fullPath, const QString& branch)
         return false;
     }
 
-    // Create new entry
+    // Create new entry and add to entries list
     PanelEntry entry(info, branch);
-
-    // Add to entries list
     entries.append(entry);
 
-    // Create model row and add to model
-    QList<QStandardItem*> row = entryToRow(entry);
-    model->appendRow(row);
-
+    // Refresh model to show the new entry
+    model->refresh();
     return true;
 }
 
