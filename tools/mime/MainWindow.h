@@ -5,6 +5,7 @@
 #include <QTreeWidget>
 #include <QMimeDatabase>
 #include <QLabel>
+#include <QLineEdit>
 
 class MainWindow : public QMainWindow
 {
@@ -17,11 +18,13 @@ private slots:
     void onSearchFiles();
     void onShowAllMimes();
     void onItemExpanded(QTreeWidgetItem* item);
+    void onFilterChanged(const QString& text);
 
 private:
     void setupUi();
     void setupMenus();
 
+    QLineEdit* m_filterEdit = nullptr;
     QTreeWidget* m_treeWidget = nullptr;
     QLabel* m_statusLabel = nullptr;
     QMimeDatabase m_mimeDb;

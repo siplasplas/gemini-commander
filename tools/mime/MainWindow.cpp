@@ -26,6 +26,12 @@ void MainWindow::setupUi()
     QVBoxLayout* layout = new QVBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
 
+    // Filter edit
+    m_filterEdit = new QLineEdit(central);
+    m_filterEdit->setPlaceholderText(tr("Filter subtypes (e.g. rar, compressed, pdf)..."));
+    m_filterEdit->setClearButtonEnabled(true);
+    connect(m_filterEdit, &QLineEdit::textChanged, this, &MainWindow::onFilterChanged);
+
     m_treeWidget = new QTreeWidget(central);
     m_treeWidget->setHeaderLabels({"Name", "Default Application", "Count"});
     m_treeWidget->header()->setSectionResizeMode(QHeaderView::Interactive);
@@ -40,6 +46,7 @@ void MainWindow::setupUi()
     m_statusLabel = new QLabel(central);
     m_statusLabel->setStyleSheet("QLabel { background-color: #f0f0f0; padding: 4px; }");
 
+    layout->addWidget(m_filterEdit);
     layout->addWidget(m_treeWidget);
     layout->addWidget(m_statusLabel);
 
@@ -137,10 +144,9 @@ void MainWindow::addFileToTree(const QString& filePath, const QString& mimeType,
     // Find or create subtype (level 2)
     QTreeWidgetItem* subTypeItem = findOrCreateSubType(categoryItem, subType);
 
-    // Update default app info for subtype
-    if (subTypeItem->text(1).isEmpty()) {
-        QString defaultApp = getDefaultAppForMime(mimeType);
-        subTypeItem->setText(1, defaultApp);
+    // Store mime type for lazy loading of default app (on expand)
+    if (subTypeItem->data(0, Qt::UserRole).toString().isEmpty()) {
+        subTypeItem->setData(0, Qt::UserRole, mimeType);
     }
 
     // Find or create extension (level 3)
@@ -377,6 +383,38 @@ void MainWindow::onItemExpanded(QTreeWidgetItem* item)
                 m_defaultAppCache.insert(mimeType, defaultApp);
                 item->setText(1, defaultApp);
             }
+        }
+    }
+}
+
+void MainWindow::onFilterChanged(const QString& text)
+{
+    QString filter = text.trimmed().toLower();
+
+    // Iterate through all top-level items (categories)
+    for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
+        QTreeWidgetItem* categoryItem = m_treeWidget->topLevelItem(i);
+        int visibleChildren = 0;
+
+        // Iterate through subtypes (level 2)
+        for (int j = 0; j < categoryItem->childCount(); ++j) {
+            QTreeWidgetItem* subTypeItem = categoryItem->child(j);
+            QString subTypeName = subTypeItem->text(0).toLower();
+
+            // Show if filter is empty or subtype contains filter text
+            bool matches = filter.isEmpty() || subTypeName.contains(filter);
+            subTypeItem->setHidden(!matches);
+
+            if (matches)
+                visibleChildren++;
+        }
+
+        // Hide category if no visible children (unless filter is empty)
+        categoryItem->setHidden(!filter.isEmpty() && visibleChildren == 0);
+
+        // Expand category if it has matching children
+        if (visibleChildren > 0 && !filter.isEmpty()) {
+            categoryItem->setExpanded(true);
         }
     }
 }
