@@ -225,6 +225,14 @@ void MainWindow::setupUi() {
     m_leftTabs->addTab(leftPane,  "Left");
     m_rightTabs->addTab(rightPane, "Right");
 
+    // Connect favorites button signals
+    connect(leftPane, &FilePaneWidget::favoritesRequested, this, [this, leftPane](const QPoint& pos) {
+        showFavoriteDirsMenu(leftPane->filePanel()->side(), pos);
+    });
+    connect(rightPane, &FilePaneWidget::favoritesRequested, this, [this, rightPane](const QPoint& pos) {
+        showFavoriteDirsMenu(rightPane->filePanel()->side(), pos);
+    });
+
     // Bottom line: currentPath label (3/4 of left panel) + command line (rest)
     auto* bottomLayout = new QHBoxLayout();
     bottomLayout->setContentsMargins(0, 0, 0, 0);
@@ -470,7 +478,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     return QMainWindow::eventFilter(obj, event);
 }
 
-void MainWindow::showFavoriteDirsMenu(Side side)
+void MainWindow::showFavoriteDirsMenu(Side side, const QPoint& pos)
 {
     FilePanel* panel = filePanelForSide(side);
     if (!panel)
@@ -574,9 +582,16 @@ void MainWindow::showFavoriteDirsMenu(Side side)
     bool alreadyInFavorites = Config::instance().containsFavoriteDir(currentDir);
     addAct->setEnabled(!alreadyInFavorites && !currentDir.isEmpty());
 
-    // Popup position: above the active panel
-    QPoint panelPos = panel->mapToGlobal(QPoint(panel->width() / 2, panel->height()/2));
-    QAction* chosen = menu.exec(panelPos);
+    // Popup position: if pos is provided (from button), use it; otherwise center on panel (Ctrl+D)
+    QPoint menuPos;
+    if (pos.isNull()) {
+        // Ctrl+D: show in center of panel
+        menuPos = panel->mapToGlobal(QPoint(panel->width() / 2, panel->height()/2));
+    } else {
+        // Button click: show at provided position
+        menuPos = pos;
+    }
+    QAction* chosen = menu.exec(menuPos);
     if (!chosen)
         return;
 

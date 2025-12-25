@@ -48,7 +48,7 @@ private:
     QPointer<ViewerFrame> viewerFrame;
     SearchDialog* m_searchDialog = nullptr;
     int numberForWidget(QTableView* widget);
-    void showFavoriteDirsMenu(Side side);
+    void showFavoriteDirsMenu(Side side, const QPoint& pos = QPoint());
 
     void reloadAllPanels();
     void showFavoriteDirsMenu();

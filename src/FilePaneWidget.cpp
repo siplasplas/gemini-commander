@@ -6,7 +6,9 @@
 #include <QItemSelectionModel>
 #include <QStandardItemModel>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QDir>
+#include <QMenu>
 
 #include "keys/ObjectRegistry.h"
 
@@ -17,11 +19,35 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(2);
 
+    // Path bar with favorites and history buttons
+    auto* pathLayout = new QHBoxLayout();
+    pathLayout->setContentsMargins(0, 0, 0, 0);
+    pathLayout->setSpacing(0);
+
     m_pathEdit = new QLineEdit(this);
     m_pathEdit->setReadOnly(true);
     QFontMetrics fm(m_pathEdit->font());
     int h = fm.height() + 4;
     m_pathEdit->setFixedHeight(h);
+
+    m_favoritesButton = new QToolButton(this);
+    m_favoritesButton->setText("*");
+    m_favoritesButton->setToolTip(tr("Favorite directories (Ctrl+D)"));
+    m_favoritesButton->setFixedHeight(h);
+    connect(m_favoritesButton, &QToolButton::clicked, this, [this]() {
+        QPoint pos = m_favoritesButton->mapToGlobal(QPoint(0, m_favoritesButton->height()));
+        emit favoritesRequested(pos);
+    });
+
+    m_historyButton = new QToolButton(this);
+    m_historyButton->setText("▾");
+    m_historyButton->setToolTip(tr("Directory history (Alt+Left/Right)"));
+    m_historyButton->setFixedHeight(h);
+    connect(m_historyButton, &QToolButton::clicked, this, &FilePaneWidget::showHistoryMenu);
+
+    pathLayout->addWidget(m_pathEdit);
+    pathLayout->addWidget(m_favoritesButton);
+    pathLayout->addWidget(m_historyButton);
 
     m_filePanel = new FilePanel(side, nullptr);
     ObjectRegistry::add(m_filePanel, "Panel");
@@ -33,7 +59,7 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     m_statusLabel->setStyleSheet("QLabel { background-color: #f4f4f4; padding: 2px 6px; }");
     m_statusLabel->setText(QString());
 
-    layout->addWidget(m_pathEdit);
+    layout->addLayout(pathLayout);
     layout->addWidget(m_filePanel);
     layout->addWidget(m_searchEdit);
     layout->addWidget(m_statusLabel);
@@ -279,6 +305,55 @@ void FilePaneWidget::goForward()
 
     m_navigatingHistory = true;
     m_historyPosition++;
+
+    QString targetPath = m_history[m_historyPosition];
+    m_filePanel->currentPath = targetPath;
+    m_filePanel->loadDirectory();
+
+    m_navigatingHistory = false;
+}
+
+void FilePaneWidget::showHistoryMenu()
+{
+    if (m_history.isEmpty())
+        return;
+
+    QMenu menu(this);
+    QString currentPath = m_filePanel->currentPath;
+
+    // Display history in reverse order (newest first)
+    for (int i = m_history.size() - 1; i >= 0; --i) {
+        const QString& path = m_history[i];
+        QAction* action = menu.addAction(path);
+        action->setData(i);
+
+        // Check current directory
+        if (i == m_historyPosition) {
+            action->setCheckable(true);
+            action->setChecked(true);
+        }
+    }
+
+    // Show menu at button position
+    QPoint pos = m_historyButton->mapToGlobal(QPoint(0, m_historyButton->height()));
+    QAction* selected = menu.exec(pos);
+
+    if (selected) {
+        int index = selected->data().toInt();
+        navigateToHistoryIndex(index);
+    }
+}
+
+void FilePaneWidget::navigateToHistoryIndex(int index)
+{
+    if (index < 0 || index >= m_history.size())
+        return;
+
+    if (index == m_historyPosition)
+        return;  // Already at this position
+
+    m_navigatingHistory = true;
+    m_historyPosition = index;
 
     QString targetPath = m_history[m_historyPosition];
     m_filePanel->currentPath = targetPath;

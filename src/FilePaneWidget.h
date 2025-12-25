@@ -5,6 +5,7 @@
 #include <QLineEdit>
 #include <QLabel>
 #include <QStringList>
+#include <QToolButton>
 
 #include "FilePanel.h"
 
@@ -28,13 +29,21 @@ public:
   void goBack();
   void goForward();
 
+signals:
+  void favoritesRequested(const QPoint& pos);
+
 public slots:
   void onDirectoryChanged(const QString& path);
   void onSelectionChanged();
 
+private slots:
+  void showHistoryMenu();
+
 private:
   Side m_side;
+  QToolButton* m_favoritesButton = nullptr;
   QLineEdit* m_pathEdit = nullptr;
+  QToolButton* m_historyButton = nullptr;
   FilePanel* m_filePanel = nullptr;
   QLabel*    m_statusLabel = nullptr;
 
@@ -49,6 +58,7 @@ private:
 
   void addToHistory(const QString& path);
   void trimHistoryToLimit();
+  void navigateToHistoryIndex(int index);
 };
 
 #endif // FILEPANEWIDGET_H
