@@ -201,8 +201,8 @@ QPair<QVarLengthArray<QString, 2>, DetailedArchiveType> classifyArchive(
 {
     // Standard compression formats
     static const QStringList standardCompressed = {
-        "gz", "gzip", "bzip2", "bzip3", "lrzip","arc",
-        "lzip","zlib","zstd","lz4","lzma","lha","lhz",
+        "gz", "gzip", "bz2", "bzip2", "bz3", "bzip3", "lrzip","arc",
+        "lz","lzip","zlib","zstd","lz4","lzma","lha","lhz",
         "zip", "arj", "rar", "xz", "xzpdf", "7z", "ms-cab"
     };
     // Call analyzeArchive first
