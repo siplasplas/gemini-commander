@@ -17,7 +17,7 @@ bool isAllDigits(const QString& str) {
 // Find first suffix with double extension (e.g. "tar.gz")
 // Ignore as double if one segment is all digits (e.g. "7z.001")
 // Returns segments split by dot, or empty list if not found
-QStringList findDoubleSuffix(const QMimeType& mt) {
+QVarLengthArray<QString, 2> findDoubleSuffix(const QMimeType& mt) {
     QStringList suffixes = mt.suffixes();
 
     for (const QString& suffix : suffixes) {
@@ -40,10 +40,13 @@ QStringList findDoubleSuffix(const QMimeType& mt) {
             continue;
 
         // This is a real double suffix
-        return segments;
+        QVarLengthArray<QString, 2> result;
+        for (const QString& seg : segments)
+            result.append(seg);
+        return result;
     }
 
-    return QStringList();
+    return {};
 }
 
 // Get extension from path, handling digit segments
@@ -85,8 +88,6 @@ QPair<QVarLengthArray<QString, 2>, ArchiveType> analyzeArchive(
 
     // Get MIME name
     QString mimeName = mt.name();
-    if (mimeName=="application/geo+json")
-        qDebug() << mimeName;
 
     // Split by slash
     QStringList parts = mimeName.split('/');
@@ -142,12 +143,10 @@ QPair<QVarLengthArray<QString, 2>, ArchiveType> analyzeArchive(
             // "compressed" at the end
 
             // Check for double suffix
-            QStringList doubleSuffix = findDoubleSuffix(mt);
+            auto doubleSuffix = findDoubleSuffix(mt);
             if (!doubleSuffix.isEmpty()) {
                 // Has double suffix (e.g. tar.gz)
-                QString ext = getExtensionIgnoringDigits(path);
-                result.append(ext);
-                return {result, ArchiveType::Compressed};
+                return {doubleSuffix, ArchiveType::CompressedArchive};
             } else {
                 // No double suffix - join parts before "compressed"
                 QStringList beforeCompressed = nameParts.mid(0, compressedIndex);
@@ -174,14 +173,11 @@ QPair<QVarLengthArray<QString, 2>, ArchiveType> analyzeArchive(
         // No "compressed" found
 
         // Check for double suffix
-        QStringList doubleSuffix = findDoubleSuffix(mt);
+        auto doubleSuffix = findDoubleSuffix(mt);
         if (!doubleSuffix.isEmpty()) {
             // Has double suffix (e.g. tar.Z)
             // Return first and second segments
-            result.append(doubleSuffix[0]);
-            if (doubleSuffix.size() > 1)
-                result.append(doubleSuffix[1]);
-            return {result, ArchiveType::CompressedArchive};
+            return {doubleSuffix, ArchiveType::CompressedArchive};
         } else {
             // No double suffix
 
@@ -203,6 +199,12 @@ QPair<QVarLengthArray<QString, 2>, DetailedArchiveType> classifyArchive(
     const QMimeType& mt,
     const QString& path)
 {
+    // Standard compression formats
+    static const QStringList standardCompressed = {
+        "gz", "gzip", "bzip2", "bzip3", "lrzip","arc",
+        "lzip","zlib","zstd","lz4","lzma","lha","lhz",
+        "zip", "arj", "rar", "xz", "xzpdf", "7z", "ms-cab"
+    };
     // Call analyzeArchive first
     auto [components, basicType] = analyzeArchive(mt, path);
 
@@ -216,6 +218,8 @@ QPair<QVarLengthArray<QString, 2>, DetailedArchiveType> classifyArchive(
         case ArchiveType::CompressedArchive:
             if (isArchiveFormat(result[0])>0)
                 return {result, DetailedArchiveType::CompressedArchive};
+            else if (result.size() > 1 && standardCompressed.contains(result[1]))
+                return {result, DetailedArchiveType::Compressed};
             else
                 return {result, DetailedArchiveType::NotArchive};
 
@@ -241,16 +245,13 @@ QPair<QVarLengthArray<QString, 2>, DetailedArchiveType> classifyArchive(
                     compType.contains("oasis.opendocument")) {
                     return {result, DetailedArchiveType::CompressedOther};
                 }
-
-                // Standard compression formats
-                static const QStringList standardCompressed = {
-                    "gzip", "bzip2", "bzip3", "lrzip","arc",
-                    "lzip","zlib","zstd","lz4","lzma","lha","lhz",
-                    "zip", "arj", "rar", "xz", "xzpdf", "7z", "ms-cab"
-                };
-
                 if (standardCompressed.contains(compType)) {
                     return {result, DetailedArchiveType::Compressed};
+                }
+                if (components.size() > 1) {
+                    QString compType = components.back();
+                    if (standardCompressed.contains(compType))
+                        return {result, DetailedArchiveType::Compressed};
                 }
             }
 
