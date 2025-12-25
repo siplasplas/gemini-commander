@@ -241,13 +241,11 @@ void FilePaneWidget::addToHistory(const QString& path)
         m_history.erase(m_history.begin() + m_historyPosition + 1, m_history.end());
     }
 
-    // Check if this is the same as the current position (avoid duplicates)
-    if (!m_history.isEmpty() && m_historyPosition >= 0 && m_historyPosition < m_history.size()) {
-        if (m_history[m_historyPosition] == cleanPath)
-            return;  // Same directory, don't add again
-    }
+    // Remove ALL previous occurrences of this directory from history
+    // This prevents duplicates when navigating back and forth
+    m_history.removeAll(cleanPath);
 
-    // Add to history
+    // Add to history at the end
     m_history.append(cleanPath);
     m_historyPosition = m_history.size() - 1;
 
