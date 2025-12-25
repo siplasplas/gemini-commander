@@ -927,9 +927,16 @@ FileType FilePanel::classifyFileType(const QFileInfo& info)
     if (mimeName.startsWith("video/"))
         return FileType::Video;
 
+    // Disk image types
+    static const QStringList diskImageExts = {
+        "iso", "img", "bin", "nrg", "mdf", "mds", "dmg", "cue", "toast", "vcd"
+    };
+    if (diskImageExts.contains(ext) || mimeName.contains("iso9660") || mimeName.contains("disk-image"))
+        return FileType::DiskImage;
+
     // Archive types
     static const QStringList archiveExts = {
-        "zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz", "tbz2", "txz", "cab", "iso"
+        "zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz", "tbz2", "txz", "cab"
     };
     if (archiveExts.contains(ext) || mimeName.contains("archive") || mimeName.contains("compressed"))
         return FileType::Archive;
@@ -984,6 +991,9 @@ QIcon FilePanel::getIconForFileType(FileType type)
             break;
         case FileType::Document:
             iconPath = ":/icons/file_document.svg";
+            break;
+        case FileType::DiskImage:
+            iconPath = ":/icons/file_diskimage.svg";
             break;
         case FileType::Hidden:
             iconPath = ":/icons/file_hidden.svg";

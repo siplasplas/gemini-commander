@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" version="1.1" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+ <g stroke="#000" stroke-width="2">
+  <!-- Outer disc -->
+  <circle cx="32" cy="32" r="28" fill="#f8d4f8"/>
+
+  <!-- Inner hole -->
+  <circle cx="32" cy="32" r="8" fill="#fff"/>
+
+  <!-- Shine effect (top arc) -->
+  <path d="M 12,20 A 24,24 0 0,1 52,20" fill="none" stroke="#f8d8f8" stroke-width="3" opacity="0.7"/>
+
+  <!-- Data track lines (decorative) -->
+  <circle cx="32" cy="32" r="18" fill="none" stroke="#c090c0" stroke-width="0.5" opacity="0.5"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#c090c0" stroke-width="0.5" opacity="0.5"/>
+  <circle cx="32" cy="32" r="14" fill="none" stroke="#c090c0" stroke-width="0.5" opacity="0.5"/>
+ </g>
+</svg>
