@@ -24,6 +24,10 @@ public:
 
    Q_INVOKABLE bool doLocalSearch(QObject *obj, QKeyEvent *keyEvent);
 
+  // PathEdit handlers
+  Q_INVOKABLE bool doRestoreAndReturnToPanel(QObject *obj, QKeyEvent *keyEvent);
+  Q_INVOKABLE bool doNavigateOrRestore(QObject *obj, QKeyEvent *keyEvent);
+
   // Directory navigation history
   bool canGoBack() const;
   bool canGoForward() const;
@@ -32,6 +36,9 @@ public:
 
 signals:
   void favoritesRequested(const QPoint& pos);
+
+protected:
+  bool eventFilter(QObject *obj, QEvent *event) override;
 
 public slots:
   void onDirectoryChanged(const QString& path);
@@ -60,6 +67,7 @@ private:
   void addToHistory(const QString& path);
   void trimHistoryToLimit();
   void navigateToHistoryIndex(int index);
+  void restorePathEdit();
 };
 
 #endif // FILEPANEWIDGET_H

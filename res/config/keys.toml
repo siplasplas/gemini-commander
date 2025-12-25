@@ -142,6 +142,13 @@ keys = [
     { key = "Return",              handler = "doAccept" },
 ]
 
+# PathEdit - path edit field in FilePaneWidget
+[PathEdit]
+keys = [
+    { key = "Escape",              handler = "doRestoreAndReturnToPanel" },
+    { key = "Return",              handler = "doNavigateOrRestore" },
+]
+
 [Editor]
 keys = [
     { key = "Ctrl+Tab",            handler = "noneWithChildren" },

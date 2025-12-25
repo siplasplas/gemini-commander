@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QDir>
 #include <QMenu>
+#include <QEvent>
 
 #include "keys/ObjectRegistry.h"
 
@@ -26,6 +27,8 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
 
     m_pathEdit = new QLineEdit(this);
     m_pathEdit->setStyleSheet("QLineEdit { background-color: white; }");
+    m_pathEdit->installEventFilter(this);
+    ObjectRegistry::add(m_pathEdit, "PathEdit");
     QFontMetrics fm(m_pathEdit->font());
     int h = fm.height() + 4;
     m_pathEdit->setFixedHeight(h);
@@ -358,4 +361,62 @@ void FilePaneWidget::navigateToHistoryIndex(int index)
     m_filePanel->loadDirectory();
 
     m_navigatingHistory = false;
+}
+
+bool FilePaneWidget::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == m_pathEdit && event->type() == QEvent::FocusOut) {
+        // Restore path edit to current panel path on focus loss
+        restorePathEdit();
+    }
+    return QWidget::eventFilter(obj, event);
+}
+
+void FilePaneWidget::restorePathEdit()
+{
+    if (m_pathEdit && m_filePanel) {
+        m_pathEdit->setText(m_filePanel->currentPath);
+    }
+}
+
+bool FilePaneWidget::doRestoreAndReturnToPanel(QObject *obj, QKeyEvent *keyEvent)
+{
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    // Restore path edit from current panel path
+    restorePathEdit();
+
+    // Return focus to panel
+    if (m_filePanel) {
+        m_filePanel->setFocus();
+    }
+
+    return true;
+}
+
+bool FilePaneWidget::doNavigateOrRestore(QObject *obj, QKeyEvent *keyEvent)
+{
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    if (!m_pathEdit || !m_filePanel)
+        return true;
+
+    QString newPath = m_pathEdit->text().trimmed();
+
+    // Check if the path is a valid directory
+    QDir dir(newPath);
+    if (dir.exists()) {
+        // Navigate to the directory
+        m_filePanel->currentPath = dir.absolutePath();
+        m_filePanel->loadDirectory();
+        m_filePanel->setFocus();
+    } else {
+        // Path doesn't exist - restore from current panel path
+        restorePathEdit();
+        m_filePanel->setFocus();
+    }
+
+    return true;
 }
