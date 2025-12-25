@@ -20,6 +20,8 @@ add_executable(MimeExplorer
     SearchDialog.cpp
     ${MAIN_SRC_DIR}/SortedDirIterator.h
     ${MAIN_SRC_DIR}/SortedDirIterator.cpp
+    ${MAIN_SRC_DIR}/Archives.h
+    ${MAIN_SRC_DIR}/Archives.cpp
 )
 
 target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR})

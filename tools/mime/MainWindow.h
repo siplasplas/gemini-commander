@@ -6,6 +6,7 @@
 #include <QMimeDatabase>
 #include <QLabel>
 #include <QLineEdit>
+#include "Archives.h"
 
 class MainWindow : public QMainWindow
 {
@@ -31,7 +32,8 @@ private:
     QHash<QString, QString> m_defaultAppCache;  // mime -> default app name
 
     // For file search results
-    void addFileToTree(const QString& filePath, const QString& mimeType, const QString& extension);
+    void addFileToTree(const QString& filePath, const QString& mimeType, const QString& extension,
+                       const QString& components, const QString& archiveType);
     QTreeWidgetItem* findOrCreateCategory(const QString& category);
     QTreeWidgetItem* findOrCreateSubType(QTreeWidgetItem* parent, const QString& subType);
     QTreeWidgetItem* findOrCreateExtension(QTreeWidgetItem* parent, const QString& extension);
