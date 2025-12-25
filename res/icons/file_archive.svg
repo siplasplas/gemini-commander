@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="64" height="64" version="1.1" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
- <g fill="#ffe680" stroke="#000">
+ <g transform="matrix(.88 0 0 .88 3.8504 3.7739)" fill="#ffe680" stroke="#000">
   <g stroke-width="1.9429">
    <rect x="2.2946" y="14.609" width="23.315" height="23.315"/>
    <rect x="25.61" y="14.609" width="23.315" height="23.315"/>
@@ -8,10 +8,10 @@
    <rect x="25.61" y="37.924" width="23.315" height="23.315"/>
   </g>
   <g stroke-width="1.5">
-   <polygon transform="matrix(1.2953 0 0 1.2953 -13.249 -11.296)" points="22 10 12 20 30 20 40 10"/>
-   <polygon transform="matrix(1.2953 0 0 1.2953 -13.249 -11.296)" points="40 10 30 20 48 20 58 10"/>
-   <polygon transform="matrix(1.2953 0 0 1.2953 -13.249 -11.296)" points="48 38 48 20 58 10 58 28"/>
-   <polygon transform="matrix(1.2953 0 0 1.2953 -13.249 -11.296)" points="48 56 48 38 58 28 58 46"/>
+   <polygon transform="matrix(1.2953,0,0,1.2953,-13.249,-11.296)" points="12 20 30 20 40 10 22 10"/>
+   <polygon transform="matrix(1.2953,0,0,1.2953,-13.249,-11.296)" points="30 20 48 20 58 10 40 10"/>
+   <polygon transform="matrix(1.2953,0,0,1.2953,-13.249,-11.296)" points="48 20 58 10 58 28 48 38"/>
+   <polygon transform="matrix(1.2953,0,0,1.2953,-13.249,-11.296)" points="48 38 58 28 58 46 48 56"/>
   </g>
  </g>
 </svg>

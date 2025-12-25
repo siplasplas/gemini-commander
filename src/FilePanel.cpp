@@ -695,6 +695,7 @@ FilePanel::FilePanel(Side side, QWidget* parent): m_side(side), QTableView(paren
     setColumnWidth(COLUMN_SIZE, 100);
     setColumnWidth(COLUMN_DATE, 125);
 
+    setIconSize(QSize(19, 19));
 
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);
