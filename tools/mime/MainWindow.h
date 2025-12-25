@@ -15,6 +15,9 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 private slots:
     void onSearchFiles();
     void onShowAllMimes();
@@ -30,6 +33,8 @@ private:
     QLabel* m_statusLabel = nullptr;
     QMimeDatabase m_mimeDb;
     QHash<QString, QString> m_defaultAppCache;  // mime -> default app name
+    QString m_lastSearchPath;  // Last used search path
+    bool m_searchCancelled = false;  // Flag for cancelling search
 
     // For file search results
     void addFileToTree(const QString& filePath, const QString& mimeType, const QString& extension,

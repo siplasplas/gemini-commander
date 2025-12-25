@@ -7,7 +7,7 @@
 #include <QDir>
 #include <QLabel>
 
-SearchDialog::SearchDialog(QWidget *parent)
+SearchDialog::SearchDialog(const QString& initialPath, QWidget *parent)
     : QDialog(parent)
 {
     setWindowTitle(tr("Search Files"));
@@ -18,7 +18,7 @@ SearchDialog::SearchDialog(QWidget *parent)
     // Path selection
     QHBoxLayout* pathLayout = new QHBoxLayout();
     m_pathEdit = new QLineEdit(this);
-    m_pathEdit->setText(QDir::homePath());
+    m_pathEdit->setText(initialPath.isEmpty() ? QDir::homePath() : initialPath);
     m_pathEdit->setPlaceholderText(tr("Enter directory path..."));
 
     m_browseButton = new QPushButton(tr("..."), this);

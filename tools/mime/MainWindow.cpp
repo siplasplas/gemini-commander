@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDir>
+#include <QKeyEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -53,6 +54,20 @@ void MainWindow::setupUi()
     layout->addWidget(m_statusLabel);
 
     setCentralWidget(central);
+
+    // Install event filter to catch ESC during search
+    installEventFilter(this);
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Escape) {
+            m_searchCancelled = true;
+        }
+    }
+    return QMainWindow::eventFilter(obj, event);
 }
 
 void MainWindow::setupMenus()
@@ -81,12 +96,14 @@ void MainWindow::setupMenus()
 
 void MainWindow::onSearchFiles()
 {
-    SearchDialog dialog(this);
+    SearchDialog dialog(m_lastSearchPath, this);
     if (dialog.exec() == QDialog::Accepted) {
         m_treeWidget->clear();
-        m_statusLabel->setText("Searching...");
+        m_statusLabel->setText("Searching... (Press ESC to cancel)");
+        m_searchCancelled = false;
 
         QString searchPath = dialog.searchPath();
+        m_lastSearchPath = searchPath;  // Remember for next time
         QMimeDatabase::MatchMode matchMode = dialog.matchMode();
 
         // Use SortedDirIterator for recursive search
@@ -94,9 +111,8 @@ void MainWindow::onSearchFiles()
         SortedDirIterator iter(searchPath, filters);
 
         int fileCount = 0;
-        bool cancelled = false;
 
-        while (iter.hasNext() && !cancelled) {
+        while (iter.hasNext() && !m_searchCancelled) {
             QFileInfo info = iter.next();
 
             if (info.isFile()) {
@@ -125,15 +141,17 @@ void MainWindow::onSearchFiles()
 
                 // Update progress every 1000 files
                 if (fileCount % 1000 == 0) {
-                    m_statusLabel->setText(QString("Processed %1 files...").arg(fileCount));
+                    m_statusLabel->setText(QString("Processed %1 files... (Press ESC to cancel)").arg(fileCount));
                     QApplication::processEvents();
-
-                    // Check if user wants to cancel (could add a cancel button)
                 }
             }
         }
 
-        m_statusLabel->setText(QString("Done. Found %1 files.").arg(fileCount));
+        if (m_searchCancelled) {
+            m_statusLabel->setText(QString("Cancelled. Processed %1 files.").arg(fileCount));
+        } else {
+            m_statusLabel->setText(QString("Done. Found %1 files.").arg(fileCount));
+        }
     }
 }
 

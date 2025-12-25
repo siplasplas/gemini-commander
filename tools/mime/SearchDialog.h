@@ -12,7 +12,7 @@ class SearchDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit SearchDialog(QWidget *parent = nullptr);
+    explicit SearchDialog(const QString& initialPath = QString(), QWidget *parent = nullptr);
 
     QString searchPath() const;
     QMimeDatabase::MatchMode matchMode() const;
