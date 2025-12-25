@@ -293,6 +293,38 @@ bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     return false;
 }
 
+bool MainWindow::doSyncDirFromLeft(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+    FilePanel* rightPanel = filePanelForSide(Side::Right);
+
+    if (!leftPanel || !rightPanel)
+        return true;
+
+    rightPanel->currentPath = leftPanel->currentPath;
+    rightPanel->loadDirectory();
+
+    return true;
+}
+
+bool MainWindow::doSyncDirFromRight(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+    FilePanel* rightPanel = filePanelForSide(Side::Right);
+
+    if (!leftPanel || !rightPanel)
+        return true;
+
+    leftPanel->currentPath = rightPanel->currentPath;
+    leftPanel->loadDirectory();
+
+    return true;
+}
+
 bool MainWindow::doSwitchSide(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);

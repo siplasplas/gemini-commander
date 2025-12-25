@@ -24,6 +24,8 @@
     Q_INVOKABLE bool doClearAndReturnToPanel(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSearchGlobal(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSwapPanels(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doSyncDirFromLeft(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doSyncDirFromRight(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSwitchSide(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doTestArchives(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doView(QObject *obj, QKeyEvent *keyEvent);

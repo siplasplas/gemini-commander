@@ -116,6 +116,9 @@ keys = [
     { key = "Alt+F7",              handler = "doSearchGlobal" },
 
     { key = "Ctrl+U",              handler = "doSwapPanels" },
+
+    { key = "Ctrl+Left",           handler = "doSyncDirFromRight" },
+    { key = "Ctrl+Right",          handler = "doSyncDirFromLeft" },
 ]
 
 # CommandLine - command bar at the bottom
