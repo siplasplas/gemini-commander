@@ -473,6 +473,7 @@ void FilePanel::addAllEntries() {
     sortEntries();
     model->refresh();
     selectEntryByName(selectedName);
+    scheduleVisibleFilesUpdate();
 }
 
 void FilePanel::trigger(const QModelIndex &index) {
@@ -703,6 +704,13 @@ FilePanel::FilePanel(Side side, QWidget* parent): QTableView(parent), m_side(sid
     currentPath = QDir::currentPath();
     setModel(model);
     setItemDelegate(new MarkedItemDelegate(this));
+
+    // Debounce timer for visible files tracking (file watcher)
+    m_visibilityDebounceTimer = new QTimer(this);
+    m_visibilityDebounceTimer->setSingleShot(true);
+    m_visibilityDebounceTimer->setInterval(1000);
+    connect(m_visibilityDebounceTimer, &QTimer::timeout,
+            this, &FilePanel::emitVisibleFiles);
 
     hideColumn(COLUMN_ID);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -1851,6 +1859,84 @@ bool FilePanel::addEntryFromPath(const QString& fullPath, const QString& branch)
     // Refresh model to show the new entry
     model->refresh();
     return true;
+}
+
+// ============================================================================
+// Visible files tracking for file watcher
+// ============================================================================
+
+void FilePanel::scheduleVisibleFilesUpdate()
+{
+    // Restart debounce timer - will emit after 1000ms of no changes
+    m_visibilityDebounceTimer->start();
+}
+
+void FilePanel::scrollContentsBy(int dx, int dy)
+{
+    QTableView::scrollContentsBy(dx, dy);
+    // Schedule update when scrolling changes visible files
+    scheduleVisibleFilesUpdate();
+}
+
+QStringList FilePanel::getVisibleFilePaths() const
+{
+    QStringList paths;
+
+    if (!model || !viewport())
+        return paths;
+
+    const int rowCount = model->rowCount();
+    if (rowCount == 0)
+        return paths;
+
+    // Get visible rect
+    QRect visibleRect = viewport()->rect();
+
+    for (int row = 0; row < rowCount; ++row) {
+        QModelIndex idx = model->index(row, COLUMN_NAME);
+        QRect rowRect = visualRect(idx);
+
+        // Check if row is visible
+        if (!rowRect.isValid() || !visibleRect.intersects(rowRect))
+            continue;
+
+        // Get entry index from row
+        int entryIdx = model->rowToEntryIndex(row);
+        if (entryIdx < 0 || entryIdx >= entries.size())
+            continue;  // Skip [..] row
+
+        const PanelEntry& entry = entries[entryIdx];
+
+        // Only track files, not directories
+        if (!entry.info.isDir()) {
+            paths.append(entry.info.absoluteFilePath());
+        }
+    }
+
+    return paths;
+}
+
+void FilePanel::emitVisibleFiles()
+{
+    QStringList paths = getVisibleFilePaths();
+    emit visibleFilesChanged(m_side, paths);
+}
+
+bool FilePanel::refreshEntryByPath(const QString& filePath)
+{
+    // Find entry by absolute path
+    for (int i = 0; i < entries.size(); ++i) {
+        if (entries[i].info.absoluteFilePath() == filePath) {
+            // Refresh file info
+            entries[i].info.refresh();
+
+            // Refresh model row
+            int modelRow = model->entryIndexToRow(i);
+            model->refreshRow(modelRow);
+            return true;
+        }
+    }
+    return false;
 }
 
 

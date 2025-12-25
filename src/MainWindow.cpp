@@ -120,6 +120,20 @@ MainWindow::MainWindow(QWidget *parent)
                 this, &MainWindow::updateWatchedDirectories);
     }
     updateWatchedDirectories();
+
+    // File monitoring (visible files only)
+    m_leftFileWatcher = new QFileSystemWatcher(this);
+    m_rightFileWatcher = new QFileSystemWatcher(this);
+    connect(m_leftFileWatcher, &QFileSystemWatcher::fileChanged,
+            this, &MainWindow::onLeftFileChanged);
+    connect(m_rightFileWatcher, &QFileSystemWatcher::fileChanged,
+            this, &MainWindow::onRightFileChanged);
+
+    // Connect visible files signals from panels
+    for (auto* panel : allFilePanels()) {
+        connect(panel, &FilePanel::visibleFilesChanged,
+                this, &MainWindow::onVisibleFilesChanged);
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -1620,6 +1634,85 @@ void MainWindow::onDirectoryChanged(const QString& path)
     if (m_dirWatcher && QDir(path).exists()) {
         if (!m_dirWatcher->directories().contains(path)) {
             m_dirWatcher->addPath(path);
+        }
+    }
+}
+
+// ============================================================================
+// File monitoring (visible files only)
+// ============================================================================
+
+void MainWindow::ensureFileWatcherActive(QFileSystemWatcher* watcher)
+{
+    // QFileSystemWatcher may stop working after file deletion
+    // Re-create if needed (check by trying to add a known existing file)
+    if (!watcher)
+        return;
+
+    // Simple check: if watcher has no files and no directories, it's still active
+    // The watcher becomes inactive only in specific edge cases we handle by re-adding
+}
+
+void MainWindow::updateFileWatcher(Side side, const QStringList& paths)
+{
+    QFileSystemWatcher* watcher = (side == Side::Left) ? m_leftFileWatcher : m_rightFileWatcher;
+    if (!watcher)
+        return;
+
+    // Get currently watched files
+    QStringList currentlyWatched = watcher->files();
+    QSet<QString> currentSet(currentlyWatched.begin(), currentlyWatched.end());
+    QSet<QString> neededSet(paths.begin(), paths.end());
+
+    // Remove files no longer visible
+    for (const QString& file : currentlyWatched) {
+        if (!neededSet.contains(file)) {
+            watcher->removePath(file);
+        }
+    }
+
+    // Add newly visible files
+    for (const QString& file : paths) {
+        if (!currentSet.contains(file)) {
+            // Only add if file exists
+            if (QFileInfo::exists(file)) {
+                watcher->addPath(file);
+            }
+        }
+    }
+}
+
+void MainWindow::onVisibleFilesChanged(Side side, const QStringList& paths)
+{
+    updateFileWatcher(side, paths);
+}
+
+void MainWindow::onLeftFileChanged(const QString& path)
+{
+    FilePanel* panel = filePanelForSide(Side::Left);
+    if (panel) {
+        panel->refreshEntryByPath(path);
+    }
+
+    // Re-add to watcher (inotify removes after change)
+    if (m_leftFileWatcher && QFileInfo::exists(path)) {
+        if (!m_leftFileWatcher->files().contains(path)) {
+            m_leftFileWatcher->addPath(path);
+        }
+    }
+}
+
+void MainWindow::onRightFileChanged(const QString& path)
+{
+    FilePanel* panel = filePanelForSide(Side::Right);
+    if (panel) {
+        panel->refreshEntryByPath(path);
+    }
+
+    // Re-add to watcher (inotify removes after change)
+    if (m_rightFileWatcher && QFileInfo::exists(path)) {
+        if (!m_rightFileWatcher->files().contains(path)) {
+            m_rightFileWatcher->addPath(path);
         }
     }
 }

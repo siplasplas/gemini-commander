@@ -4,6 +4,7 @@
 #include <QAbstractTableModel>
 #include <QDir>
 #include <QTableView>
+#include <QTimer>
 #include <qfileinfo.h>
 #include <QFileIconProvider>
 #include <QMimeDatabase>
@@ -205,6 +206,7 @@ signals:
     void searchRequested(const QString& initialText);
     void goBackRequested();
     void goForwardRequested();
+    void visibleFilesChanged(Side side, const QStringList& paths);
 
 private:
     static QIcon getIconForEntry(const QFileInfo& info, EntryContentState contentState);
@@ -221,8 +223,21 @@ private:
     static QStringList s_patternHistory;
     static QString showPatternDialog(QWidget* parent, const QString& title, const QString& label);
 
+    // Visible files tracking for file watcher
+    QTimer* m_visibilityDebounceTimer = nullptr;
+    void scheduleVisibleFilesUpdate();
+    void emitVisibleFiles();
+    QStringList getVisibleFilePaths() const;
+
     // FilePanelModel needs access to private members
     friend class FilePanelModel;
+
+protected:
+    void scrollContentsBy(int dx, int dy) override;
+
+public:
+    // Update single entry info (for file watcher)
+    bool refreshEntryByPath(const QString& filePath);
 };
 
 #endif //PANEL_H

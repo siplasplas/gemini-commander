@@ -94,6 +94,12 @@ private:
     QFileSystemWatcher* m_dirWatcher = nullptr;
     void updateWatchedDirectories();
 
+    // File monitoring (visible files only)
+    QFileSystemWatcher* m_leftFileWatcher = nullptr;
+    QFileSystemWatcher* m_rightFileWatcher = nullptr;
+    void updateFileWatcher(Side side, const QStringList& paths);
+    void ensureFileWatcherActive(QFileSystemWatcher* watcher);
+
     // Mounts monitoring via UDisks2
     UDisksDeviceManager* m_udisksManager = nullptr;
     void refreshMountsToolbar();
@@ -113,6 +119,9 @@ private slots:
     void onExternalToolContextMenu(const QPoint& pos);
     void configureExternalTool();
     void onDirectoryChanged(const QString& path);
+    void onVisibleFilesChanged(Side side, const QStringList& paths);
+    void onLeftFileChanged(const QString& path);
+    void onRightFileChanged(const QString& path);
 };
 
 #endif // MAINWINDOW_H
