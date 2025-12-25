@@ -325,7 +325,7 @@ bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     return false;
 }
 
-bool MainWindow::doSyncDirFromLeft(QObject *obj, QKeyEvent *keyEvent) {
+bool MainWindow::doFollowDirFromLeft(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 
@@ -341,7 +341,7 @@ bool MainWindow::doSyncDirFromLeft(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
-bool MainWindow::doSyncDirFromRight(QObject *obj, QKeyEvent *keyEvent) {
+bool MainWindow::doFollowDirFromRight(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 

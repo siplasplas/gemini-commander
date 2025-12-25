@@ -331,6 +331,22 @@ void MainWindow::setupUi() {
     });
     navigateMenu->addAction(goToRootAction);
 
+    navigateMenu->addSeparator();
+
+    QAction* leftFollowsRightAction = new QAction(tr("Left follows Right"), this);
+    leftFollowsRightAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Left));
+    connect(leftFollowsRightAction, &QAction::triggered, this, [this]() {
+        doFollowDirFromRight(nullptr, nullptr);
+    });
+    navigateMenu->addAction(leftFollowsRightAction);
+
+    QAction* rightFollowsLeftAction = new QAction(tr("Right follows Left"), this);
+    rightFollowsLeftAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Right));
+    connect(rightFollowsLeftAction, &QAction::triggered, this, [this]() {
+        doFollowDirFromLeft(nullptr, nullptr);
+    });
+    navigateMenu->addAction(rightFollowsLeftAction);
+
     // --- TOOLBAR ---
     m_mainToolBar = addToolBar(tr("Main toolbar"));
     m_mainToolBar->setMovable(true);
