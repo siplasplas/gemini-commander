@@ -227,3 +227,6 @@ endif()
 
 enable_testing()
 add_subdirectory(tests)
+
+# Tools
+add_subdirectory(tools/mime)
