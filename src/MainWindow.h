@@ -29,6 +29,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
+    void applyStartupPaths(const QStringList& paths);
 #include "MainWindow_decl.inc"
 protected:
     void closeEvent(QCloseEvent *event) override;

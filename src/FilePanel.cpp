@@ -587,6 +587,25 @@ void FilePanel::selectFirstEntry() {
     }
 }
 
+void FilePanel::navigateToPath(const QString& path)
+{
+    QFileInfo info(path);
+    if (!info.exists())
+        return;
+
+    if (info.isDir()) {
+        // It's a directory - navigate to it
+        currentPath = info.absoluteFilePath();
+        loadDirectory();
+        selectFirstEntry();
+    } else if (info.isFile()) {
+        // It's a file - navigate to parent directory and select the file
+        currentPath = info.absolutePath();
+        loadDirectory();
+        selectEntryByName(info.fileName());
+    }
+}
+
 void FilePanel::trigger(const QString &name) {
     // Handle branch mode navigation
     if (branchMode) {

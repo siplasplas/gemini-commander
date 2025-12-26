@@ -147,6 +147,7 @@ public:
     void selectEntryByName(const QString& fullName);
     void selectEntryByRelPath(const QString& relPath);
     void selectFirstEntry();
+    void navigateToPath(const QString& path);
     void trigger(const QString &name);
     void activate(const QString &name);
     void addAllEntries();

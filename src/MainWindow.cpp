@@ -1793,4 +1793,22 @@ void MainWindow::onDeviceUnmounted(const QString &objectPath)
     refreshMountsToolbar();
 }
 
+void MainWindow::applyStartupPaths(const QStringList& paths)
+{
+    if (paths.isEmpty())
+        return;
+
+    // First argument -> left panel
+    if (paths.size() >= 1) {
+        if (FilePanel* panel = filePanelForSide(Side::Left))
+            panel->navigateToPath(paths.at(0));
+    }
+
+    // Second argument -> right panel
+    if (paths.size() >= 2) {
+        if (FilePanel* panel = filePanelForSide(Side::Right))
+            panel->navigateToPath(paths.at(1));
+    }
+}
+
 #include "MainWindow_impl.inc"
