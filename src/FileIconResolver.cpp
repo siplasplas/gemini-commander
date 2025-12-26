@@ -111,46 +111,33 @@ std::optional<QString> FileIconResolver::findCachedSuffix(const QString& fileNam
 
 QString FileIconResolver::findIconInTheme(const QString& iconName)
 {
-    static const QStringList themes = { "Yaru", "mate", "hicolor", "Adwaita" };
+    // Find the first available theme (cached after first call)
+    static QString activeTheme;
+    if (activeTheme.isEmpty()) {
+        static const QStringList themes = { "Yaru", "mate", "HighContrast", "ContrastHigh", "hicolor", "Adwaita" };
+        for (const QString& theme : themes) {
+            if (QFile::exists("/usr/share/icons/" + theme)) {
+                activeTheme = theme;
+                break;
+            }
+        }
+        if (activeTheme.isEmpty()) {
+            return QString();  // No theme found
+        }
+    }
+
+    static const QStringList sizes = { "22x22", "24x24", "16x16", "scalable"};
     static const QStringList categories = { "mimetypes", "apps" };
-    static const QStringList basePaths = {
-        QDir::homePath() + "/.local/share/icons",
-        "/usr/share/icons"
-    };
+    QString basePath = "/usr/share/icons/" + activeTheme;
 
-    // First pass: look for SVG (scalable, best quality)
-    for (const QString& basePath : basePaths) {
-        for (const QString& theme : themes) {
-            for (const QString& category : categories) {
-                QString path = basePath + "/" + theme + "/scalable/" + category + "/" + iconName + ".svg";
-                if (QFile::exists(path)) {
-                    return path;
-                }
+    for (const QString& size : sizes) {
+        for (const QString& category : categories) {
+            QString ext = (size == "scalable") ? ".svg" : ".png";
+            QString path = basePath + "/" + size + "/" + category + "/" + iconName + ext;
+            if (QFile::exists(path)) {
+                return path;
             }
         }
-    }
-
-    // Second pass: look for large PNG (256, 128, 64, 48)
-    static const QStringList largeSizes = { "256x256", "128x128", "64x64", "48x48" };
-    for (const QString& basePath : basePaths) {
-        for (const QString& theme : themes) {
-            for (const QString& size : largeSizes) {
-                for (const QString& category : categories) {
-                    QString path = basePath + "/" + theme + "/" + size + "/" + category + "/" + iconName + ".png";
-                    if (QFile::exists(path)) {
-                        return path;
-                    }
-                }
-            }
-        }
-    }
-
-    // Pixmaps as last resort
-    if (QFile::exists("/usr/share/pixmaps/" + iconName + ".svg")) {
-        return "/usr/share/pixmaps/" + iconName + ".svg";
-    }
-    if (QFile::exists("/usr/share/pixmaps/" + iconName + ".png")) {
-        return "/usr/share/pixmaps/" + iconName + ".png";
     }
 
     return QString();
