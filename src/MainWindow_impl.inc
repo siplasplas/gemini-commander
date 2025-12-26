@@ -131,7 +131,7 @@ bool MainWindow::doEdit(QObject *obj, QKeyEvent *keyEvent) {
         return true;
     }
     if (!editorFrame)
-        editorFrame = new EditorFrame(this);
+        editorFrame = new EditorFrame(nullptr);
     editorFrame->openFile(fullPath);
     editorFrame->show();
     editorFrame->raise();
@@ -163,7 +163,7 @@ bool MainWindow::doEditNew(QObject *obj, QKeyEvent *keyEvent) {
         fullPath = dir.absoluteFilePath(name);
     }
     if (!editorFrame)
-        editorFrame = new EditorFrame(this);
+        editorFrame = new EditorFrame(nullptr);
     editorFrame->openFile(fullPath);
     editorFrame->show();
     editorFrame->raise();
@@ -474,7 +474,7 @@ void MainWindow::openEditorForFile(const QString& filePath) {
         return;
 
     if (!editorFrame)
-        editorFrame = new EditorFrame(this);
+        editorFrame = new EditorFrame(nullptr);
     editorFrame->openFile(filePath);
 
     // If opening config file, connect signal to reload config on save
