@@ -44,7 +44,8 @@ enum class FileType {
     Archive,     // .zip, .tar.gz, .7z, .rar
     Audio,       // .mp3, .wav, .flac, .ogg
     Video,       // .mp4, .mkv, .avi, .webm
-    Document,    // .pdf, .doc, .odt, .xls
+    Document,    // .doc, .odt, .xls
+    Pdf,         // .pdf
     DiskImage,   // .iso, .img, .bin, .nrg, .mdf
     Hidden,      // files starting with .
     Unknown      // fallback

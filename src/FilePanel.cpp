@@ -964,10 +964,12 @@ FileType FilePanel::classifyFileType(const QFileInfo &info) {
         return FileType::Archive;
 
     // Document types
-    static const QStringList docExts = {"pdf", "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "rtf"};
-    if (docExts.contains(ext) || mimeName.startsWith("application/pdf") || mimeName.contains("document") ||
-        mimeName.contains("spreadsheet") || mimeName.contains("presentation"))
+    static const QStringList docExts = {"doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "rtf"};
+    if (docExts.contains(ext))
         return FileType::Document;
+
+    if (mimeName.startsWith("application/pdf"))
+        return FileType::Pdf;
 
     // Text/source code types
     if (mimeName.startsWith("text/") || mimeName.contains("json") || mimeName.contains("xml") ||
@@ -1008,6 +1010,9 @@ QIcon FilePanel::getIconForFileType(FileType type) {
             break;
         case FileType::Document:
             iconPath = ":/icons/file_document.svg";
+            break;
+        case FileType::Pdf:
+            iconPath = ":/icons/file_pdf.svg";
             break;
         case FileType::DiskImage:
             iconPath = ":/icons/file_diskimage.svg";
