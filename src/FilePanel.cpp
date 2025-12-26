@@ -969,26 +969,14 @@ void FilePanel::dropEvent(QDropEvent* event)
 }
 
 QIcon FilePanel::getIconForEntry(const QFileInfo &info, EntryContentState contentState) {
-    static QHash<int, QIcon> folderCache;
-
     // --- folders ---
     if (contentState != EntryContentState::NotDirectory) {
-        int key = static_cast<int>(contentState);
-        auto it = folderCache.find(key);
-        if (it != folderCache.end())
-            return it.value();
-
-        QString iconPath;
-        if (contentState == EntryContentState::DirEmpty)
-            iconPath = ":/icons/folder_blue.svg";
-        else if (contentState == EntryContentState::DirNotEmpty)
-            iconPath = ":/icons/folder_yellow.svg";
-        else
-            iconPath = ":/icons/folder_white.svg";
-
-        QIcon icon(iconPath);
-        folderCache.insert(key, icon);
-        return icon;
+        if (contentState == EntryContentState::DirEmpty) {
+            static QIcon emptyIcon(":/icons/folder-empty.png");
+            return emptyIcon;
+        }
+        static QIcon folderIcon(":/icons/folder.png");
+        return folderIcon;
     }
 
     // --- files: use FileIconResolver ---
