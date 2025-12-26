@@ -11,12 +11,6 @@ struct FavoriteDir {
   QString group;
 };
 
-enum class IconMode {
-  Extension,  // current behavior: icon by file extension via QMimeDatabase
-  FileType,   // icon by file type category (executable, text, image, etc.)
-  AppIcon     // icon from associated application (future: + thumbnails)
-};
-
 class Config
 {
 public:
@@ -36,9 +30,6 @@ public:
 
   void setConfigPath(const QString& p) { m_configPath = p; }
   QString configPath() const { return m_configPath; }
-
-  IconMode iconMode() const { return m_iconMode; }
-  void setIconMode(IconMode mode) { m_iconMode = mode; }
 
   QString externalToolPath() const { return m_externalToolPath; }
   void setExternalToolPath(const QString& path) { m_externalToolPath = path; }
@@ -86,7 +77,6 @@ private:
 
   QString m_configPath;
   QVector<FavoriteDir> m_favorites;
-  IconMode m_iconMode = IconMode::Extension;
   QString m_externalToolPath;
   bool m_confirmExit = true;
   int m_windowWidth = 1024;

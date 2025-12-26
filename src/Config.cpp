@@ -49,13 +49,6 @@ void Config::addFavoriteDir(const QString& dir, const QString& label, const QStr
     m_favorites.append(f);
 }
 
-static IconMode parseIconMode(const std::string& str)
-{
-    if (str == "filetype")  return IconMode::FileType;
-    if (str == "appicon")   return IconMode::AppIcon;
-    return IconMode::Extension;
-}
-
 void Config::setWindowGeometry(int x, int y, int width, int height)
 {
     m_windowX = x;
@@ -84,7 +77,6 @@ bool Config::load(const QString& path)
 {
     m_configPath = path;
     m_favorites.clear();
-    m_iconMode = IconMode::Extension;
     m_externalToolPath.clear();
     m_confirmExit = true;
     m_windowWidth = 1024;
@@ -109,13 +101,6 @@ bool Config::load(const QString& path)
 
     try {
         auto tbl = toml::parse_file(path.toStdString());
-
-        // [icons] section
-        if (tbl.contains("icons")) {
-            auto& icons = *tbl["icons"].as_table();
-            if (auto mode = icons["mode"].value<std::string>())
-                m_iconMode = parseIconMode(*mode);
-        }
 
         // [external_tool] section
         if (tbl.contains("external_tool")) {
@@ -219,15 +204,6 @@ bool Config::load(const QString& path)
     return true;
 }
 
-static const char* iconModeToString(IconMode mode)
-{
-    switch (mode) {
-        case IconMode::FileType: return "filetype";
-        case IconMode::AppIcon:  return "appicon";
-        default:                 return "extension";
-    }
-}
-
 bool Config::validateToml(const QString& content, QString& errorMsg)
 {
     try {
@@ -273,11 +249,6 @@ bool Config::save() const
     windowTbl.insert("x", static_cast<int64_t>(m_windowX));
     windowTbl.insert("y", static_cast<int64_t>(m_windowY));
     tbl.insert("window", windowTbl);
-
-    // [icons] section
-    toml::table iconsTbl;
-    iconsTbl.insert("mode", iconModeToString(m_iconMode));
-    tbl.insert("icons", iconsTbl);
 
     // [ui] section
     toml::table uiTbl;

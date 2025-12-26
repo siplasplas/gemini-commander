@@ -27,6 +27,7 @@
 #include <QVBoxLayout>
 #include "Config.h"
 #include "FilePanel.h"
+#include "FileIconResolver.h"
 #include "quitls.h"
 
 #include <QProcess>
@@ -967,136 +968,10 @@ void FilePanel::dropEvent(QDropEvent* event)
     }
 }
 
-FileType FilePanel::classifyFileType(const QFileInfo &info) {
-    static QMimeDatabase db;
-
-    const QString fileName = info.fileName();
-
-    // Hidden files (starting with .)
-    if (fileName.startsWith('.') && fileName.size() > 1)
-        return FileType::Hidden;
-
-    // Check if executable
-    if (info.isExecutable() && info.isFile()) {
-        // Quick ELF check (first 4 bytes: 0x7f 'E' 'L' 'F')
-        QFile file(info.absoluteFilePath());
-        if (file.open(QIODevice::ReadOnly)) {
-            QByteArray header = file.read(4);
-            file.close();
-            if (header.size() >= 4 && header[0] == 0x7f && header[1] == 'E' && header[2] == 'L' && header[3] == 'F') {
-                return FileType::Executable;
-            }
-        }
-        // Also check for shebang scripts
-        if (file.open(QIODevice::ReadOnly)) {
-            QByteArray header = file.read(2);
-            file.close();
-            if (header.startsWith("#!"))
-                return FileType::Executable;
-        }
-    }
-
-    // Use MIME type for classification
-    const QString ext = info.suffix().toLower();
-    QMimeType mt = db.mimeTypeForFile(info.absoluteFilePath(), QMimeDatabase::MatchExtension);
-    QString mimeName = mt.name();
-
-    // Image types
-    if (mimeName.startsWith("image/"))
-        return FileType::Image;
-
-    // Audio types
-    if (mimeName.startsWith("audio/"))
-        return FileType::Audio;
-
-    // Video types
-    if (mimeName.startsWith("video/"))
-        return FileType::Video;
-
-    // Disk image types
-    static const QStringList diskImageExts = {"iso", "img", "bin", "nrg", "mdf", "mds", "dmg", "cue", "toast", "vcd"};
-    if (diskImageExts.contains(ext) || mimeName.contains("iso9660") || mimeName.contains("disk-image"))
-        return FileType::DiskImage;
-
-    // Archive types
-    static const QStringList archiveExts = {"zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz", "tbz2", "txz", "cab"};
-    if (archiveExts.contains(ext) || mimeName.contains("archive") || mimeName.contains("compressed"))
-        return FileType::Archive;
-
-    // Document types
-    static const QStringList docExts = {"doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "rtf"};
-    if (docExts.contains(ext))
-        return FileType::Document;
-
-    if (mimeName.startsWith("application/pdf"))
-        return FileType::Pdf;
-
-    // Text/source code types
-    if (mimeName.startsWith("text/") || mimeName.contains("json") || mimeName.contains("xml") ||
-        mimeName.contains("javascript") || mimeName.contains("x-python") || mimeName.contains("x-perl") ||
-        mimeName.contains("x-ruby") || mimeName.contains("x-shellscript"))
-        return FileType::Text;
-
-    return FileType::Unknown;
-}
-
-QIcon FilePanel::getIconForFileType(FileType type) {
-    static QHash<int, QIcon> cache;
-
-    int key = static_cast<int>(type);
-    auto it = cache.find(key);
-    if (it != cache.end())
-        return it.value();
-
-    QString iconPath;
-    switch (type) {
-        case FileType::Executable:
-            iconPath = ":/icons/file_executable.svg";
-            break;
-        case FileType::Text:
-            iconPath = ":/icons/file_text.svg";
-            break;
-        case FileType::Image:
-            iconPath = ":/icons/file_image.svg";
-            break;
-        case FileType::Archive:
-            iconPath = ":/icons/file_archive.svg";
-            break;
-        case FileType::Audio:
-            iconPath = ":/icons/file_audio.svg";
-            break;
-        case FileType::Video:
-            iconPath = ":/icons/file_video.svg";
-            break;
-        case FileType::Document:
-            iconPath = ":/icons/file_document.svg";
-            break;
-        case FileType::Pdf:
-            iconPath = ":/icons/file_pdf.svg";
-            break;
-        case FileType::DiskImage:
-            iconPath = ":/icons/file_diskimage.svg";
-            break;
-        case FileType::Hidden:
-            iconPath = ":/icons/file_hidden.svg";
-            break;
-        default:
-            iconPath = ":/icons/file_unknown.svg";
-            break;
-    }
-
-    QIcon icon(iconPath);
-    cache.insert(key, icon);
-    return icon;
-}
-
 QIcon FilePanel::getIconForEntry(const QFileInfo &info, EntryContentState contentState) {
-    static QFileIconProvider provider;
-    static QMimeDatabase db;
-    static QHash<QString, QIcon> extCache; // for Extension mode
     static QHash<int, QIcon> folderCache;
 
-    // --- folders (same for all modes) ---
+    // --- folders ---
     if (contentState != EntryContentState::NotDirectory) {
         int key = static_cast<int>(contentState);
         auto it = folderCache.find(key);
@@ -1116,36 +991,8 @@ QIcon FilePanel::getIconForEntry(const QFileInfo &info, EntryContentState conten
         return icon;
     }
 
-    // --- files: depends on IconMode ---
-    IconMode mode = Config::instance().iconMode();
-
-    if (mode == IconMode::FileType) {
-        FileType ft = classifyFileType(info);
-        return getIconForFileType(ft);
-    }
-
-    // Default: Extension mode (original behavior)
-    QString ext = info.suffix().toLower();
-    auto it = extCache.find(ext);
-    if (it != extCache.end())
-        return it.value();
-
-    QIcon icon;
-
-    if (!ext.isEmpty()) {
-        QMimeType mt = db.mimeTypeForFile("." + ext, QMimeDatabase::MatchExtension);
-        if (mt.isValid()) {
-            icon = QIcon::fromTheme(mt.iconName());
-            if (icon.isNull() && !mt.genericIconName().isEmpty())
-                icon = QIcon::fromTheme(mt.genericIconName());
-        }
-    }
-
-    if (icon.isNull())
-        icon = provider.icon(QFileIconProvider::File);
-
-    extCache.insert(ext, icon);
-    return icon;
+    // --- files: use FileIconResolver ---
+    return FileIconResolver::instance().getIconByName(info.fileName());
 }
 
 void FilePanel::updateSearch(const QString &text) {

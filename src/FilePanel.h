@@ -37,20 +37,6 @@ enum class TotalSizeStatus {
     Has,
 };
 
-enum class FileType {
-    Executable,  // ELF, scripts with shebang
-    Text,        // .txt, .md, .cpp, .h, source code
-    Image,       // .png, .jpg, .svg, .gif
-    Archive,     // .zip, .tar.gz, .7z, .rar
-    Audio,       // .mp3, .wav, .flac, .ogg
-    Video,       // .mp4, .mkv, .avi, .webm
-    Document,    // .doc, .odt, .xls
-    Pdf,         // .pdf
-    DiskImage,   // .iso, .img, .bin, .nrg, .mdf
-    Hidden,      // files starting with .
-    Unknown      // fallback
-};
-
 
 struct PanelEntry {
     QFileInfo info;
@@ -216,8 +202,6 @@ signals:
 
 private:
     static QIcon getIconForEntry(const QFileInfo& info, EntryContentState contentState);
-    static FileType classifyFileType(const QFileInfo& info);
-    static QIcon getIconForFileType(FileType type);
     EntryContentState ensureContentState(PanelEntry& entry) const;
     bool mixedHidden = true;  // filenames with dot, are between others
     // Search UI and logic
