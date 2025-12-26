@@ -338,7 +338,6 @@ bool MainWindow::doFollowDirFromLeft(QObject *obj, QKeyEvent *keyEvent) {
 
     // Only work when left panel is active
     if (currentPanel == leftPanel) {
-        // Get selected entry from left panel
         QModelIndex currentIndex = leftPanel->currentIndex();
         if (currentIndex.isValid()) {
             QString selectedName = leftPanel->getRowRelPath(currentIndex.row());
@@ -346,21 +345,17 @@ bool MainWindow::doFollowDirFromLeft(QObject *obj, QKeyEvent *keyEvent) {
                 // Build full path to selected item
                 QDir leftDir(leftPanel->currentPath);
                 QString selectedPath = leftDir.absoluteFilePath(selectedName);
-                QFileInfo info(selectedPath);
-
-                // If selected is a directory, navigate to it in right panel
-                if (info.isDir()) {
-                    rightPanel->currentPath = selectedPath;
-                    rightPanel->loadDirectory();
-                    return true;
-                }
+                // Use navigateToPath - handles both dirs and files
+                rightPanel->navigateToPath(selectedPath);
+                return true;
             }
         }
     }
 
-    // Default behavior: right panel follows left panel's current directory
+    // [..] or no selection: follow current directory
     rightPanel->currentPath = leftPanel->currentPath;
     rightPanel->loadDirectory();
+    rightPanel->selectFirstEntry();
 
     return true;
 }
@@ -378,7 +373,6 @@ bool MainWindow::doFollowDirFromRight(QObject *obj, QKeyEvent *keyEvent) {
 
     // Only work when right panel is active
     if (currentPanel == rightPanel) {
-        // Get selected entry from right panel
         QModelIndex currentIndex = rightPanel->currentIndex();
         if (currentIndex.isValid()) {
             QString selectedName = rightPanel->getRowRelPath(currentIndex.row());
@@ -386,21 +380,17 @@ bool MainWindow::doFollowDirFromRight(QObject *obj, QKeyEvent *keyEvent) {
                 // Build full path to selected item
                 QDir rightDir(rightPanel->currentPath);
                 QString selectedPath = rightDir.absoluteFilePath(selectedName);
-                QFileInfo info(selectedPath);
-
-                // If selected is a directory, navigate to it in left panel
-                if (info.isDir()) {
-                    leftPanel->currentPath = selectedPath;
-                    leftPanel->loadDirectory();
-                    return true;
-                }
+                // Use navigateToPath - handles both dirs and files
+                leftPanel->navigateToPath(selectedPath);
+                return true;
             }
         }
     }
 
-    // Default behavior: left panel follows right panel's current directory
+    // [..] or no selection: follow current directory
     leftPanel->currentPath = rightPanel->currentPath;
     leftPanel->loadDirectory();
+    leftPanel->selectFirstEntry();
 
     return true;
 }

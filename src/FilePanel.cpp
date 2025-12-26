@@ -583,7 +583,8 @@ void FilePanel::selectEntryByName(const QString &fullName) {
 void FilePanel::selectFirstEntry() {
     if (model->rowCount() > 0) {
         m_lastSelectedRow = 0;
-        restoreSelectionFromMemory();
+        if (hasFocus())
+            restoreSelectionFromMemory();
     }
 }
 
