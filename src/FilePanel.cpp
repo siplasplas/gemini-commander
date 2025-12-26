@@ -823,14 +823,14 @@ void FilePanel::startDrag(Qt::DropActions supportedActions) {
         firstName = getRowRelPath(row);
     }
 
+    QDir currentDir(currentPath);
     for (const QModelIndex &idx: selectedRows) {
         int row = idx.row();
         QString name = getRowRelPath(row);
         if (name.isEmpty())
             continue; // skip parent entry "[..]" / empty name
 
-        dir = new QDir(currentPath);
-        QString fullPath = dir->absoluteFilePath(name);
+        QString fullPath = currentDir.absoluteFilePath(name);
         urls.append(QUrl::fromLocalFile(fullPath));
     }
 
