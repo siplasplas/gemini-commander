@@ -126,7 +126,7 @@ QString FileIconResolver::findIconInTheme(const QString& iconName)
         }
     }
 
-    static const QStringList sizes = { "22x22", "24x24", "16x16", "scalable"};
+    static const QStringList sizes = { "24x24", "22x22", "scalable", "16x16"};
     static const QStringList categories = { "mimetypes", "apps" };
     QString basePath = "/usr/share/icons/" + activeTheme;
 
