@@ -60,7 +60,7 @@ EditorFrame::EditorFrame(QWidget* parent)
 
     // --- Editor Tab Widget ---
     m_editorTabWidget = new MruTabWidget(this);
-    m_editorTabWidget->setTabLimit(3); // Small value for tests
+    m_editorTabWidget->setTabLimit(16);
     m_editorTabWidget->setTabsClosable(true);
     m_editorTabWidget->setMovable(true);
     m_editorTabWidget->setUsesScrollButtons(true);
