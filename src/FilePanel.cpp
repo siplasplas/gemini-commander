@@ -348,6 +348,21 @@ QVariant FilePanelModel::headerData(int section, Qt::Orientation orientation, in
     return {};
 }
 
+Qt::ItemFlags FilePanelModel::flags(const QModelIndex& index) const {
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+
+    Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+
+    // Enable drag for all entries except [..]
+    int entryIdx = rowToEntryIndex(index.row());
+    if (entryIdx >= 0) {
+        flags |= Qt::ItemIsDragEnabled;
+    }
+
+    return flags;
+}
+
 void FilePanelModel::refresh() {
     beginResetModel();
     endResetModel();
