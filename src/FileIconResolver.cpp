@@ -3,8 +3,6 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
-#include <QTextStream>
-#include <QStandardPaths>
 #include <QPixmap>
 #include <algorithm>
 
@@ -155,80 +153,6 @@ QString FileIconResolver::findIconInTheme(const QString& iconName)
     return QString();
 }
 
-QString FileIconResolver::getDesktopFileForMime(const QString& mimeType)
-{
-    // Read mimeapps.list files to find default app
-    static const QStringList mimeappsFiles = {
-        QDir::homePath() + "/.config/mimeapps.list",
-        QDir::homePath() + "/.local/share/applications/mimeapps.list",
-        "/usr/share/applications/mimeapps.list",
-        "/etc/xdg/mimeapps.list"
-    };
-
-    for (const QString& mimeappsPath : mimeappsFiles) {
-        QFile file(mimeappsPath);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-            continue;
-
-        QTextStream in(&file);
-        bool inDefaultSection = false;
-
-        while (!in.atEnd()) {
-            QString line = in.readLine().trimmed();
-
-            if (line.startsWith('[')) {
-                inDefaultSection = (line == "[Default Applications]");
-                continue;
-            }
-
-            if (inDefaultSection && line.startsWith(mimeType + "=")) {
-                QString desktopFile = line.mid(mimeType.length() + 1).split(';').first();
-                file.close();
-                return desktopFile;
-            }
-        }
-        file.close();
-    }
-
-    return QString();
-}
-
-QString FileIconResolver::getIconFromDesktopFile(const QString& desktopFilePath)
-{
-    // Search paths for .desktop files
-    static const QStringList desktopDirs = {
-        QDir::homePath() + "/.local/share/applications",
-        "/usr/share/applications",
-        "/usr/local/share/applications",
-        "/var/lib/flatpak/exports/share/applications",
-        QDir::homePath() + "/.local/share/flatpak/exports/share/applications"
-    };
-
-    for (const QString& dir : desktopDirs) {
-        QString fullPath = dir + "/" + desktopFilePath;
-        QFile file(fullPath);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-            bool inDesktopEntry = false;
-
-            while (!in.atEnd()) {
-                QString line = in.readLine().trimmed();
-
-                if (line.startsWith('[')) {
-                    inDesktopEntry = (line == "[Desktop Entry]");
-                    continue;
-                }
-
-                if (inDesktopEntry && line.startsWith("Icon=")) {
-                    return line.mid(5);
-                }
-            }
-        }
-    }
-
-    return QString();
-}
-
 QIcon FileIconResolver::lookupElfIcon(const QString& filePath)
 {
     // Check cache first
@@ -270,49 +194,6 @@ QIcon FileIconResolver::lookupElfIcon(const QString& filePath)
     return icon;
 }
 
-QIcon FileIconResolver::lookupIconFromApp(const QString& mimeType)
-{
-    // Check cache first
-    auto it = m_mimeCache.find(mimeType);
-    if (it != m_mimeCache.end()) {
-        return it.value();
-    }
-
-    QIcon icon;
-
-    // Get desktop file for this MIME type
-    QString desktopFile = getDesktopFileForMime(mimeType);
-    if (!desktopFile.isEmpty()) {
-        // Get icon name from desktop file
-        QString iconName = getIconFromDesktopFile(desktopFile);
-        if (!iconName.isEmpty()) {
-            // If it's an absolute path, use it directly
-            if (iconName.startsWith('/')) {
-                if (QFile::exists(iconName)) {
-                    icon = QIcon(iconName);
-                }
-            } else {
-                // Try Qt theme first (most reliable - handles all theme locations)
-                icon = QIcon::fromTheme(iconName);
-
-                // Fallback to manual search in hicolor
-                if (!isIconValid(icon)) {
-                    QString iconPath = findIconInTheme(iconName);
-                    if (!iconPath.isEmpty()) {
-                        icon = QIcon(iconPath);
-                    }
-                }
-            }
-        }
-    }
-
-    // Only cache if we found a valid icon (don't cache failures)
-    if (isIconValid(icon)) {
-        m_mimeCache.insert(mimeType, icon);
-    }
-    return icon;
-}
-
 QIcon FileIconResolver::lookupMimeIcon(const QString& filePath)
 {
     QFileInfo info(filePath);
@@ -326,15 +207,16 @@ QIcon FileIconResolver::lookupMimeIcon(const QString& filePath)
 
     // Get MIME type
     QMimeType mt = m_mimeDb.mimeTypeForFile(filePath, QMimeDatabase::MatchExtension);
-    QString mimeType = mt.name();
 
-    // Try to get icon from associated application
-    QIcon icon = lookupIconFromApp(mimeType);
+    // Try MIME generic icon (e.g., "text-x-generic", "image-x-generic")
+    // These are well-supported in Adwaita and other themes
+    QIcon icon;
 
-    // Fallback to MIME type icon via Qt theme
+    // First try the specific icon name
     if (!isIconValid(icon)) {
         icon = QIcon::fromTheme(mt.iconName());
     }
+    // Then try generic icon name (better coverage in themes)
     if (!isIconValid(icon) && !mt.genericIconName().isEmpty()) {
         icon = QIcon::fromTheme(mt.genericIconName());
     }
@@ -397,15 +279,15 @@ QIcon FileIconResolver::getIconByName(const QString& fileName)
 
     // Get MIME type by extension only
     QMimeType mt = m_mimeDb.mimeTypeForFile(fileName, QMimeDatabase::MatchExtension);
-    QString mimeType = mt.name();
 
-    // Try to get icon from associated application
-    QIcon icon = lookupIconFromApp(mimeType);
+    // Try MIME generic icon (e.g., "text-x-generic", "image-x-generic")
+    QIcon icon;
 
-    // Fallback to MIME type icon via Qt theme
+    // First try the specific icon name
     if (!isIconValid(icon)) {
         icon = QIcon::fromTheme(mt.iconName());
     }
+    // Then try generic icon name (better coverage in themes)
     if (!isIconValid(icon) && !mt.genericIconName().isEmpty()) {
         icon = QIcon::fromTheme(mt.genericIconName());
     }
@@ -437,7 +319,6 @@ void FileIconResolver::clearCache()
 {
     m_suffixCache.clear();
     m_elfCache.clear();
-    m_mimeCache.clear();
 }
 
 bool FileIconResolver::isIconValid(const QIcon& icon)

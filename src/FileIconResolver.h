@@ -13,7 +13,7 @@
  * Features:
  * - Suffix-based caching with longest-suffix-first matching (e.g., .tar.gz before .gz)
  * - ELF executable icon lookup from system theme directories
- * - MIME-based icon lookup using associated application icons
+ * - MIME-based icon lookup using theme icons (Adwaita, hicolor, etc.)
  * - Magic byte detection for file type identification
  */
 class FileIconResolver
@@ -75,25 +75,15 @@ private:
     // Icon lookup methods
     QIcon lookupElfIcon(const QString& filePath);
     QIcon lookupMimeIcon(const QString& filePath);
-    QIcon lookupIconFromApp(const QString& mimeType);
 
     // Find icon file in icon theme directories
     static QString findIconInTheme(const QString& iconName);
-
-    // Get default app .desktop file for MIME type
-    QString getDesktopFileForMime(const QString& mimeType);
-
-    // Get Icon= value from .desktop file
-    static QString getIconFromDesktopFile(const QString& desktopFilePath);
 
     // Cache: suffix -> icon (e.g., "tar.gz" -> icon, "gz" -> icon)
     QHash<QString, QIcon> m_suffixCache;
 
     // Cache: full path -> icon (for ELF executables)
     QHash<QString, QIcon> m_elfCache;
-
-    // Cache: MIME type -> icon
-    QHash<QString, QIcon> m_mimeCache;
 
     QMimeDatabase m_mimeDb;
 
