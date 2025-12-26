@@ -213,9 +213,8 @@ QIcon FileIconResolver::lookupMimeIcon(const QString& filePath)
     QIcon icon;
 
     // First try the specific icon name
-    if (!isIconValid(icon)) {
-        icon = QIcon::fromTheme(mt.iconName());
-    }
+    icon = QIcon::fromTheme(mt.iconName());
+
     // Then try generic icon name (better coverage in themes)
     if (!isIconValid(icon) && !mt.genericIconName().isEmpty()) {
         icon = QIcon::fromTheme(mt.genericIconName());
@@ -235,9 +234,9 @@ QIcon FileIconResolver::lookupMimeIcon(const QString& filePath)
         }
     }
 
-    // Cache by suffix (use longest suffix) - but only if we found a valid icon
+    // Always cache by suffix (including failures - to avoid repeated lookups)
     QStringList suffixes = extractSuffixes(fileName);
-    if (!suffixes.isEmpty() && isIconValid(icon)) {
+    if (!suffixes.isEmpty()) {
         m_suffixCache.insert(suffixes.first(), icon);
     }
 
@@ -284,9 +283,8 @@ QIcon FileIconResolver::getIconByName(const QString& fileName)
     QIcon icon;
 
     // First try the specific icon name
-    if (!isIconValid(icon)) {
-        icon = QIcon::fromTheme(mt.iconName());
-    }
+    icon = QIcon::fromTheme(mt.iconName());
+
     // Then try generic icon name (better coverage in themes)
     if (!isIconValid(icon) && !mt.genericIconName().isEmpty()) {
         icon = QIcon::fromTheme(mt.genericIconName());
@@ -306,9 +304,9 @@ QIcon FileIconResolver::getIconByName(const QString& fileName)
         }
     }
 
-    // Cache by suffix - but only if we found a valid icon
+    // Always cache by suffix (including failures - to avoid repeated lookups)
     QStringList suffixes = extractSuffixes(fileName);
-    if (!suffixes.isEmpty() && isIconValid(icon)) {
+    if (!suffixes.isEmpty()) {
         m_suffixCache.insert(suffixes.first(), icon);
     }
 
