@@ -7,6 +7,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include "Archives.h"
+#include "FileIconResolver.h"
 
 class MainWindow : public QMainWindow
 {

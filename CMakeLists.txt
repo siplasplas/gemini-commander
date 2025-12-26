@@ -133,6 +133,8 @@ add_executable(${PROJECT_NAME}
         src/SortedDirIterator.h
         src/Archives.cpp
         src/Archives.h
+        src/FileIconResolver.cpp
+        src/FileIconResolver.h
         src/keys/KeyMap.cpp
         src/keys/KeyMap.h
         src/SearchEdit.cpp

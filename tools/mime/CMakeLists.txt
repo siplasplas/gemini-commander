@@ -22,6 +22,8 @@ add_executable(MimeExplorer
     ${MAIN_SRC_DIR}/SortedDirIterator.cpp
     ${MAIN_SRC_DIR}/Archives.h
     ${MAIN_SRC_DIR}/Archives.cpp
+    ${MAIN_SRC_DIR}/FileIconResolver.h
+    ${MAIN_SRC_DIR}/FileIconResolver.cpp
 )
 
 target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR})

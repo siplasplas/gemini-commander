@@ -34,14 +34,16 @@ void MainWindow::setupUi()
     connect(m_filterEdit, &QLineEdit::textChanged, this, &MainWindow::onFilterChanged);
 
     m_treeWidget = new QTreeWidget(central);
-    m_treeWidget->setHeaderLabels({"Name", "Components", "Archive Type", "Default Application", "Count"});
+    m_treeWidget->setHeaderLabels({"Name", "Icon", "Components", "Archive Type", "Default Application", "Count"});
     m_treeWidget->header()->setSectionResizeMode(QHeaderView::Interactive);
     m_treeWidget->header()->setStretchLastSection(false);
-    m_treeWidget->setColumnWidth(0, 300);  // Reduced from 400
-    m_treeWidget->setColumnWidth(1, 100);  // Components
-    m_treeWidget->setColumnWidth(2, 150);  // Archive Type
-    m_treeWidget->setColumnWidth(3, 200);  // Default Application
-    m_treeWidget->setColumnWidth(4, 80);   // Count
+    m_treeWidget->setColumnWidth(0, 300);  // Name
+    m_treeWidget->setColumnWidth(1, 40);   // Icon
+    m_treeWidget->setColumnWidth(2, 100);  // Components
+    m_treeWidget->setColumnWidth(3, 150);  // Archive Type
+    m_treeWidget->setColumnWidth(4, 200);  // Default Application
+    m_treeWidget->setColumnWidth(5, 80);   // Count
+    m_treeWidget->setIconSize(QSize(24, 24));
 
     // Lazy load default app when item is expanded
     connect(m_treeWidget, &QTreeWidget::itemExpanded, this, &MainWindow::onItemExpanded);
@@ -177,11 +179,11 @@ void MainWindow::addFileToTree(const QString& filePath, const QString& mimeType,
     }
 
     // Set archive info on subtype level (if not already set)
-    if (subTypeItem->text(1).isEmpty() && !components.isEmpty()) {
-        subTypeItem->setText(1, components);
+    if (subTypeItem->text(2).isEmpty() && !components.isEmpty()) {
+        subTypeItem->setText(2, components);
     }
-    if (subTypeItem->text(2).isEmpty() && !archiveType.isEmpty()) {
-        subTypeItem->setText(2, archiveType);
+    if (subTypeItem->text(3).isEmpty() && !archiveType.isEmpty()) {
+        subTypeItem->setText(3, archiveType);
     }
 
     // Find or create extension (level 3)
@@ -191,15 +193,21 @@ void MainWindow::addFileToTree(const QString& filePath, const QString& mimeType,
     QTreeWidgetItem* fileItem = new QTreeWidgetItem(extItem);
     fileItem->setText(0, filePath);
 
-    // Update counts (now in column 4)
-    int extCount = extItem->text(4).toInt() + 1;
-    extItem->setText(4, QString::number(extCount));
+    // Set icon for the file (using FileIconResolver)
+    QIcon icon = FileIconResolver::instance().getIcon(filePath, true);
+    if (!icon.isNull()) {
+        fileItem->setIcon(0, icon);
+    }
 
-    int subCount = subTypeItem->text(4).toInt() + 1;
-    subTypeItem->setText(4, QString::number(subCount));
+    // Update counts (now in column 5)
+    int extCount = extItem->text(5).toInt() + 1;
+    extItem->setText(5, QString::number(extCount));
 
-    int catCount = categoryItem->text(4).toInt() + 1;
-    categoryItem->setText(4, QString::number(catCount));
+    int subCount = subTypeItem->text(5).toInt() + 1;
+    subTypeItem->setText(5, QString::number(subCount));
+
+    int catCount = categoryItem->text(5).toInt() + 1;
+    categoryItem->setText(5, QString::number(catCount));
 }
 
 QTreeWidgetItem* MainWindow::findOrCreateCategory(const QString& category)
@@ -223,7 +231,7 @@ QTreeWidgetItem* MainWindow::findOrCreateCategory(const QString& category)
     // Not found - insert at position lo
     QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText(0, category);
-    item->setText(4, "0");  // Count in column 4
+    item->setText(5, "0");  // Count in column 5
     m_treeWidget->insertTopLevelItem(lo, item);
     return item;
 }
@@ -249,7 +257,7 @@ QTreeWidgetItem* MainWindow::findOrCreateSubType(QTreeWidgetItem* parent, const 
     // Not found - insert at position lo
     QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText(0, subType);
-    item->setText(4, "0");  // Count in column 4
+    item->setText(5, "0");  // Count in column 5
     parent->insertChild(lo, item);
     return item;
 }
@@ -275,7 +283,7 @@ QTreeWidgetItem* MainWindow::findOrCreateExtension(QTreeWidgetItem* parent, cons
     // Not found - insert at position lo
     QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText(0, extension);
-    item->setText(4, "0");  // Count in column 4
+    item->setText(5, "0");  // Count in column 5
     parent->insertChild(lo, item);
     return item;
 }
@@ -390,7 +398,7 @@ void MainWindow::populateAllMimes()
 
         QTreeWidgetItem* categoryItem = new QTreeWidgetItem(m_treeWidget);
         categoryItem->setText(0, category);
-        categoryItem->setText(4, QString::number(mimes.size()));  // Count in column 4
+        categoryItem->setText(5, QString::number(mimes.size()));  // Count in column 5
 
         for (const QMimeType& mt : mimes) {
             QString subType = mt.name().split('/').last();
@@ -406,15 +414,20 @@ void MainWindow::populateAllMimes()
             auto [components, archiveType] = classifyArchive(mt, samplePath);
             if (!components.isEmpty()) {
                 QString componentsStr = components.size() == 1 ? components[0] : components[0] + "," + components[1];
-                subItem->setText(1, componentsStr);
-                subItem->setText(2, archiveTypeToString(archiveType));
+                subItem->setText(2, componentsStr);
+                subItem->setText(3, archiveTypeToString(archiveType));
             }
 
-            // Add extensions as children
+            // Add extensions as children with icons
             if (!suffixes.isEmpty()) {
                 for (const QString& suffix : suffixes) {
                     QTreeWidgetItem* extItem = new QTreeWidgetItem(subItem);
                     extItem->setText(0, "." + suffix);
+                    // Get icon for this extension
+                    QIcon icon = FileIconResolver::instance().getIconByName("file." + suffix);
+                    if (!icon.isNull()) {
+                        extItem->setIcon(0, icon);
+                    }
                 }
             }
 
@@ -453,15 +466,15 @@ void MainWindow::onItemExpanded(QTreeWidgetItem* item)
     if (parent != nullptr && parent->parent() == nullptr) {
         // This is a subtype item - load default app if not already loaded
         QString mimeType = item->data(0, Qt::UserRole).toString();
-        if (!mimeType.isEmpty() && item->text(3).isEmpty()) {  // Column 3 = Default Application
+        if (!mimeType.isEmpty() && item->text(4).isEmpty()) {  // Column 4 = Default Application
             // Check cache first
             auto it = m_defaultAppCache.find(mimeType);
             if (it != m_defaultAppCache.end()) {
-                item->setText(3, it.value());
+                item->setText(4, it.value());
             } else {
                 QString defaultApp = getDefaultAppForMime(mimeType);
                 m_defaultAppCache.insert(mimeType, defaultApp);
-                item->setText(3, defaultApp);
+                item->setText(4, defaultApp);
             }
         }
     }
