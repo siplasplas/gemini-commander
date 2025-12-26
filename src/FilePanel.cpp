@@ -1503,7 +1503,7 @@ void FilePanel::collectCopyStats(const QString &srcPath, CopyStats &stats, bool 
     // liczymy katalog root też
     stats.totalDirs += 1;
 
-    SortedDirIterator it(srcPath, QDir::AllEntries | QDir::NoDotAndDotDot);
+    SortedDirIterator it(srcPath, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
 
     int counter = 0;
     while (it.hasNext()) {
