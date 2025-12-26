@@ -186,6 +186,9 @@ public:
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
 
 private slots:
     void onHeaderSectionClicked(int logicalIndex);

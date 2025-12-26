@@ -774,7 +774,9 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     connect(this, &QTableView::doubleClicked, [this](const QModelIndex &index) { trigger(index); });
 
     setDragEnabled(true);
-    setDragDropMode(QAbstractItemView::DragOnly);
+    setDragDropMode(QAbstractItemView::DragDrop);
+    setAcceptDrops(true);
+    viewport()->setAcceptDrops(true);
 }
 
 FilePanel::~FilePanel() {
@@ -924,6 +926,44 @@ void FilePanel::startDrag(Qt::DropActions supportedActions) {
         actions |= Qt::CopyAction;
 
     drag->exec(actions, Qt::CopyAction);
+}
+
+void FilePanel::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    } else {
+        QTableView::dragEnterEvent(event);
+    }
+}
+
+void FilePanel::dragMoveEvent(QDragMoveEvent* event)
+{
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    } else {
+        QTableView::dragMoveEvent(event);
+    }
+}
+
+void FilePanel::dropEvent(QDropEvent* event)
+{
+    const QMimeData* mimeData = event->mimeData();
+    if (!mimeData->hasUrls()) {
+        QTableView::dropEvent(event);
+        return;
+    }
+
+    QList<QUrl> urls = mimeData->urls();
+    if (urls.isEmpty())
+        return;
+
+    // Use first URL - navigate to that path
+    QString path = urls.first().toLocalFile();
+    if (!path.isEmpty()) {
+        navigateToPath(path);
+        event->acceptProposedAction();
+    }
 }
 
 FileType FilePanel::classifyFileType(const QFileInfo &info) {
