@@ -167,9 +167,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ICU::uc ICU::i18n
  )
 
-# Get git SHA
+# Get git SHA with dirty flag
 execute_process(
-    COMMAND git rev-parse --short HEAD
+    COMMAND git describe --always --dirty
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_SHA
     OUTPUT_STRIP_TRAILING_WHITESPACE
