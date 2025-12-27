@@ -48,6 +48,7 @@ protected:
     void showEvent(QShowEvent *event) override;
 
 private slots:
+    void onNewFileTriggered();
     void onOpenFileTriggered();
     void onCloseCurrentTabTriggered();
     void onAboutTriggered();
@@ -69,6 +70,7 @@ private:
     QVBoxLayout* m_mainLayout;
 
     // Menu Actions
+    QAction *m_newFileAction;
     QAction *m_openFileAction;
     QAction *m_viewFileAction;
     QAction *m_closeAction;

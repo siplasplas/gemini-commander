@@ -35,7 +35,7 @@ public:
      * @param findNextAction Action for Find Next (F3)
      * @param findPrevAction Action for Find Previous (Shift+F3)
      */
-    void setupMenus(QAction* openFile, QAction* closeFile,
+    void setupMenus(QAction* newFile, QAction* openFile, QAction* closeFile,
                     QAction* exitApp, QAction* showSpecialChars, QAction* wrapLines,
                     QAction* aboutApp, QAction* findAction = nullptr,
                     QAction* findNextAction = nullptr, QAction* findPrevAction = nullptr,

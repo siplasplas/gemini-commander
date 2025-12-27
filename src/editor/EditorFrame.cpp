@@ -72,7 +72,7 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::extendTabContextMenu);
 
     createActions();
-    m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
+    m_mainHeader->setupMenus(m_newFileAction, m_openFileAction, m_closeAction,
                              m_exitAction, m_showSpecialCharsAction, m_wrapLinesAction,
                              m_aboutAction, m_findAction, m_findNextAction, m_findPrevAction,
                              m_replaceAction, m_gotoAction);
@@ -125,6 +125,10 @@ EditorFrame::~EditorFrame()
 
 void EditorFrame::createActions()
 {
+    m_newFileAction = new QAction(tr("&New"), this);
+    m_newFileAction->setShortcut(QKeySequence::New);
+    connect(m_newFileAction, &QAction::triggered, this, &EditorFrame::onNewFileTriggered);
+
     m_openFileAction = new QAction(tr("&Open File..."), this);
     m_openFileAction->setShortcut(QKeySequence::Open);
     connect(m_openFileAction, &QAction::triggered, this, &EditorFrame::onOpenFileTriggered);
@@ -253,6 +257,39 @@ Editor* EditorFrame::currentEditor() const
     if (!m_editorTabWidget)
         return nullptr;
     return qobject_cast<Editor*>(m_editorTabWidget->currentWidget());
+}
+
+void EditorFrame::onNewFileTriggered()
+{
+    KTextEditor::Document* doc = KTextEditor::Editor::instance()->createDocument(nullptr);
+    if (!doc) {
+        qWarning() << "Failed to create new KTextEditor::Document!";
+        return;
+    }
+
+    Editor* newEditor = new Editor(doc, m_editorTabWidget);
+    QString tabTitle = generateUniqueTabTitle(QString());
+    int newIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
+    int removedCount = m_editorTabWidget->enforceTabLimit();
+    m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
+    auto view = newEditor->view();
+    ObjectRegistry::add(view, "Editor");
+
+    if (QAction* gotoLineAction = view->action("go_goto_line")) {
+        gotoLineAction->setShortcut(QKeySequence());
+    }
+
+    // Sync menu checkboxes with KTextEditor settings on first file open
+    if (m_editorTabWidget->count() == 1) {
+        if (QAction* wrapAction = view->action("view_dynamic_word_wrap")) {
+            m_wrapLinesAction->setChecked(wrapAction->isChecked());
+        }
+        if (QAction* wsAction = view->action("view_show_whitespaces")) {
+            m_showSpecialCharsAction->setChecked(wsAction->isChecked());
+        }
+    }
+
+    view->setFocus();
 }
 
 /**
@@ -398,6 +435,25 @@ int EditorFrame::findTabByPath(const QString& filePath)
 // generateUniqueTabTitle (MODIFIED to check Editor's document URL/path)
 QString EditorFrame::generateUniqueTabTitle(const QString& filePath)
 {
+    // For empty path (new untitled document), generate Untitled-1, Untitled-2, etc.
+    if (filePath.isEmpty()) {
+        int counter = 1;
+        QString candidate;
+        while (true) {
+            candidate = QString("Untitled-%1").arg(counter);
+            bool found = false;
+            for (int i = 0; i < m_editorTabWidget->count(); ++i) {
+                if (m_editorTabWidget->tabText(i) == candidate) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                return candidate;
+            counter++;
+        }
+    }
+
     QString baseName = QFileInfo(filePath).fileName();
     QString uniqueTitle = baseName;
     int counter = 1;
