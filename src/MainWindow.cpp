@@ -320,10 +320,10 @@ void MainWindow::setupUi() {
     connect(aboutAction, &QAction::triggered, this, [this]() {
         QString aboutText = tr(
             "<h3>Gemini Commander</h3>"
-            "<p>Version: %1</p>"
-            "<p>Qt Version: %2</p>"
-            "<p>KDE Frameworks Version: %3</p>"
-        ).arg(APP_VERSION, qVersion(), KCOREADDONS_VERSION_STRING);
+            "<p>Version: %1 (%2)</p>"
+            "<p>Qt Version: %3</p>"
+            "<p>KDE Frameworks Version: %4</p>"
+        ).arg(APP_VERSION, GIT_SHA, qVersion(), KCOREADDONS_VERSION_STRING);
         QMessageBox::about(this, tr("About Gemini Commander"), aboutText);
     });
     helpMenu->addAction(aboutAction);

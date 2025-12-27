@@ -167,8 +167,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ICU::uc ICU::i18n
  )
 
+# Get git SHA
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_SHA
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT GIT_SHA)
+    set(GIT_SHA "unknown")
+endif()
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         APP_VERSION="${PROJECT_VERSION}"
+        GIT_SHA="${GIT_SHA}"
 )
 
 if(QT_MAJOR_VERSION EQUAL 5)
