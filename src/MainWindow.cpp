@@ -46,6 +46,7 @@
 #include "quitls.h"
 #include "udisks/UDisksDeviceManager.h"
 #include <kcoreaddons_version.h>
+#include "git_version.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {

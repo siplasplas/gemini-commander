@@ -167,21 +167,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ICU::uc ICU::i18n
  )
 
-# Get git SHA with dirty flag
-execute_process(
-    COMMAND git describe --always --dirty
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_SHA
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
+# Generate git_version.h at build time (not configure time)
+set(GIT_VERSION_HEADER "${CMAKE_BINARY_DIR}/git_version.h")
+add_custom_target(git_version ALL
+    COMMAND ${CMAKE_COMMAND}
+        -DGIT_VERSION_HEADER=${GIT_VERSION_HEADER}
+        -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/cmake/GenerateGitVersion.cmake
+    BYPRODUCTS ${GIT_VERSION_HEADER}
+    COMMENT "Generating git version header"
 )
-if(NOT GIT_SHA)
-    set(GIT_SHA "unknown")
-endif()
+add_dependencies(${PROJECT_NAME} git_version)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         APP_VERSION="${PROJECT_VERSION}"
-        GIT_SHA="${GIT_SHA}"
 )
 
 if(QT_MAJOR_VERSION EQUAL 5)
