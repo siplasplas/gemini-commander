@@ -167,7 +167,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ICU::uc ICU::i18n
  )
 
-qt_add_resources(APP_RESOURCES res/resources.qrc)
+if(QT_MAJOR_VERSION EQUAL 5)
+    qt5_add_resources(APP_RESOURCES res/resources.qrc)
+else()
+    qt_add_resources(APP_RESOURCES res/resources.qrc)
+endif()
 target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
 
 # Installation

@@ -3,6 +3,7 @@
 #include <cctype>
 #include <iostream>
 #include <stdexcept>
+#include <set>
 #include <toml++/toml.h>
 
 #include "../FilePaneWidget.h"
@@ -197,7 +198,6 @@ const std::vector<std::pair<Qt::Key, std::string>> KeyMap::keys_ = {
     { Qt::Key_twosuperior, "twosuperior" },
     { Qt::Key_threesuperior, "threesuperior" },
     { Qt::Key_acute, "acute" },
-    { Qt::Key_micro, "micro" },
     { Qt::Key_paragraph, "paragraph" },
     { Qt::Key_periodcentered, "periodcentered" },
     { Qt::Key_cedilla, "cedilla" },

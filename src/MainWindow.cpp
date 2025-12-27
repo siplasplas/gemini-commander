@@ -35,6 +35,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QRegularExpression>
+#include <QDebug>
 
 #include "SortedDirIterator.h"
 #include "SearchDialog.h"

@@ -4,15 +4,12 @@
 #include <QTabWidget>
 #include <QTabBar>
 #include <QList>
-#include <QKeyEvent>
 #include <QTimer>
 #include <QPointer>
-#include <QMouseEvent>
 #include <QMap>
 #include <QResizeEvent>
-#include <QSet>
+#include <QMenu>
 #include <QMetaMethod>
-
 
 class QDialog;
 class QListWidget;

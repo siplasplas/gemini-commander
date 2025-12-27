@@ -13,7 +13,6 @@ BaseViewer::~BaseViewer() {
     // The m_view widget will be deleted by Qt's parent/child mechanism
     // as it's parented to 'this' (the Editor QWidget).
     // The m_document is managed by KTextEditor::Editor singleton, do not delete here.
-    qDebug() << "Editor destructor for:" << m_filePath;
 }
 
 /**

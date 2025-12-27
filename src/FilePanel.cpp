@@ -5,37 +5,34 @@
 
 #include <QComboBox>
 #include <QDesktopServices>
-#include <QDialog>
-#include <QDialogButtonBox>
-#include <QDir>
 #include <QDirIterator>
 #include <QDrag>
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QKeyEvent>
-#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
-#include <QProgressDialog>
-#include <QRegularExpression>
 #include <QStandardItemModel>
 #include <QStorageInfo>
 #include <QUrl>
 #include <QVBoxLayout>
-#include "Config.h"
+#include <QProcess>
+#include <QStandardPaths>
+#include <QCoreApplication>
+#include <QDialogButtonBox>
+#include <QDebug>
+
 #include "FilePanel.h"
 #include "FileIconResolver.h"
 #include "quitls.h"
-
-#include <QProcess>
-#include <QStandardPaths>
 #include "SearchDialog.h"
 #include "SizeFormat.h"
 #include "SortedDirIterator.h"
 #include "keys/KeyRouter.h"
+#include <QDateTime>
 
 namespace {
 

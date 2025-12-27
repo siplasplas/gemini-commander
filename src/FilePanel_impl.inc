@@ -94,7 +94,6 @@ bool FilePanel::doCancelOperation(QObject *obj, QKeyEvent *keyEvent) {
 
     if (operationInProgress) {
         m_cancelOperation = true;
-        qDebug() << "Cancel operation requested";
         return true;  // Consume ESC event
     }
 

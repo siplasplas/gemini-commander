@@ -9,6 +9,7 @@
 
 #include "keys/ObjectRegistry.h"
 #include "../Config.h"
+#include <QDebug>
 
 ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
     : QDialog(parent)
