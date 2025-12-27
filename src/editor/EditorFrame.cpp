@@ -259,6 +259,11 @@ Editor* EditorFrame::currentEditor() const
     return qobject_cast<Editor*>(m_editorTabWidget->currentWidget());
 }
 
+void EditorFrame::newFile()
+{
+    onNewFileTriggered();
+}
+
 void EditorFrame::onNewFileTriggered()
 {
     KTextEditor::Document* doc = KTextEditor::Editor::instance()->createDocument(nullptr);

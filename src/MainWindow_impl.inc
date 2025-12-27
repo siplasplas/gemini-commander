@@ -157,14 +157,15 @@ bool MainWindow::doEditNew(QObject *obj, QKeyEvent *keyEvent) {
 
     if (!ok)
         return false;
-    QString fullPath;
-    if (!name.isEmpty()) {
-        QDir dir(currentFilePanel()->currentPath);
-        fullPath = dir.absoluteFilePath(name);
-    }
     if (!editorFrame)
         editorFrame = new EditorFrame(nullptr);
-    editorFrame->openFile(fullPath);
+    if (name.isEmpty()) {
+        editorFrame->newFile();
+    } else {
+        QDir dir(currentFilePanel()->currentPath);
+        QString fullPath = dir.absoluteFilePath(name);
+        editorFrame->openFile(fullPath);
+    }
     editorFrame->show();
     editorFrame->raise();
     editorFrame->activateWindow();

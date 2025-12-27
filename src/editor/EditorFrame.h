@@ -39,6 +39,7 @@ public:
     bool actionsBeforeTabClose(int index);
 
     void tabAboutToClose(int index, bool askPin, bool &allow_close);
+    void newFile();
     void openFile(const QString& filePath);
     void openFileInViewer(const QString &fileName);
     Editor* currentEditor() const;
