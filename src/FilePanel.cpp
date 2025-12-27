@@ -466,13 +466,8 @@ void FilePanel::sortEntries() {
 }
 
 void FilePanel::addAllEntries() {
-    QString selectedName;
-    auto rows = selectionModel()->selectedRows();
-    if (!rows.isEmpty())
-        selectedName = getRowName(rows.first().row());
     sortEntries();
     model->refresh();
-    selectEntryByName(selectedName);
     scheduleVisibleFilesUpdate();
 }
 
