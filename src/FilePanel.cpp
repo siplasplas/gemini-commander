@@ -622,7 +622,7 @@ void FilePanel::trigger(const QString &name) {
                 selectFirstEntry();
             } else {
                 // Open file with full path
-                activate(entry->info.absoluteFilePath());
+                run(entry->info.absoluteFilePath());
             }
         }
         return;
@@ -645,14 +645,14 @@ void FilePanel::trigger(const QString &name) {
         } else {
             // Regular file: open with system default application
             selectedName = name;
-            activate(name);
+            run(name);
         }
     }
     loadDirectory();
     selectEntryByName(selectedName);
 }
 
-void FilePanel::activate(const QString &commandLine) {
+void FilePanel::run(const QString &commandLine) {
     if (commandLine.isEmpty())
         return;
 

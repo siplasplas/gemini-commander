@@ -20,7 +20,7 @@ bool MainWindow::doActivate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     if (!commandLineEdit->text().isEmpty()) {
-        currentFilePanel()->activate(QString::fromStdString(utils::trim(commandLineEdit->text().toStdString())));
+        currentFilePanel()->run(QString::fromStdString(utils::trim(commandLineEdit->text().toStdString())));
         doClearAndReturnToPanel(obj, keyEvent);
     } else {
         currentFilePanel()->trigger(currentPanelName());

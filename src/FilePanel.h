@@ -135,7 +135,7 @@ public:
     void selectFirstEntry();
     void navigateToPath(const QString& path);
     void trigger(const QString &name);
-    void activate(const QString &name);
+    void run(const QString &name);
     void addAllEntries();
     void trigger(const QModelIndex &index);
     void triggerCurrentEntry();
