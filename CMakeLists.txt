@@ -201,7 +201,7 @@ elseif(RSVG_CONVERT_EXECUTABLE)
 endif()
 
 if(SVG_CONVERTER)
-    foreach(size 16 32 48 64 128 256)
+    foreach(size 16 24 32 48 64 128 256)
         install(CODE "
             set(ICON_DIR \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps\")
             file(MAKE_DIRECTORY \"\${ICON_DIR}\")
