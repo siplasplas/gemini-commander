@@ -166,6 +166,7 @@ bool MainWindow::doEditNew(QObject *obj, QKeyEvent *keyEvent) {
         QString fullPath = dir.absoluteFilePath(name);
         editorFrame->openFile(fullPath);
     }
+    QCoreApplication::processEvents();
     editorFrame->show();
     editorFrame->raise();
     editorFrame->activateWindow();
