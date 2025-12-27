@@ -36,10 +36,10 @@ public:
      * @param findPrevAction Action for Find Previous (Shift+F3)
      */
     void setupMenus(QAction* openFile, QAction* closeFile,
-                    QAction* exitApp, QAction* showSpecialChars, QAction* aboutApp,
-                    QAction* findAction = nullptr, QAction* findNextAction = nullptr,
-                    QAction* findPrevAction = nullptr, QAction* replaceAction = nullptr,
-                    QAction* gotoAction = nullptr);
+                    QAction* exitApp, QAction* showSpecialChars, QAction* wrapLines,
+                    QAction* aboutApp, QAction* findAction = nullptr,
+                    QAction* findNextAction = nullptr, QAction* findPrevAction = nullptr,
+                    QAction* replaceAction = nullptr, QAction* gotoAction = nullptr);
 
     void setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth);
 

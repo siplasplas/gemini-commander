@@ -52,6 +52,7 @@ private slots:
     void onCloseCurrentTabTriggered();
     void onAboutTriggered();
     void onToggleSpecialChars(bool checked);
+    void onToggleWrapLines(bool checked);
     void onFindTriggered();
     void onFindNextTriggered();
     void onFindPrevTriggered();
@@ -74,6 +75,7 @@ private:
     QAction *m_exitAction;
     QAction *m_aboutAction;
     QAction *m_showSpecialCharsAction;
+    QAction *m_wrapLinesAction;
     QAction *m_findAction;
     QAction *m_findNextAction;
     QAction *m_findPrevAction;

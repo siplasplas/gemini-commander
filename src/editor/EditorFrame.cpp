@@ -73,9 +73,9 @@ EditorFrame::EditorFrame(QWidget* parent)
 
     createActions();
     m_mainHeader->setupMenus(m_openFileAction, m_closeAction,
-                             m_exitAction, m_showSpecialCharsAction, m_aboutAction,
-                             m_findAction, m_findNextAction, m_findPrevAction, m_replaceAction,
-                             m_gotoAction);
+                             m_exitAction, m_showSpecialCharsAction, m_wrapLinesAction,
+                             m_aboutAction, m_findAction, m_findNextAction, m_findPrevAction,
+                             m_replaceAction, m_gotoAction);
     m_mainHeader->setupToolsMenu(m_insertDateAction, m_insertTimeAction, m_insertBothAction);
 
     m_mainLayout->addWidget(m_editorTabWidget);
@@ -144,6 +144,11 @@ void EditorFrame::createActions()
     m_showSpecialCharsAction->setCheckable(true);
     m_showSpecialCharsAction->setChecked(false);
     connect(m_showSpecialCharsAction, &QAction::toggled, this, &EditorFrame::onToggleSpecialChars);
+
+    m_wrapLinesAction = new QAction(tr("Wrap Lines"), this);
+    m_wrapLinesAction->setCheckable(true);
+    m_wrapLinesAction->setChecked(false);
+    connect(m_wrapLinesAction, &QAction::toggled, this, &EditorFrame::onToggleWrapLines);
 
     // Note: KTextEditor already handles Ctrl+F, F3, Shift+F3 internally
     // We just add menu entries that trigger the same actions
@@ -228,6 +233,16 @@ void EditorFrame::openFile(const QString& fileName)
     // Disable KTextEditor's built-in Ctrl+G (go_goto_line) so we can use our own Goto dialog
     if (QAction* gotoLineAction = view->action("go_goto_line")) {
         gotoLineAction->setShortcut(QKeySequence());
+    }
+
+    // Sync menu checkboxes with KTextEditor settings on first file open
+    if (m_editorTabWidget->count() == 1) {
+        if (QAction* wrapAction = view->action("view_dynamic_word_wrap")) {
+            m_wrapLinesAction->setChecked(wrapAction->isChecked());
+        }
+        if (QAction* wsAction = view->action("view_show_whitespaces")) {
+            m_showSpecialCharsAction->setChecked(wsAction->isChecked());
+        }
     }
 
     view->setFocus();
@@ -421,6 +436,21 @@ void EditorFrame::onToggleSpecialChars(bool checked)
             QAction* wsAction = editor->view()->action("view_show_whitespaces");
             if (wsAction && wsAction->isChecked() != checked) {
                 wsAction->trigger();
+            }
+        }
+    }
+}
+
+void EditorFrame::onToggleWrapLines(bool checked)
+{
+    // Iterate through all open editor tabs and toggle word wrap
+    for (int i = 0; i < m_editorTabWidget->count(); ++i) {
+        Editor* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i));
+        if (editor && editor->view()) {
+            // Use the built-in KTextEditor action for dynamic word wrap
+            QAction* wrapAction = editor->view()->action("view_dynamic_word_wrap");
+            if (wrapAction && wrapAction->isChecked() != checked) {
+                wrapAction->trigger();
             }
         }
     }
