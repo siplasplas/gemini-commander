@@ -84,6 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     for (auto* panel : allFilePanels()) {
         panel->loadDirectory();
+        panel->selectFirstEntry();
         // Connect directoryChanged to update the label
         connect(panel, &FilePanel::directoryChanged,
                 this, &MainWindow::updateCurrentPathLabel);
