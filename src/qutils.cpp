@@ -1,4 +1,5 @@
 #include "quitls.h"
+#include "utils.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QString>
@@ -6,6 +7,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+QString qEscapePathForShell(const QString& path) {
+    return QString::fromStdString(utils::escapePathForShell(path.toStdString()));
+}
 
 QPair<QString, QString> splitFileName(const QFileInfo& info)
 {

@@ -5,6 +5,9 @@
 class QString;
 class QFileInfo;
 
+
+QString qEscapePathForShell(const QString& path);
+
 // Split filename into base name and extension
 // Handles hidden files like ".gitignore" correctly:
 // - ".gitignore" -> {".gitignore", ""}

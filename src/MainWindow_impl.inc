@@ -1,6 +1,6 @@
-#include "utils.h"
 #include "editor/editor.h"
-
+#include "quitls.h"
+#include "utils.h"
 
 bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
@@ -89,21 +89,21 @@ bool MainWindow::doCurrentDirToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     QString currentPath = currentFilePanel()->currentPath;
-    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(utils::escapePathForShell(currentPath.toStdString()))+" ");
+    commandLineEdit->setText(commandLineEdit->text() + qEscapePathForShell(currentPath)+" ");
     return true;
 }
 
 bool MainWindow::doCurrentNameToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(utils::escapePathForShell(currentPanelName().toStdString()))+" ");
+    commandLineEdit->setText(commandLineEdit->text() + qEscapePathForShell(currentPanelName())+" ");
     return true;
 }
 
 bool MainWindow::doCurrentPathToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    commandLineEdit->setText(commandLineEdit->text() + QString::fromStdString(utils::escapePathForShell(currentPanelPath().toStdString()))+" ");
+    commandLineEdit->setText(commandLineEdit->text() + qEscapePathForShell(currentPanelPath())+" ");
     return true;
 }
 
