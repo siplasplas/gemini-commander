@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(gemini-commander VERSION 1.0 LANGUAGES CXX)
+project(gemini-commander VERSION 1.0.0 LANGUAGES CXX)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
@@ -166,6 +166,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         KF${KF_MAJOR_VERSION}::Parts
         ICU::uc ICU::i18n
  )
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        APP_VERSION="${PROJECT_VERSION}"
+)
 
 if(QT_MAJOR_VERSION EQUAL 5)
     qt5_add_resources(APP_RESOURCES res/resources.qrc)

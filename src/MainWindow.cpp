@@ -45,6 +45,7 @@
 #include "keys/ObjectRegistry.h"
 #include "quitls.h"
 #include "udisks/UDisksDeviceManager.h"
+#include <kcoreaddons_version.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
@@ -313,6 +314,19 @@ void MainWindow::setupUi() {
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
     QMenu* configMenu = menuBar()->addMenu(tr("C&onfiguration"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+
+    // Help menu
+    QAction* aboutAction = new QAction(tr("About"), this);
+    connect(aboutAction, &QAction::triggered, this, [this]() {
+        QString aboutText = tr(
+            "<h3>Gemini Commander</h3>"
+            "<p>Version: %1</p>"
+            "<p>Qt Version: %2</p>"
+            "<p>KDE Frameworks Version: %3</p>"
+        ).arg(APP_VERSION, qVersion(), KCOREADDONS_VERSION_STRING);
+        QMessageBox::about(this, tr("About Gemini Commander"), aboutText);
+    });
+    helpMenu->addAction(aboutAction);
 
     // File menu
     QAction* quitAction = new QAction(tr("Quit"), this);
