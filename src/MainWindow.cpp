@@ -1078,6 +1078,40 @@ void MainWindow::createMountsToolbar()
     refreshMountsToolbar();
 }
 
+
+// Check if destination is invalid for copy/move:
+// - same as source, or
+// - subdirectory of source (when source is a directory)
+static bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPath)
+{
+    QFileInfo srcInfo(srcPath);
+    QFileInfo dstInfo(dstPath);
+
+    QString srcCanonical = srcInfo.canonicalFilePath();
+    // For destination that may not exist yet, get canonical path of existing parent
+    QString dstCanonical = dstInfo.exists()
+        ? dstInfo.canonicalFilePath()
+        : QFileInfo(dstInfo.absolutePath()).canonicalFilePath();
+
+    if (srcCanonical.isEmpty() || dstCanonical.isEmpty())
+        return false;
+
+    // Same path
+    if (srcCanonical == dstCanonical)
+        return true;
+
+    // Destination is subdirectory of source (only when source is directory)
+    if (srcInfo.isDir()) {
+        QString srcWithSlash = srcCanonical;
+        if (!srcWithSlash.endsWith('/'))
+            srcWithSlash += '/';
+        if (dstCanonical.startsWith(srcWithSlash))
+            return true;
+    }
+
+    return false;
+}
+
 void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
 {
     if (!srcPanel)
@@ -1180,6 +1214,10 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
             QString dstFilePath = QDir(dstPath).filePath(name);
             QFileInfo srcInfo(srcPath);
 
+            // Skip if copying to same location or subdirectory of source
+            if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
+                continue;
+
             if (srcInfo.isFile()) {
                 if (QFileInfo::exists(dstFilePath)) {
                     auto reply = QMessageBox::question(
@@ -1253,6 +1291,10 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
     }
 
     QFileInfo finalDstInfo(finalDstPath);
+
+    // Check if copying to same location or subdirectory of source
+    if (isInvalidCopyMoveTarget(srcPath, finalDstPath))
+        return;
 
     if (srcInfo.isFile()) {
         if (finalDstInfo.exists()) {
@@ -1444,6 +1486,10 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
             QString srcPath = srcDir.absoluteFilePath(name);
             QString dstFilePath = QDir(dstPath).filePath(name);
 
+            // Skip if moving to same location or subdirectory of source
+            if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
+                continue;
+
             if (QFileInfo::exists(dstFilePath)) {
                 auto reply = QMessageBox::question(
                     this, tr("Overwrite"),
@@ -1498,6 +1544,10 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
     }
 
     QFileInfo finalDstInfo(finalDstPath);
+
+    // Check if moving to same location or subdirectory of source
+    if (isInvalidCopyMoveTarget(srcPath, finalDstPath))
+        return;
 
     if (finalDstInfo.exists()) {
         auto reply = QMessageBox::question(
