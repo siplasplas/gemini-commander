@@ -645,7 +645,7 @@ void FilePanel::trigger(const QString &name) {
         } else {
             // Regular file: open with system default application
             selectedName = name;
-            run(name);
+            run(qEscapePathForShell(name));
         }
     }
     loadDirectory();
