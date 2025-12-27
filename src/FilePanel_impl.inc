@@ -474,33 +474,7 @@ bool FilePanel::doRefresh(QObject *obj, QKeyEvent *keyEvent) {
 
     // Reload directory
     loadDirectory();
-
-    // Try to select by name first
-    if (!currentName.isEmpty()) {
-        QModelIndex start = model->index(0, COLUMN_NAME);
-        QModelIndexList matches = model->match(
-            start,
-            Qt::UserRole,
-            currentName,
-            1,
-            Qt::MatchExactly
-        );
-        if (!matches.isEmpty()) {
-            QModelIndex newIdx = matches.first();
-            setCurrentIndex(newIdx);
-            scrollTo(newIdx);
-            return true;
-        }
-    }
-
-    // Name not found - fall back to same row index
-    int maxRow = model->rowCount() - 1;
-    if (maxRow >= 0) {
-        int targetRow = qMin(currentRow, maxRow);
-        QModelIndex newIdx = model->index(targetRow, COLUMN_NAME);
-        setCurrentIndex(newIdx);
-        scrollTo(newIdx);
-    }
+    selectEntryByRelPath(currentName);
 
     return true;
 }
