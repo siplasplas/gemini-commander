@@ -131,32 +131,17 @@ void UDisksDeviceManager::enumerateDevices()
         deviceNames.append(match.captured(1));
     }
 
-    qDebug() << "UDisks: Found" << deviceNames.size() << "block devices";
-
     // Now query each device
     for (const QString &deviceName : deviceNames) {
         QString objectPath = "/org/freedesktop/UDisks2/block_devices/" + deviceName;
 
         BlockDeviceInfo info = buildDeviceInfo(objectPath);
 
-        qDebug() << "UDisks: Device" << info.device
-                 << "label:" << info.label
-                 << "uuid:" << info.uuid
-                 << "fsType:" << info.fsType
-                 << "size:" << info.size
-                 << "mounted:" << info.isMounted
-                 << "mountPoint:" << info.mountPoint;
-
         if (shouldShowDevice(info)) {
             m_devices.insert(objectPath, info);
             connectToDeviceSignals(objectPath);
-            qDebug() << "UDisks: -> ADDED to list";
-        } else {
-            qDebug() << "UDisks: -> FILTERED OUT";
         }
     }
-
-    qDebug() << "UDisks: Total devices in list:" << m_devices.size();
 }
 
 void UDisksDeviceManager::refresh()
@@ -332,18 +317,14 @@ QMap<QString, BlockDeviceInfo> UDisksDeviceManager::getDevices(bool includeSyste
             info.mountPoint.startsWith("/var") ||
             info.mountPoint.startsWith("/usr") ||
             info.mountPoint.startsWith("/snap")) {
-            qDebug() << "UDisks: getDevices() filtering out system:" << info.device << info.mountPoint;
             continue;
         }
 
         // Keep devices mounted in /media or /run/media (user mounts)
         // Keep unmounted devices (they're likely external)
         // Keep removable devices
-        qDebug() << "UDisks: getDevices() including:" << info.device << info.mountPoint;
         filtered.insert(it.key(), info);
     }
-
-    qDebug() << "UDisks: getDevices() returning" << filtered.size() << "devices";
     return filtered;
 }
 

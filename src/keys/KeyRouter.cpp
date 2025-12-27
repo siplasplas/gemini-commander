@@ -58,10 +58,6 @@ bool KeyRouter::handelWithHandler(QObject *obj, QKeyEvent *keyEvent, Qt::Keyboar
             continue;
         }
 
-        qDebug() << "[KeyRouter]"
-                 << "event_obj =" << ObjectRegistry::name(obj)
-                 << "key =" << keyEvent->key() << "mods =" << mods << "handler =" << handlerName
-                 << "result =" << r.result;
         // Handler was called - consume the event
         return true;
     }
@@ -88,10 +84,6 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
         }
     }
 
-    qDebug() << "-------------------";
-    qDebug()<<obj;
-    qDebug()<<"name obj = " << ObjectRegistry::name(obj);
-    qDebug() << "key =" << keyEvent->key();
     Qt::KeyboardModifiers mods = keyEvent->modifiers();
     QString handlerName;
     QString widgetName;
@@ -102,10 +94,8 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
         auto parentObj = obj->parent();
         while (parentObj) {
             widgetParent = ObjectRegistry::name(parentObj);
-            qDebug() << "  walk:" << parentObj << "name=" << widgetParent;
             if (!widgetParent.isEmpty()) {
                 handlerName = keyMap_->handlerFor(keyEvent->key(), mods, widgetParent);
-                qDebug() << "    handlerFor(" << keyEvent->key() << "," << mods << "," << widgetParent << ") =" << handlerName;
                 if (!handlerName.isEmpty())
                     break;
             }
@@ -127,7 +117,6 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
 
     // "default" = allow Qt default behavior
     if (handlerName == QStringLiteral("default")) {
-        qDebug() << "return default";
         return owner_->eventFilter(obj, event);
     }
     return handelWithHandler(obj, keyEvent, mods, handlerName);
