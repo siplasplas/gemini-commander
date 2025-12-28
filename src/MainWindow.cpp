@@ -110,7 +110,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     this->setStyleSheet(
         "QMainWindow {"
-        "  background-color: #f4f4f4;"
         "  padding: 0px 0px;"
         "}"
     );
@@ -275,7 +274,6 @@ void MainWindow::setupUi() {
     currentPathLabel = new QLabel(centralWidget);
     currentPathLabel->setStyleSheet(
         "QLabel {"
-        "  background-color: #f4f4f4;"
         "  padding: 0px 4px;"
         "}"
     );

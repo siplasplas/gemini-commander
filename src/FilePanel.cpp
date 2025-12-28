@@ -1381,18 +1381,14 @@ void FilePanel::restoreSelectionFromMemory() {
 }
 
 void FilePanel::styleActive() {
-    setStyleSheet("QTableView::item {"
-                  "    background-color: white;"
-                  "}"
+    setStyleSheet(
                   "QTableView::item:selected {"
                   "    background-color: #3584E4;"
                   "}");
 }
 
 void FilePanel::styleInactive() {
-    setStyleSheet("QTableView::item {"
-                  "    background-color: white;"
-                  "}"
+    setStyleSheet(
                   "QTableView::item:selected {"
                   "    background-color: #a0a0a0;"
                   "}");
