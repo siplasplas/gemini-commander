@@ -66,7 +66,8 @@ std::string makeTempPartPath(const std::string& path, bool pathIsDir)
     fs::path dir = pathIsDir ? abs : abs.parent_path();
     fs::path hashedPath = abs;
 
-    std::string utf8 = hashedPath.u8string();
+    auto u8str = hashedPath.u8string();
+    std::string utf8(u8str.begin(), u8str.end());
     auto crc = Botan::HashFunction::create("CRC32");
     crc->update(reinterpret_cast<const uint8_t*>(utf8.data()), utf8.size());
     auto digest = crc->final();
