@@ -1919,6 +1919,7 @@ void MainWindow::refreshProcMountsToolbar()
 
         QAction* act = new QAction(label, m_procMountsToolBar);
         act->setToolTip(tooltip);
+        act->setData(mi.mountPoint);  // Store mount point for context menu
 
         connect(act, &QAction::triggered, this, [this, mi]() {
             FilePanel* panel = currentFilePanel();
@@ -1930,6 +1931,40 @@ void MainWindow::refreshProcMountsToolbar()
 
         m_procMountsToolBar->addAction(act);
     }
+
+    // Enable context menu on toolbar
+    m_procMountsToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
+    disconnect(m_procMountsToolBar, &QToolBar::customContextMenuRequested, nullptr, nullptr);
+    connect(m_procMountsToolBar, &QToolBar::customContextMenuRequested,
+            this, [this](const QPoint& pos) {
+        QAction* act = m_procMountsToolBar->actionAt(pos);
+        if (!act)
+            return;
+
+        QString mountPoint = act->data().toString();
+        if (mountPoint.isEmpty())
+            return;
+
+        QMenu menu;
+        QAction* umountAction = menu.addAction(tr("umount"));
+
+        if (menu.exec(m_procMountsToolBar->mapToGlobal(pos)) == umountAction) {
+            QProcess proc;
+            proc.start("umount", QStringList() << mountPoint);
+            proc.waitForFinished(5000);
+
+            if (proc.exitCode() != 0) {
+                QString error = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+                if (error.contains("target is busy") || error.contains("device is busy")) {
+                    QMessageBox::warning(this, tr("umount"),
+                        tr("Cannot unmount: device is busy.\nClose all files and try again."));
+                } else {
+                    QMessageBox::warning(this, tr("umount"),
+                        tr("Failed to unmount %1:\n%2").arg(mountPoint).arg(error));
+                }
+            }
+        }
+    });
 }
 
 void MainWindow::applyStartupPaths(const QStringList& paths)
