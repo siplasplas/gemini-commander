@@ -144,6 +144,8 @@ add_executable(${PROJECT_NAME}
         src/quitls.h
         src/udisks/UDisksDeviceManager.cpp
         src/udisks/UDisksDeviceManager.h
+        src/mounts/ProcMountsManager.cpp
+        src/mounts/ProcMountsManager.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}

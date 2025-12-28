@@ -61,11 +61,13 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_udisksManager, &UDisksDeviceManager::deviceAdded,
             this, [this](const BlockDeviceInfo &) {
                 refreshMountsToolbar();
+                refreshProcMountsToolbar();
             });
 
     connect(m_udisksManager, &UDisksDeviceManager::deviceRemoved,
             this, [this](const QString &, const QString &) {
                 refreshMountsToolbar();
+                refreshProcMountsToolbar();
             });
 
     connect(m_udisksManager, &UDisksDeviceManager::deviceMounted,
@@ -81,6 +83,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     if (!m_udisksManager->start()) {
         qWarning() << "Failed to start UDisks device manager - mounts toolbar will be empty";
+    }
+
+    // Initialize ProcMountsManager for /proc/mounts monitoring
+    m_procMountsManager = new ProcMountsManager(this);
+
+    connect(m_procMountsManager, &ProcMountsManager::mountsChanged,
+            this, &MainWindow::refreshProcMountsToolbar);
+
+    if (!m_procMountsManager->start()) {
+        qWarning() << "Failed to start ProcMountsManager";
     }
 
     setupUi();
@@ -433,14 +445,17 @@ void MainWindow::setupUi() {
 
     addToolBarBreak(Qt::TopToolBarArea);
     createMountsToolbar();
+    createProcMountsToolbar();
     QSize icon16(16,16);
     m_mainToolBar->setIconSize(icon16);
     m_mountsToolBar->setIconSize(icon16);
+    m_procMountsToolBar->setIconSize(icon16);
 
     QFontMetrics fm(m_mainToolBar->font());
     int h = fm.height() + 8;
     m_mainToolBar->setFixedHeight(h);
     m_mountsToolBar->setFixedHeight(h);
+    m_procMountsToolBar->setFixedHeight(h);
 
     QString tbStyle =
         "QToolBar QToolButton { "
@@ -1851,6 +1866,7 @@ void MainWindow::onDeviceMounted(const QString &objectPath, const QString &mount
     Q_UNUSED(objectPath)
     qDebug() << "Device mounted at:" << mountPoint;
     refreshMountsToolbar();
+    refreshProcMountsToolbar();
 }
 
 void MainWindow::onDeviceUnmounted(const QString &objectPath)
@@ -1858,6 +1874,62 @@ void MainWindow::onDeviceUnmounted(const QString &objectPath)
     Q_UNUSED(objectPath)
     qDebug() << "Device unmounted";
     refreshMountsToolbar();
+    refreshProcMountsToolbar();
+}
+
+void MainWindow::createProcMountsToolbar()
+{
+    m_procMountsToolBar = addToolBar(tr("Other Mounts"));
+    m_procMountsToolBar->setMovable(true);
+
+    refreshProcMountsToolbar();
+}
+
+void MainWindow::refreshProcMountsToolbar()
+{
+    if (!m_procMountsToolBar || !m_procMountsManager)
+        return;
+
+    m_procMountsToolBar->clear();
+
+    // Get mount points from UDisks to exclude them
+    QSet<QString> udisksMountPoints;
+    if (m_udisksManager) {
+        auto devices = m_udisksManager->getDevices(true);
+        for (const BlockDeviceInfo& dev : devices) {
+            if (!dev.mountPoint.isEmpty())
+                udisksMountPoints.insert(dev.mountPoint);
+        }
+    }
+    m_procMountsManager->setUDisksMountPoints(udisksMountPoints);
+    m_procMountsManager->refresh();
+
+    auto mounts = m_procMountsManager->getMounts();
+
+    for (const MountInfo& mi : mounts) {
+        // Skip if already visible in UDisks toolbar
+        if (udisksMountPoints.contains(mi.mountPoint))
+            continue;
+
+        QString label = mi.displayLabel();
+
+        QString tooltip = QString("%1 (%2)")
+            .arg(mi.mountPoint)
+            .arg(mi.fsType);
+
+        QAction* act = new QAction(label, m_procMountsToolBar);
+        act->setToolTip(tooltip);
+
+        connect(act, &QAction::triggered, this, [this, mi]() {
+            FilePanel* panel = currentFilePanel();
+            if (panel) {
+                panel->currentPath = mi.mountPoint;
+                panel->loadDirectory();
+            }
+        });
+
+        m_procMountsToolBar->addAction(act);
+    }
 }
 
 void MainWindow::applyStartupPaths(const QStringList& paths)

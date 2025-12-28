@@ -13,6 +13,7 @@
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
 #include "udisks/UDisksDeviceManager.h"
+#include "mounts/ProcMountsManager.h"
 
 class FunctionBar;
 class ViewerFrame;
@@ -65,7 +66,8 @@ private:
     FilePanel* filePanelForSide(Side side) const;
 
     QToolBar* m_mainToolBar = nullptr;
-    QToolBar* m_mountsToolBar = nullptr;;
+    QToolBar* m_mountsToolBar = nullptr;
+    QToolBar* m_procMountsToolBar = nullptr;
     QAction* m_openTerminalAction = nullptr;
     QAction* m_searchAction = nullptr;
     QAction* m_externalToolAction = nullptr;
@@ -106,6 +108,11 @@ private:
     void refreshMountsToolbar();
     void onDeviceMounted(const QString &objectPath, const QString &mountPoint);
     void onDeviceUnmounted(const QString &objectPath);
+
+    // Mounts monitoring via /proc/mounts
+    ProcMountsManager* m_procMountsManager = nullptr;
+    void createProcMountsToolbar();
+    void refreshProcMountsToolbar();
 
     // Function bar
     FunctionBar* m_functionBar = nullptr;
