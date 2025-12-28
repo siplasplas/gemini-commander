@@ -1381,17 +1381,27 @@ void FilePanel::restoreSelectionFromMemory() {
 }
 
 void FilePanel::styleActive() {
-    setStyleSheet(
-                  "QTableView::item:selected {"
-                  "    background-color: #3584E4;"
-                  "}");
+    QString bgColor = isDarkTheme() ? "" : "background-color: white;";
+
+    setStyleSheet(QString(
+        "QTableView::item {"
+        "    %1"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: #3584E4;"
+        "}").arg(bgColor));
 }
 
 void FilePanel::styleInactive() {
-    setStyleSheet(
-                  "QTableView::item:selected {"
-                  "    background-color: #a0a0a0;"
-                  "}");
+    QString bgColor = isDarkTheme() ? "" : "background-color: white;";
+
+    setStyleSheet(QString(
+        "QTableView::item {"
+        "    %1"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: #a0a0a0;"
+        "}").arg(bgColor));
 }
 
 void FilePanel::collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *cancelFlag) {

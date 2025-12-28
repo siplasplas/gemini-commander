@@ -5,6 +5,7 @@
 class QString;
 class QFileInfo;
 
+bool isDarkTheme();
 
 QString qEscapePathForShell(const QString& path);
 

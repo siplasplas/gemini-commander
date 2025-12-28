@@ -3,10 +3,16 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QString>
+#include <QApplication>
+#include <QPalette>
 
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+bool isDarkTheme() {
+    return qApp->palette().color(QPalette::Window).lightness() < 128;
+}
 
 QString qEscapePathForShell(const QString& path) {
     return QString::fromStdString(utils::escapePathForShell(path.toStdString()));
