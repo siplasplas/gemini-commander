@@ -13,7 +13,9 @@
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
 #include "udisks/UDisksDeviceManager.h"
+#ifndef _WIN32
 #include "mounts/ProcMountsManager.h"
+#endif
 
 class FunctionBar;
 class ViewerFrame;
@@ -109,8 +111,10 @@ private:
     void onDeviceMounted(const QString &objectPath, const QString &mountPoint);
     void onDeviceUnmounted(const QString &objectPath);
 
-    // Mounts monitoring via /proc/mounts
+    // Mounts monitoring via /proc/mounts (Linux only)
+#ifndef _WIN32
     ProcMountsManager* m_procMountsManager = nullptr;
+#endif
     void createProcMountsToolbar();
     void refreshProcMountsToolbar();
 

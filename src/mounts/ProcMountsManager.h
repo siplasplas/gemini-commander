@@ -1,6 +1,8 @@
 #ifndef PROCMOUNTSMANAGER_H
 #define PROCMOUNTSMANAGER_H
 
+#ifndef _WIN32
+
 #include <QObject>
 #include <QList>
 #include <QFileSystemWatcher>
@@ -52,5 +54,7 @@ private:
     QSet<QString> m_udisksMountPoints;
     bool m_running = false;
 };
+
+#endif // _WIN32
 
 #endif // PROCMOUNTSMANAGER_H

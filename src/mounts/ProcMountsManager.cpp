@@ -1,5 +1,7 @@
 #include "ProcMountsManager.h"
 
+#ifndef _WIN32
+
 #include <QFile>
 #include <QDir>
 #include <QDebug>
@@ -285,3 +287,5 @@ QString ProcMountsManager::getGvfsPath() const
     QString uid = QString::number(getuid());
     return QString("/run/user/%1/gvfs").arg(uid);
 }
+
+#endif // _WIN32

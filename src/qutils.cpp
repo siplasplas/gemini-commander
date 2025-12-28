@@ -6,9 +6,13 @@
 #include <QApplication>
 #include <QPalette>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#endif
 
 bool isDarkTheme() {
     return qApp->palette().color(QPalette::Window).lightness() < 128;
@@ -116,6 +120,56 @@ ExecutableType getExecutableType(const QString& filePath) {
 
 void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
 {
+#ifdef _WIN32
+    // Windows implementation
+    HANDLE hSrc = CreateFileW(
+        reinterpret_cast<LPCWSTR>(srcPath.utf16()),
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
+    );
+
+    if (hSrc != INVALID_HANDLE_VALUE) {
+        FILETIME ftCreate, ftAccess, ftWrite;
+        if (GetFileTime(hSrc, &ftCreate, &ftAccess, &ftWrite)) {
+            HANDLE hDst = CreateFileW(
+                reinterpret_cast<LPCWSTR>(dstPath.utf16()),
+                FILE_WRITE_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                nullptr,
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                nullptr
+            );
+
+            if (hDst != INVALID_HANDLE_VALUE) {
+                SetFileTime(hDst, &ftCreate, &ftAccess, &ftWrite);
+                CloseHandle(hDst);
+            }
+        }
+        CloseHandle(hSrc);
+    }
+
+    // Sync file to disk (important for USB drives to prevent data loss)
+    HANDLE hFlush = CreateFileW(
+        reinterpret_cast<LPCWSTR>(dstPath.utf16()),
+        GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
+    );
+
+    if (hFlush != INVALID_HANDLE_VALUE) {
+        FlushFileBuffers(hFlush);
+        CloseHandle(hFlush);
+    }
+#else
+    // Linux/Unix implementation
     struct stat srcStat;
     if (stat(srcPath.toLocal8Bit().constData(), &srcStat) == 0) {
         struct timespec times[2];
@@ -130,4 +184,5 @@ void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
         fsync(fd);
         close(fd);
     }
+#endif
 }

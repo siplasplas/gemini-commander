@@ -85,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent)
         qWarning() << "Failed to start UDisks device manager - mounts toolbar will be empty";
     }
 
+#ifndef _WIN32
     // Initialize ProcMountsManager for /proc/mounts monitoring
     m_procMountsManager = new ProcMountsManager(this);
 
@@ -94,6 +95,7 @@ MainWindow::MainWindow(QWidget *parent)
     if (!m_procMountsManager->start()) {
         qWarning() << "Failed to start ProcMountsManager";
     }
+#endif
 
     setupUi();
 
@@ -1887,6 +1889,7 @@ void MainWindow::onDeviceUnmounted(const QString &objectPath)
     refreshProcMountsToolbar();
 }
 
+#ifndef _WIN32
 void MainWindow::createProcMountsToolbar()
 {
     m_procMountsToolBar = addToolBar(tr("Other Mounts"));
@@ -1976,6 +1979,17 @@ void MainWindow::refreshProcMountsToolbar()
         }
     });
 }
+#else
+void MainWindow::createProcMountsToolbar()
+{
+    m_procMountsToolBar = addToolBar(tr("Other Mounts"));
+    m_procMountsToolBar->setMovable(true);
+}
+
+void MainWindow::refreshProcMountsToolbar()
+{
+}
+#endif
 
 void MainWindow::applyStartupPaths(const QStringList& paths)
 {
