@@ -2,10 +2,10 @@
 
 #include <QFile>
 #include <QDir>
-#include <QTextStream>
 #include <QDebug>
-#include <QRegularExpression>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <linux/netlink.h>
 
 namespace {
     const QSet<QString> excludedFsTypes = {
@@ -45,18 +45,51 @@ ProcMountsManager::ProcMountsManager(QObject *parent)
 {
 }
 
+ProcMountsManager::~ProcMountsManager()
+{
+    stop();
+}
+
+bool ProcMountsManager::setupNetlinkSocket()
+{
+    // Create netlink socket for kernel events
+    m_netlinkFd = socket(AF_NETLINK, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
+                         NETLINK_KOBJECT_UEVENT);
+    if (m_netlinkFd < 0) {
+        qWarning() << "Failed to create netlink socket:" << strerror(errno);
+        return false;
+    }
+
+    struct sockaddr_nl addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.nl_family = AF_NETLINK;
+    addr.nl_pid = getpid();
+    addr.nl_groups = 1; // Kernel events multicast group
+
+    if (bind(m_netlinkFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        qWarning() << "Failed to bind netlink socket:" << strerror(errno);
+        close(m_netlinkFd);
+        m_netlinkFd = -1;
+        return false;
+    }
+
+    // Create QSocketNotifier to integrate with Qt event loop
+    m_netlinkNotifier = new QSocketNotifier(m_netlinkFd, QSocketNotifier::Read, this);
+    connect(m_netlinkNotifier, &QSocketNotifier::activated,
+            this, &ProcMountsManager::onNetlinkEvent);
+
+    return true;
+}
+
 bool ProcMountsManager::start()
 {
     if (m_running)
         return true;
 
-    // Watch /proc/mounts for changes
-    m_procMountsWatcher = new QFileSystemWatcher(this);
-    if (!m_procMountsWatcher->addPath("/proc/mounts")) {
-        qWarning() << "Failed to watch /proc/mounts";
+    // Setup netlink socket for mount events
+    if (!setupNetlinkSocket()) {
+        qWarning() << "Netlink socket setup failed, mount changes won't be detected automatically";
     }
-    connect(m_procMountsWatcher, &QFileSystemWatcher::fileChanged,
-            this, &ProcMountsManager::onProcMountsChanged);
 
     // Watch GVFS directory for changes
     QString gvfsPath = getGvfsPath();
@@ -80,8 +113,15 @@ void ProcMountsManager::stop()
     if (!m_running)
         return;
 
-    delete m_procMountsWatcher;
-    m_procMountsWatcher = nullptr;
+    if (m_netlinkNotifier) {
+        delete m_netlinkNotifier;
+        m_netlinkNotifier = nullptr;
+    }
+
+    if (m_netlinkFd >= 0) {
+        close(m_netlinkFd);
+        m_netlinkFd = -1;
+    }
 
     delete m_gvfsWatcher;
     m_gvfsWatcher = nullptr;
@@ -105,17 +145,22 @@ void ProcMountsManager::refresh()
     parseProcMounts();
 }
 
-void ProcMountsManager::onProcMountsChanged(const QString& path)
+void ProcMountsManager::onNetlinkEvent()
 {
-    Q_UNUSED(path)
-
-    // Re-add path to watcher (QFileSystemWatcher may remove it after change)
-    if (m_procMountsWatcher && !m_procMountsWatcher->files().contains("/proc/mounts")) {
-        m_procMountsWatcher->addPath("/proc/mounts");
+    // Read and discard the netlink message
+    char buffer[4096];
+    while (recv(m_netlinkFd, buffer, sizeof(buffer), MSG_DONTWAIT) > 0) {
+        // Check if this is a block device event (mount/unmount related)
+        // Events contain strings like "ACTION=add", "SUBSYSTEM=block", etc.
+        QString event = QString::fromUtf8(buffer);
+        if (event.contains("SUBSYSTEM=block") ||
+            event.contains("mount") ||
+            event.contains("loop")) {
+            // Mount-related event detected
+            emit mountsChanged();
+            return;
+        }
     }
-
-    parseProcMounts();
-    emit mountsChanged();
 }
 
 void ProcMountsManager::onGvfsDirectoryChanged(const QString& path)

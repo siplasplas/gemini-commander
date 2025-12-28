@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QList>
 #include <QFileSystemWatcher>
+#include <QSocketNotifier>
 #include <QSet>
 
 struct MountInfo {
@@ -20,6 +21,7 @@ class ProcMountsManager : public QObject
     Q_OBJECT
 public:
     explicit ProcMountsManager(QObject *parent = nullptr);
+    ~ProcMountsManager();
 
     bool start();
     void stop();
@@ -33,16 +35,18 @@ signals:
     void mountsChanged();
 
 private slots:
-    void onProcMountsChanged(const QString& path);
+    void onNetlinkEvent();
     void onGvfsDirectoryChanged(const QString& path);
 
 private:
+    bool setupNetlinkSocket();
     void parseProcMounts();
     bool shouldShowMount(const QString& device, const QString& mountPoint, const QString& fsType) const;
     QString extractLabel(const QString& mountPoint) const;
     QString getGvfsPath() const;
 
-    QFileSystemWatcher* m_procMountsWatcher = nullptr;
+    int m_netlinkFd = -1;
+    QSocketNotifier* m_netlinkNotifier = nullptr;
     QFileSystemWatcher* m_gvfsWatcher = nullptr;
     QList<MountInfo> m_mounts;
     QSet<QString> m_udisksMountPoints;
