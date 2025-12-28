@@ -732,8 +732,8 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     f.setPointSize(9);
 #else
     QFont f("Ubuntu", 11);
-    f.setStyleHint(QFont::SansSerif); // fallback if font unavailable
 #endif
+    f.setStyleHint(QFont::SansSerif); // fallback if font unavailable
     setFont(f);
 
     QFontMetrics fm(font());
