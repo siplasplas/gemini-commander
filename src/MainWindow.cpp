@@ -44,7 +44,9 @@
 #include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"
 #include "quitls.h"
+#ifndef _WIN32
 #include "udisks/UDisksDeviceManager.h"
+#endif
 #include <kcoreaddons_version.h>
 #include "git_version.h"
 
@@ -55,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
     Config::instance().load(cfg);
     Config::instance().setConfigPath(cfg);
 
+#ifndef _WIN32
     // Initialize UDisks2 BEFORE setupUi() so mounts toolbar can be populated
     m_udisksManager = new UDisksDeviceManager(this);
 
@@ -84,8 +87,6 @@ MainWindow::MainWindow(QWidget *parent)
     if (!m_udisksManager->start()) {
         qWarning() << "Failed to start UDisks device manager - mounts toolbar will be empty";
     }
-
-#ifndef _WIN32
     // Initialize ProcMountsManager for /proc/mounts monitoring
     m_procMountsManager = new ProcMountsManager(this);
 
@@ -1811,6 +1812,59 @@ void MainWindow::onRightFileChanged(const QString& path)
     }
 }
 
+#ifdef _WIN32
+// Windows implementation - use QStorageInfo to list drives
+void MainWindow::refreshMountsToolbar()
+{
+    if (!m_mountsToolBar)
+        return;
+
+    m_mountsToolBar->clear();
+
+    // Get all mounted volumes (drives) on Windows
+    const QList<QStorageInfo> volumes = QStorageInfo::mountedVolumes();
+
+    for (const QStorageInfo& vol : volumes) {
+        if (!vol.isValid() || !vol.isReady())
+            continue;
+
+        QString rootPath = vol.rootPath();  // e.g., "C:/"
+        QString label = vol.name();         // Volume label
+        QString displayLabel;
+
+        // Format: "C:" or "C: Label" if label exists
+        if (rootPath.endsWith('/') || rootPath.endsWith('\\'))
+            rootPath.chop(1);  // Remove trailing slash -> "C:"
+
+        if (label.isEmpty()) {
+            displayLabel = rootPath;
+        } else {
+            displayLabel = QString("%1 %2").arg(rootPath, label);
+        }
+
+        QString tooltip = QString("%1\n%2\nFree: %3 / %4")
+            .arg(vol.rootPath())
+            .arg(QString::fromUtf8(vol.fileSystemType()))
+            .arg(QLocale().formattedDataSize(vol.bytesFree()))
+            .arg(QLocale().formattedDataSize(vol.bytesTotal()));
+
+        QAction* act = new QAction(displayLabel, m_mountsToolBar);
+        act->setToolTip(tooltip);
+        act->setData(vol.rootPath());
+
+        connect(act, &QAction::triggered, this, [this, vol]() {
+            FilePanel* panel = currentFilePanel();
+            if (panel) {
+                panel->currentPath = vol.rootPath();
+                panel->loadDirectory();
+            }
+        });
+
+        m_mountsToolBar->addAction(act);
+    }
+}
+#else
+// Linux implementation - use UDisks2
 void MainWindow::refreshMountsToolbar()
 {
     if (!m_mountsToolBar || !m_udisksManager)
@@ -1888,6 +1942,7 @@ void MainWindow::onDeviceUnmounted(const QString &objectPath)
     refreshMountsToolbar();
     refreshProcMountsToolbar();
 }
+#endif
 
 #ifndef _WIN32
 void MainWindow::createProcMountsToolbar()

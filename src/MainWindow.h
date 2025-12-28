@@ -12,8 +12,8 @@
 
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
-#include "udisks/UDisksDeviceManager.h"
 #ifndef _WIN32
+#include "udisks/UDisksDeviceManager.h"
 #include "mounts/ProcMountsManager.h"
 #endif
 
@@ -105,14 +105,15 @@ private:
     void updateFileWatcher(Side side, const QStringList& paths);
     void ensureFileWatcherActive(QFileSystemWatcher* watcher);
 
-    // Mounts monitoring via UDisks2
-    UDisksDeviceManager* m_udisksManager = nullptr;
     void refreshMountsToolbar();
+
+#ifndef _WIN32
+    // Mounts monitoring via UDisks2 (Linux only)
+    UDisksDeviceManager* m_udisksManager = nullptr;
     void onDeviceMounted(const QString &objectPath, const QString &mountPoint);
     void onDeviceUnmounted(const QString &objectPath);
 
     // Mounts monitoring via /proc/mounts (Linux only)
-#ifndef _WIN32
     ProcMountsManager* m_procMountsManager = nullptr;
 #endif
     void createProcMountsToolbar();
