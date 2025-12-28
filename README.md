@@ -1,7 +1,9 @@
 
 # gemini-commander
 Twin-panel file manager written in C++ with the Qt library.
-
+```shell
+git clone --recursive https://github.com/siplasplas/gemini-commander
+```
 ## Features
 
 - **Hidden file search** — Incremental search handles dot-prefixed files naturally (e.g., typing "git" finds ".gitignore")
@@ -40,85 +42,73 @@ Key licensing assumptions regarding the use of Qt in this project:
 **In summary:** Your contributions to this project are licensed under Apache 2.0. However, because the project uses Qt libraries under the LGPLv3, the work as a whole (especially in binary form) is also subject to the terms of the LGPLv3 concerning the Qt parts. Users have rights and obligations stemming from both licenses, applicable to the respective components of the project.
 
 ## Prerequisites
-On Ubuntu/Debian-based systems (e.g., Ubuntu, Linux Mint, Pop!_OS):
+On Ubuntu 24.04 LTS/Mint/Debian/Pop!_OS 24.04 LTS with old KDE Frameworks
 ```
 sudo apt update
-sudo apt install extra-cmake-modules
+sudo apt install git cmake extra-cmake-modules pkg-config libkf5texteditor-dev libbotan-2-dev \
+    libicu-dev nlohmann-json3-dev libgtest-dev librsvg2-bin  
 ```
+
+On new Ubuntu 25.04/25.10 with new KDE Frameworks
+```
+sudo apt update
+sudo apt install git cmake extra-cmake-modules pkg-config libkf6texteditor-dev libbotan-2-dev \
+    libicu-dev nlohmann-json3-dev libgtest-dev librsvg2-bin  
+```
+
 
 On Fedora/RHEL-based systems:
 ```
-sudo dnf install extra-cmake-modules
+sudo dnf install extra-cmake-modules pkgconf-pkg-config kf6-ktexteditor-devel botan2-devel \
+    libicu-devel json-devel gtest-devel librsvg2 librsvg2-tools
 ```
 
 On Arch-based systems (e.g., Arch Linux, Manjaro):
 ```
-sudo pacman -Syu extra-cmake-modules
+sudo pacman -Syu cmake extra-cmake-modules pkgconf ktexteditor botan \
+    icu nlohmann-json gtest librsvg 
 ```
 
 On openSUSE:
 ```
-sudo zypper install extra-cmake-modules
-```
-
-On macOS (using Homebrew):
-```
-brew install extra-cmake-modules
+sudo zypper install cmake extra-cmake-modules pkgconf-pkg-config kf6-ktexteditor-devel libbotan-devel \
+    libicu-devel nlohmann_json-devel gtest rsvg-convert
 ```
 
 On Windows (using MSYS2 or Chocolatey; note that KDE development on Windows may require additional setup):
+(note: on Windows not works yet)
 ```
 pacman -S mingw-w64-x86_64-extra-cmake-modules  # For MSYS2
 ```
 
 
-## Unicode search with ICU
-
-This project uses ICU (International Components for Unicode) to provide:
-
-- full Unicode case folding (case-insensitive comparisons),
-- diacritic-insensitive matching (accent stripping),
-- better cross-language behavior than simple ASCII-only normalization.
-
-### Installing ICU on Debian/Ubuntu
-
-Use the system packages:
-
-    sudo apt-get update
-    sudo apt-get install libicu-dev
-
-This installs ICU headers and libraries (uc, i18n, etc.).
-
-### CMake integration
-
-In your `CMakeLists.txt`, add:
-
-    find_package(ICU REQUIRED COMPONENTS uc i18n)
-
-    target_link_libraries(your_target
-        PRIVATE
-            ICU::uc
-            ICU::i18n
-    )
-
-Make sure `your_target` is replaced with the actual target name of your application (e.g. `filemanager`, `gui`, etc.).
-
-After that, ICU headers like `<unicode/unistr.h>` and `<unicode/translit.h>` will be available to your C++ code, and the linker will pick up the corresponding libraries automatically.
-
-
 ## Building
 
-To build the project, you need CMake, Ninja or Make, a C++ compiler supporting C++20, 
+To build the project, you need CMake, Ninja or Make, a C++ compiler supporting C++20,
 and Qt6 development libraries installed.
 
+On Ubuntu 24.04 LTS/Mint/Debian/Pop!_OS 24.04 LTS with old KDE Frameworks
 ```bash
-# Navigate to your project root (gemini-commander/)
-cd path/to/gemini-commander 
-
+git clone --recursive https://github.com/siplasplas/gemini-commander
+cd gemini-commander 
+mkdir build && cd build
+cmake .. -DUSE_QT5=1
+make -j$(nproc)
+```
+On systems with new KDE Frameworks
+```bash
+git clone --recursive https://github.com/siplasplas/gemini-commander
+cd gemini-commander 
 mkdir build && cd build
 cmake ..
-make
+make -j$(nproc)
+```
 
-# Run the executable (from within the builddir)
-./gemini_commander 
-# On Windows, it might be: .\gemini_commander.exe
+## Run the executable (from within the builddir)
+```
+./gemini_commander
+``` 
+## Installation
+```shell
+sudo make install
+```
