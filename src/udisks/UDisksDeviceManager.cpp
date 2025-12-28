@@ -283,6 +283,16 @@ bool UDisksDeviceManager::shouldShowDevice(const BlockDeviceInfo &info) const
         return false;
     }
 
+    // Skip swap partitions
+    if (info.fsType == "swap") {
+        return false;
+    }
+
+    // Skip ZFS system pools (bpool, rpool)
+    if (info.label == "bpool" || info.label == "rpool") {
+        return false;
+    }
+
     return true;
 }
 
