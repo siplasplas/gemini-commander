@@ -59,7 +59,7 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     m_searchEdit->hide();
 
     m_statusLabel = new QLabel(this);
-    m_statusLabel->setStyleSheet("QLabel { background-color: #f4f4f4; padding: 2px 6px; }");
+    m_statusLabel->setStyleSheet("QLabel { padding: 2px 6px; }");
     m_statusLabel->setText(QString());
 
     layout->addLayout(pathLayout);
