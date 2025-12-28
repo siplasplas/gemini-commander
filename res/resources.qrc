@@ -1,5 +1,7 @@
 <RCC>
     <qresource>
+        <file>icons/frame-yellow.svg</file>
+        <file>icons/frame-green.svg</file>
         <file>icons/folder.png</file>
         <file>icons/folder-empty.png</file>
         <file>icons/folder_yellow.svg</file>

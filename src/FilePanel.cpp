@@ -728,16 +728,18 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     verticalHeader()->hide();
 
 #ifdef _WIN32
+    setIconSize(QSize(16, 16));
     QFont f = QApplication::font();
     f.setPointSize(9);
 #else
+    setIconSize(QSize(19, 19));
     QFont f("Ubuntu", 11);
 #endif
     f.setStyleHint(QFont::SansSerif); // fallback if font unavailable
     setFont(f);
 
     QFontMetrics fm(font());
-    int rowHeight = fm.ascent() + fm.descent() + 1;
+    int rowHeight = iconSize().height()+2;// fm.ascent() + fm.descent() + 1;
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setMinimumSectionSize(rowHeight);
     verticalHeader()->setDefaultSectionSize(rowHeight);
@@ -760,12 +762,6 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     setColumnWidth(COLUMN_EXT, 80);
     setColumnWidth(COLUMN_SIZE, 100);
     setColumnWidth(COLUMN_DATE, 125);
-
-#ifdef _WIN32
-    setIconSize(QSize(16, 16));
-#else
-    setIconSize(QSize(19, 19));
-#endif
 
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);
@@ -975,10 +971,10 @@ QIcon FilePanel::getIconForEntry(const QFileInfo &info, EntryContentState conten
     // --- folders ---
     if (contentState != EntryContentState::NotDirectory) {
         if (contentState == EntryContentState::DirEmpty) {
-            static QIcon emptyIcon(":/icons/folder-empty.png");
+            static QIcon emptyIcon(":/icons/frame-green.svg");
             return emptyIcon;
         }
-        static QIcon folderIcon(":/icons/folder.png");
+        static QIcon folderIcon(":/icons/frame-yellow.svg");
         return folderIcon;
     }
 
