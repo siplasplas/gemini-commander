@@ -727,13 +727,19 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     setShowGrid(false);
     verticalHeader()->hide();
 
+#ifdef _WIN32
+    QFont f = QApplication::font();
+    f.setPointSize(9);
+#else
     QFont f("Ubuntu", 11);
-    f.setStyleHint(QFont::SansSerif); // fallback if Ubuntu unavailable
+    f.setStyleHint(QFont::SansSerif); // fallback if font unavailable
+#endif
     setFont(f);
 
     QFontMetrics fm(font());
-    int rowHeight = fm.height();
+    int rowHeight = fm.ascent() + fm.descent() + 1;
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    verticalHeader()->setMinimumSectionSize(rowHeight);
     verticalHeader()->setDefaultSectionSize(rowHeight);
 
     // Note: Sorting is handled manually in loadDirectory, so disable view sorting
@@ -755,7 +761,11 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     setColumnWidth(COLUMN_SIZE, 100);
     setColumnWidth(COLUMN_DATE, 125);
 
+#ifdef _WIN32
+    setIconSize(QSize(16, 16));
+#else
     setIconSize(QSize(19, 19));
+#endif
 
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);
