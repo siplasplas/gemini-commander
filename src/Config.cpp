@@ -207,7 +207,7 @@ bool Config::load(const QString& path)
 bool Config::validateToml(const QString& content, QString& errorMsg)
 {
     try {
-        toml::parse(content.toStdString());
+        auto pares_result = toml::parse(content.toStdString());
         return true;
     }
     catch (const toml::parse_error& e) {
