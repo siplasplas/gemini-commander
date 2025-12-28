@@ -39,7 +39,10 @@ find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(BOTAN2 REQUIRED botan-2)
+pkg_check_modules(BOTAN botan-2)
+if(NOT BOTAN_FOUND)
+    pkg_check_modules(BOTAN REQUIRED botan-3)
+endif()
 
 set(TOMLPLUSPLUS_INCLUDE_DIR
         ${CMAKE_CURRENT_SOURCE_DIR}/external/tomlplusplus/include
@@ -53,15 +56,15 @@ add_library(core
 target_include_directories(core
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${BOTAN2_INCLUDE_DIRS}
+        ${BOTAN_INCLUDE_DIRS}
 )
 
 target_link_libraries(core PRIVATE
-        ${BOTAN2_LIBRARIES}
+        ${BOTAN_LIBRARIES}
 )
 
 target_compile_options(core PRIVATE
-        ${BOTAN2_CFLAGS_OTHER}
+        ${BOTAN_CFLAGS_OTHER}
 )
 
 add_executable(toml_json_converter
