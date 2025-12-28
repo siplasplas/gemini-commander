@@ -371,6 +371,17 @@ void MainWindow::setupUi() {
     connect(runTerminalAction, &QAction::triggered, this, &MainWindow::onOpenTerminal);
     commandsMenu->addAction(runTerminalAction);
 
+    // Commands menu - Calculate All Sizes
+    QAction* calcAllSizesAction = new QAction(tr("Calculate All Sizes"), this);
+    calcAllSizesAction->setShortcut(QKeySequence(Qt::ALT | Qt::SHIFT | Qt::Key_Return));
+    connect(calcAllSizesAction, &QAction::triggered, this, [this]() {
+        FilePanel* panel = currentFilePanel();
+        if (panel) {
+            panel->doTotalSizes(nullptr, nullptr);
+        }
+    });
+    commandsMenu->addAction(calcAllSizesAction);
+
     // Navigate menu
     QAction* backAction = new QAction(tr("Back"), this);
     backAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Left));

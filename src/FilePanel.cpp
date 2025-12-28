@@ -3,6 +3,7 @@
 #include <unicode/unistr.h>
 #include <unicode/utypes.h>
 
+#include <QApplication>
 #include <QComboBox>
 #include <QDesktopServices>
 #include <QDirIterator>

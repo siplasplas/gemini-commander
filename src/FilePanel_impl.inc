@@ -651,8 +651,71 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doTotalSizes";
-    return false;
+
+    m_cancelOperation = false;
+    KeyRouter::instance().setOperationInProgress(true);
+
+    const int count = model->rowCount();
+    for (int row = 0; row < count; ++row) {
+        if (m_cancelOperation)
+            break;
+
+        if (row >= entries.size())
+            break;
+
+        PanelEntry& entry = entries[row];
+
+        // Skip non-directories
+        if (!entry.info.isDir())
+            continue;
+
+        // Skip [..] entry
+        if (entry.info.fileName() == "..")
+            continue;
+
+        // Skip already marked entries
+        if (entry.isMarked)
+            continue;
+
+        // Skip if already has total size
+        if (entry.hasTotalSize == TotalSizeStatus::Has)
+            continue;
+
+        // Calculate size
+        CopyStats stats;
+        bool ok = false;
+
+        entry.hasTotalSize = TotalSizeStatus::InPogress;
+        model->refreshRow(row);
+        QApplication::processEvents();
+
+        collectCopyStats(entry.info.absoluteFilePath(), stats, ok, &m_cancelOperation);
+
+        if (m_cancelOperation) {
+            entry.hasTotalSize = TotalSizeStatus::Unknown;
+            model->refreshRow(row);
+            break;
+        }
+
+        if (ok) {
+            entry.totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
+            entry.hasTotalSize = TotalSizeStatus::Has;
+        } else {
+            entry.hasTotalSize = TotalSizeStatus::Unknown;
+        }
+        model->refreshRow(row);
+
+        // Mark the entry after calculating size
+        entry.isMarked = true;
+        updateRowMarking(row, true);
+        model->refreshRow(row);
+        viewport()->update();
+        QApplication::processEvents();
+    }
+
+    KeyRouter::instance().setOperationInProgress(false);
+    emit selectionChanged();
+    return true;
 }
 
 bool FilePanel::doUnselectAll(QObject *obj, QKeyEvent *keyEvent) {
