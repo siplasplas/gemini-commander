@@ -845,12 +845,11 @@ void MainWindow::onOpenTerminal()
 
     QStringList args;
     // Specjalne argumenty dla niektórych terminali
-    if (termCmd == QLatin1String("gnome-terminal")) {
+    if (termCmd == QLatin1String("gnome-terminal") ||
+        termCmd == QLatin1String("xfce4-terminal")) {
         args << QStringLiteral("--working-directory=%1").arg(workDir);
     } else if (termCmd == QLatin1String("konsole")) {
         args << QStringLiteral("--workdir") << workDir;
-    } else if (termCmd == QLatin1String("xfce4-terminal")) {
-        args << QStringLiteral("--working-directory=%1").arg(workDir);
     }
     // dla xterm i innych – użyjemy tylko workingDirectory w QProcess
 
