@@ -1,6 +1,7 @@
 # MUST-HAVE (Core File Manager Functionality)
 
 * **Essential editor and viewer features**
+    * Implement search text in text viewer
     * Implement Quick View (Ctrl+Q) with basic text/image support.
 
 * **Information and status display**
