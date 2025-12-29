@@ -144,6 +144,7 @@ public:
                        const QString& defaultTargetDir = QString());
     void toggleMarkOnCurrent(bool advanceRow);
     QStringList getMarkedNames() const;
+    QStringList getMarkedPaths() const;
     QStringList getMarkedRelPaths() const;
     bool hasMarkedEntries() const;
     void rememberSelection();

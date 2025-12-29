@@ -1342,6 +1342,17 @@ QStringList FilePanel::getMarkedNames() const {
     return result;
 }
 
+QStringList FilePanel::getMarkedPaths() const {
+    QDir dir(currentPath);
+    QStringList result;
+    for (const auto &entry: entries) {
+        if (entry.isMarked) {
+            result << dir.absoluteFilePath(entry.info.fileName()) ;
+        }
+    }
+    return result;
+}
+
 QStringList FilePanel::getMarkedRelPaths() const {
     QStringList result;
     for (const auto &entry: entries) {
