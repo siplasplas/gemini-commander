@@ -295,6 +295,7 @@ void FilePaneWidget::goBack()
     QString targetPath = m_history[m_historyPosition];
     m_filePanel->currentPath = targetPath;
     m_filePanel->loadDirectory();
+    m_filePanel->selectFirstEntry();
 
     m_navigatingHistory = false;
 }
@@ -310,6 +311,7 @@ void FilePaneWidget::goForward()
     QString targetPath = m_history[m_historyPosition];
     m_filePanel->currentPath = targetPath;
     m_filePanel->loadDirectory();
+    m_filePanel->selectFirstEntry();
 
     m_navigatingHistory = false;
 }
