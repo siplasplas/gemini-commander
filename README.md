@@ -79,9 +79,22 @@ sudo zypper install cmake extra-cmake-modules pkgconf-pkg-config kf6-ktexteditor
 On Windows (using MSYS2 or Chocolatey; note that KDE development on Windows may require additional setup):
 (note: on Windows not works yet)
 ```
-pacman -S mingw-w64-x86_64-extra-cmake-modules  # For MSYS2
+pacman -S git
+git config --global core.autocrlf true # for IDE like CLion
+pacman -S mingw-w64-ucrt-x86_64-cmake
+pacman -S mingw-w64-ucrt-x86_64-gcc
+pacman -S mingw-w64-ucrt-x86_64-gdb
+pacman -S mingw-w64-ucrt-x86_64-gettext-tools
+pacman -S mingw-w64-ucrt-x86_64-ninja
+pacman -S mingw-w64-ucrt-x86_64-qt6-base
+pacman -S mingw-w64-ucrt-x86_64-qt6-tools
+pacman -S mingw-w64-x86_64-extra-cmake-modules
+pacman -S mingw-w64-ucrt-x86_64-ktexteditor
+pacman -S mingw-w64-ucrt-x86_64-libbotan
+pacman -S mingw-w64-ucrt-x86_64-nlohmann-json
+pacman -S libarchive
+pacman -S mingw-w64-ucrt-x86_64-gtest
 ```
-
 
 ## Building
 
@@ -103,6 +116,15 @@ cd gemini-commander
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
+```
+
+On Windows - default is ninja
+```shell
+git clone --recursive https://github.com/siplasplas/gemini-commander
+cd gemini-commander/
+mkdir build && cd build
+cmake ..
+ninja
 ```
 
 ## Run the executable (from within the builddir)
