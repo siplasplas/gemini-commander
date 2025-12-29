@@ -27,5 +27,5 @@ add_executable(MimeExplorer
     ${MAIN_SRC_DIR}/FileIconResolver.cpp
 )
 
-target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR})
-target_link_libraries(MimeExplorer PRIVATE Qt${QT_MAJOR_VERSION}::Core Qt${QT_MAJOR_VERSION}::Widgets)
+target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR} ${LIBARCHIVE_INCLUDE_DIRS})
+target_link_libraries(MimeExplorer PRIVATE Qt${QT_MAJOR_VERSION}::Core Qt${QT_MAJOR_VERSION}::Widgets ${LIBARCHIVE_LIBRARIES})
