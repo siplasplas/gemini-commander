@@ -39,6 +39,7 @@
 
 #include "SortedDirIterator.h"
 #include "SearchDialog.h"
+#include "DistroInfoDialog.h"
 #include "FunctionBar.h"
 #include "editor/ViewerFrame.h"
 #include "keys/KeyRouter.h"
@@ -384,6 +385,15 @@ void MainWindow::setupUi() {
         }
     });
     commandsMenu->addAction(calcAllSizesAction);
+
+    commandsMenu->addSeparator();
+
+    QAction* distroInfoAction = new QAction(tr("Distribution Info..."), this);
+    connect(distroInfoAction, &QAction::triggered, this, [this]() {
+        DistroInfoDialog dlg(this);
+        dlg.exec();
+    });
+    commandsMenu->addAction(distroInfoAction);
 
     // Navigate menu
     QAction* backAction = new QAction(tr("Back"), this);

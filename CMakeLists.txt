@@ -101,6 +101,10 @@ add_executable(${PROJECT_NAME}
         src/SearchDialog.cpp
         src/SearchDialog.h
         src/SearchWorker.cpp
+        src/DistroInfo.cpp
+        src/DistroInfo.h
+        src/DistroInfoDialog.cpp
+        src/DistroInfoDialog.h
         src/SearchWorker.h
         src/editor/editor.cpp
         src/editor/editor.h
