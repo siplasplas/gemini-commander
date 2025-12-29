@@ -902,6 +902,9 @@ QString FilePanel::normalizeForSearch(const QString &s) const {
 }
 
 void FilePanel::onHeaderSectionClicked(int logicalIndex) {
+    // Save current selection before sorting
+    QString currentRelPath = getRowRelPath(currentIndex().row());
+
     if (sortColumn == logicalIndex) {
         // Toggle direction
         sortOrder = (sortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
@@ -917,6 +920,10 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex) {
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     addAllEntries();
+
+    // Restore selection (force it even without focus)
+    selectEntryByRelPath(currentRelPath);
+    restoreSelectionFromMemory();
 }
 
 void FilePanel::startDrag(Qt::DropActions supportedActions) {

@@ -537,6 +537,7 @@ bool FilePanel::doSelectSameExtension(QObject *obj, QKeyEvent *keyEvent) {
 bool FilePanel::doSortByDate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
+    QString currentRelPath = getRowRelPath(currentIndex().row());
     if (sortColumn == COLUMN_DATE) {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
@@ -547,12 +548,14 @@ bool FilePanel::doSortByDate(QObject *obj, QKeyEvent *keyEvent) {
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     addAllEntries();
+    selectEntryByRelPath(currentRelPath);
     return true;
 }
 
 bool FilePanel::doSortByExt(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
+    QString currentRelPath = getRowRelPath(currentIndex().row());
     if (sortColumn == COLUMN_EXT) {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
@@ -563,12 +566,14 @@ bool FilePanel::doSortByExt(QObject *obj, QKeyEvent *keyEvent) {
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     addAllEntries();
+    selectEntryByRelPath(currentRelPath);
     return true;
 }
 
 bool FilePanel::doSortByName(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
+    QString currentRelPath = getRowRelPath(currentIndex().row());
     if (sortColumn == COLUMN_NAME) {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
@@ -579,12 +584,14 @@ bool FilePanel::doSortByName(QObject *obj, QKeyEvent *keyEvent) {
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     addAllEntries();
+    selectEntryByRelPath(currentRelPath);
     return true;
 }
 
 bool FilePanel::doSortBySize(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
+    QString currentRelPath = getRowRelPath(currentIndex().row());
     if (sortColumn == COLUMN_SIZE) {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
@@ -595,6 +602,7 @@ bool FilePanel::doSortBySize(QObject *obj, QKeyEvent *keyEvent) {
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
     addAllEntries();
+    selectEntryByRelPath(currentRelPath);
     return true;
 }
 
