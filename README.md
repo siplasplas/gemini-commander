@@ -46,16 +46,15 @@ On Ubuntu 24.04 LTS/Mint/Debian/Pop!_OS 24.04 LTS with old KDE Frameworks
 ```
 sudo apt update
 sudo apt install git cmake extra-cmake-modules pkg-config libkf5texteditor-dev libbotan-2-dev \
-    libicu-dev nlohmann-json3-dev libgtest-dev librsvg2-bin  
+    libicu-dev nlohmann-json3-dev libarchive-dev libgtest-dev librsvg2-bin  
 ```
 
 On new Ubuntu 25.04/25.10 with new KDE Frameworks
 ```
 sudo apt update
 sudo apt install git cmake extra-cmake-modules pkg-config libkf6texteditor-dev libbotan-2-dev \
-    libicu-dev nlohmann-json3-dev libgtest-dev librsvg2-bin  
+    libicu-dev nlohmann-json3-dev libarchive-dev libgtest-dev librsvg2-bin  
 ```
-
 
 On Fedora/RHEL-based systems:
 ```
