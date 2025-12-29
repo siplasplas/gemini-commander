@@ -346,6 +346,15 @@ void MainWindow::setupUi() {
     helpMenu->addAction(aboutAction);
 
     // File menu
+    QAction* packAction = new QAction(tr("Pack..."), this);
+    packAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F5));
+    connect(packAction, &QAction::triggered, this, [this]() {
+        doPackFiles(nullptr, nullptr);
+    });
+    fileMenu->addAction(packAction);
+
+    fileMenu->addSeparator();
+
     QAction* quitAction = new QAction(tr("Quit"), this);
     quitAction->setShortcut(QKeySequence::fromString("Alt+F4"));
     connect(quitAction, &QAction::triggered, this, &QWidget::close);

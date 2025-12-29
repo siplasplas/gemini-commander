@@ -77,6 +77,9 @@ private:
     void createMountsToolbar();
     void copyFromPanel(FilePanel* srcPanel, bool inPlace = false);
     void moveFromPanel(FilePanel* srcPanel, bool inPlace = false);
+    void pack7z(const QString& archivePath, const QStringList& files,
+                bool moveFiles, const QString& volumeSize, const QString& solidBlockSize);
+    void packZip(const QString& archivePath, const QStringList& files, bool moveFiles);
     KeyMap keyMap;
 
     bool handle(const char* handler, QKeyEvent *ev);

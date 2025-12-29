@@ -1,6 +1,14 @@
 #include "editor/editor.h"
 #include "quitls.h"
 #include "utils.h"
+#include "PackDialog.h"
+#include "DistroInfo.h"
+
+#include <QApplication>
+#include <QProgressDialog>
+#include <QStandardPaths>
+#include <QTemporaryFile>
+#include <QTextStream>
 
 bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
@@ -250,8 +258,104 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doPackFiles";
-    return false;
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel) return true;
+
+    // 1. Determine files to pack
+    QStringList markedRelPaths = panel->getMarkedRelPaths();
+    bool hasMarked = !markedRelPaths.isEmpty();
+
+    QString defaultName;
+    if (!hasMarked || markedRelPaths.size() == 1) {
+        // Use current file/dir name
+        defaultName = panel->getRowName(panel->currentIndex().row());
+    } else {
+        // Use parent directory name
+        QDir dir(panel->currentPath);
+        defaultName = dir.dirName();
+    }
+
+    // 2. Get opposite panel path for destination
+    QString destPath;
+    if (auto* oppPanel = oppositeFilePanel()) {
+        destPath = oppPanel->currentPath;
+    } else {
+        destPath = panel->currentPath;
+    }
+
+    // 3. Show dialog
+    PackDialog dlg(defaultName, destPath, markedRelPaths.size(), this);
+    if (dlg.exec() != QDialog::Accepted)
+        return true;
+
+    // 4. Check executable
+    QString packer = dlg.packerType();
+    QString executable = (packer == "7z") ? "7z" : "zip";
+    QString execPath = QStandardPaths::findExecutable(executable);
+
+    if (execPath.isEmpty()) {
+        // Show install instructions
+        QString installCmd = DistroInfo::installCommand(
+            (packer == "7z") ? "p7zip-full" : "zip");
+        QMessageBox::warning(this, tr("Packer Not Found"),
+            tr("%1 not found.\n\nInstall with:\n%2")
+                .arg(executable, installCmd));
+        return true;
+    }
+
+    // 5. Collect source files
+    QStringList filesToPack;
+    if (hasMarked) {
+        filesToPack = markedRelPaths;
+    } else {
+        filesToPack << panel->getRowRelPath(panel->currentIndex().row());
+    }
+
+    // 6. Validate destination - archive cannot be inside source directory
+    QString destDir = QDir(dlg.destination()).absolutePath();
+    QString srcDir = QDir(panel->currentPath).absolutePath();
+
+    // Check if destination is inside source or source is inside destination
+    for (const QString& fileRelPath : filesToPack) {
+        QFileInfo fi(fileRelPath);
+        QString filePath = fi.absoluteFilePath();
+
+        // Check if archive destination is inside any source directory
+        if (destDir.startsWith(filePath + "/") || destDir == filePath) {
+            QMessageBox::warning(this, tr("Invalid Destination"),
+                tr("Cannot create archive inside the source directory:\n%1")
+                    .arg(filePath));
+            return true;
+        }
+    }
+
+    // 7. Build and execute command
+    QString archivePath = QDir(dlg.destination())
+        .absoluteFilePath(dlg.archiveName());
+
+    // Show progress dialog
+    QProgressDialog progress(tr("Packing files..."), QString(), 0, 0, this);
+    progress.setWindowTitle(tr("Pack"));
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setMinimumDuration(0);
+    progress.setValue(0);
+    progress.show();
+    QApplication::processEvents();
+
+    if (packer == "7z") {
+        pack7z(archivePath, filesToPack, dlg.moveFiles(),
+               dlg.volumeSize(), dlg.solidBlockSize());
+    } else {
+        packZip(archivePath, filesToPack, dlg.moveFiles());
+    }
+
+    progress.close();
+
+    // Refresh panels to show new archive
+    reloadAllPanels();
+
+    return true;
 }
 
 bool MainWindow::doRemoveTab(QObject *obj, QKeyEvent *keyEvent) {
@@ -510,5 +614,93 @@ void MainWindow::goToFile(const QString& dir, const QString& name) {
     panel->loadDirectory();
     panel->selectEntryByName(name);
     panel->setFocus();
+}
+
+void MainWindow::pack7z(const QString& archivePath, const QStringList& files,
+                        bool moveFiles, const QString& volumeSize,
+                        const QString& solidBlockSize) {
+    // Write file list to temp file
+    QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    QString listFile = QDir(tempDir).absoluteFilePath("gemini_pack_list.txt");
+
+    QFile f(listFile);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Pack Error"),
+            tr("Failed to create temporary file list."));
+        return;
+    }
+    QTextStream out(&f);
+    for (const QString& path : files) {
+        out << path << "\n";
+    }
+    f.close();
+
+    // Build command
+    QStringList args;
+    args << "a";  // add to archive
+
+    if (moveFiles)
+        args << "-sdel";  // delete files after adding
+
+    if (!volumeSize.isEmpty())
+        args << QString("-v%1").arg(volumeSize);
+
+    if (!solidBlockSize.isEmpty()) {
+        if (solidBlockSize == "on") {
+            args << "-ms=on";
+        } else {
+            args << QString("-ms=%1").arg(solidBlockSize);
+        }
+    }
+
+    args << archivePath;
+    args << QString("@%1").arg(listFile);
+
+    QProcess proc;
+    proc.start("7z", args);
+    proc.waitForFinished(-1);
+
+    if (proc.exitCode() != 0) {
+        QString error = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        QMessageBox::warning(this, tr("Pack Error"),
+            tr("7z failed with exit code %1:\n%2").arg(proc.exitCode()).arg(error));
+    }
+
+    QFile::remove(listFile);
+}
+
+void MainWindow::packZip(const QString& archivePath, const QStringList& files,
+                         bool moveFiles) {
+    QStringList args;
+
+    if (moveFiles)
+        args << "-m";  // move mode
+
+    args << "-r"; // recurse into directories
+
+    args << archivePath;
+    args << "-@";  // read names from stdin
+
+    QProcess proc;
+    proc.start("zip", args);
+    if (!proc.waitForStarted()) {
+        QMessageBox::warning(this, tr("Pack Error"),
+            tr("Failed to start zip process."));
+        return;
+    }
+
+    // Write file paths to stdin
+    for (const QString& path : files) {
+        proc.write(path.toUtf8());
+        proc.write("\n");
+    }
+    proc.closeWriteChannel();
+    proc.waitForFinished(-1);
+
+    if (proc.exitCode() != 0) {
+        QString error = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        QMessageBox::warning(this, tr("Pack Error"),
+            tr("zip failed with exit code %1:\n%2").arg(proc.exitCode()).arg(error));
+    }
 }
 

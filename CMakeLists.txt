@@ -105,6 +105,8 @@ add_executable(${PROJECT_NAME}
         src/DistroInfo.h
         src/DistroInfoDialog.cpp
         src/DistroInfoDialog.h
+        src/PackDialog.cpp
+        src/PackDialog.h
         src/SearchWorker.h
         src/editor/editor.cpp
         src/editor/editor.h
