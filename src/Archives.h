@@ -42,4 +42,15 @@ QPair<QVarLengthArray<QString, 2>, DetailedArchiveType> classifyArchive(
 // Convert DetailedArchiveType to human-readable string
 QString archiveTypeToString(DetailedArchiveType type);
 
+// Pack files into 7z archive
+// Returns empty string on success, error message on failure
+QString pack7z(const QString& archivePath, const QStringList& files,
+               bool moveFiles, const QString& volumeSize,
+               const QString& solidBlockSize);
+
+// Pack files into zip archive
+// Returns empty string on success, error message on failure
+QString packZip(const QString& archivePath, const QStringList& files,
+                bool moveFiles);
+
 #endif // ARCHIVES_H

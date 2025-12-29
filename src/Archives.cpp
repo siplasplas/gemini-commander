@@ -1,5 +1,10 @@
 #include "Archives.h"
 #include <QFileInfo>
+#include <QDir>
+#include <QFile>
+#include <QTextStream>
+#include <QProcess>
+#include <QStandardPaths>
 
 namespace {
 
@@ -281,4 +286,95 @@ QString archiveTypeToString(DetailedArchiveType type)
             return "Archive Other";
     }
     return "Unknown";
+}
+
+QString pack7z(const QString& archivePath, const QStringList& files,
+               bool moveFiles, const QString& volumeSize,
+               const QString& solidBlockSize)
+{
+    // Write file list to temp file
+    QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    QString listFile = QDir(tempDir).absoluteFilePath("gemini_pack_list.txt");
+
+    QFile f(listFile);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return QObject::tr("Failed to create temporary file list.");
+    }
+    QTextStream out(&f);
+    for (const QString& path : files) {
+        out << path << "\n";
+    }
+    f.close();
+
+    // Build command
+    QStringList args;
+    args << "a";  // add to archive
+
+    if (moveFiles)
+        args << "-sdel";  // delete files after adding
+
+    if (!volumeSize.isEmpty())
+        args << QString("-v%1").arg(volumeSize);
+
+    if (!solidBlockSize.isEmpty()) {
+        if (solidBlockSize == "on") {
+            args << "-ms=on";
+        } else {
+            args << QString("-ms=%1").arg(solidBlockSize);
+        }
+        args << "-mqs=on";  // sort files by extension for better compression
+    }
+
+    args << archivePath;
+    args << QString("@%1").arg(listFile);
+
+    QProcess proc;
+    proc.start("7z", args);
+    proc.waitForFinished(-1);
+
+    QString error;
+    if (proc.exitCode() != 0) {
+        QString stderr = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        error = QObject::tr("7z failed with exit code %1:\n%2")
+                    .arg(proc.exitCode()).arg(stderr);
+    }
+
+    QFile::remove(listFile);
+    return error;
+}
+
+QString packZip(const QString& archivePath, const QStringList& files,
+                bool moveFiles)
+{
+    QStringList args;
+
+    if (moveFiles)
+        args << "-m";  // move mode
+
+    args << "-r"; // recurse into directories
+
+    args << archivePath;
+    args << "-@";  // read names from stdin
+
+    QProcess proc;
+    proc.start("zip", args);
+    if (!proc.waitForStarted()) {
+        return QObject::tr("Failed to start zip process.");
+    }
+
+    // Write file paths to stdin
+    for (const QString& path : files) {
+        proc.write(path.toUtf8());
+        proc.write("\n");
+    }
+    proc.closeWriteChannel();
+    proc.waitForFinished(-1);
+
+    if (proc.exitCode() != 0) {
+        QString stderr = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        return QObject::tr("zip failed with exit code %1:\n%2")
+                   .arg(proc.exitCode()).arg(stderr);
+    }
+
+    return {};
 }

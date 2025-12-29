@@ -1,14 +1,13 @@
 #include "editor/editor.h"
 #include "quitls.h"
 #include "utils.h"
+#include "Archives.h"
 #include "PackDialog.h"
 #include "DistroInfo.h"
 
 #include <QApplication>
 #include <QProgressDialog>
 #include <QStandardPaths>
-#include <QTemporaryFile>
-#include <QTextStream>
 
 bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
@@ -343,14 +342,19 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     progress.show();
     QApplication::processEvents();
 
+    QString error;
     if (packer == "7z") {
-        pack7z(archivePath, filesToPack, dlg.moveFiles(),
-               dlg.volumeSize(), dlg.solidBlockSize());
+        error = pack7z(archivePath, filesToPack, dlg.moveFiles(),
+                       dlg.volumeSize(), dlg.solidBlockSize());
     } else {
-        packZip(archivePath, filesToPack, dlg.moveFiles());
+        error = packZip(archivePath, filesToPack, dlg.moveFiles());
     }
 
     progress.close();
+
+    if (!error.isEmpty()) {
+        QMessageBox::warning(this, tr("Pack Error"), error);
+    }
 
     // Refresh panels to show new archive
     reloadAllPanels();
@@ -614,94 +618,5 @@ void MainWindow::goToFile(const QString& dir, const QString& name) {
     panel->loadDirectory();
     panel->selectEntryByName(name);
     panel->setFocus();
-}
-
-void MainWindow::pack7z(const QString& archivePath, const QStringList& files,
-                        bool moveFiles, const QString& volumeSize,
-                        const QString& solidBlockSize) {
-    // Write file list to temp file
-    QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-    QString listFile = QDir(tempDir).absoluteFilePath("gemini_pack_list.txt");
-
-    QFile f(listFile);
-    if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::warning(this, tr("Pack Error"),
-            tr("Failed to create temporary file list."));
-        return;
-    }
-    QTextStream out(&f);
-    for (const QString& path : files) {
-        out << path << "\n";
-    }
-    f.close();
-
-    // Build command
-    QStringList args;
-    args << "a";  // add to archive
-
-    if (moveFiles)
-        args << "-sdel";  // delete files after adding
-
-    if (!volumeSize.isEmpty())
-        args << QString("-v%1").arg(volumeSize);
-
-    if (!solidBlockSize.isEmpty()) {
-        if (solidBlockSize == "on") {
-            args << "-ms=on";
-        } else {
-            args << QString("-ms=%1").arg(solidBlockSize);
-        }
-        args << "-mqs=on";  // sort files by extension for better compression
-    }
-
-    args << archivePath;
-    args << QString("@%1").arg(listFile);
-
-    QProcess proc;
-    proc.start("7z", args);
-    proc.waitForFinished(-1);
-
-    if (proc.exitCode() != 0) {
-        QString error = QString::fromUtf8(proc.readAllStandardError()).trimmed();
-        QMessageBox::warning(this, tr("Pack Error"),
-            tr("7z failed with exit code %1:\n%2").arg(proc.exitCode()).arg(error));
-    }
-
-    QFile::remove(listFile);
-}
-
-void MainWindow::packZip(const QString& archivePath, const QStringList& files,
-                         bool moveFiles) {
-    QStringList args;
-
-    if (moveFiles)
-        args << "-m";  // move mode
-
-    args << "-r"; // recurse into directories
-
-    args << archivePath;
-    args << "-@";  // read names from stdin
-
-    QProcess proc;
-    proc.start("zip", args);
-    if (!proc.waitForStarted()) {
-        QMessageBox::warning(this, tr("Pack Error"),
-            tr("Failed to start zip process."));
-        return;
-    }
-
-    // Write file paths to stdin
-    for (const QString& path : files) {
-        proc.write(path.toUtf8());
-        proc.write("\n");
-    }
-    proc.closeWriteChannel();
-    proc.waitForFinished(-1);
-
-    if (proc.exitCode() != 0) {
-        QString error = QString::fromUtf8(proc.readAllStandardError()).trimmed();
-        QMessageBox::warning(this, tr("Pack Error"),
-            tr("zip failed with exit code %1:\n%2").arg(proc.exitCode()).arg(error));
-    }
 }
 
