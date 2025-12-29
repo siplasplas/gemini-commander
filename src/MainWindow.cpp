@@ -39,6 +39,7 @@
 
 #include "SortedDirIterator.h"
 #include "SearchDialog.h"
+#include "DistroInfo.h"
 #include "DistroInfoDialog.h"
 #include "FunctionBar.h"
 #include "editor/ViewerFrame.h"
@@ -830,38 +831,40 @@ void MainWindow::onOpenTerminal()
         workDir = QDir::homePath();
     }
 
-    // Lista preferowanych terminali
-    const QStringList candidates = {
-        QStringLiteral("gnome-terminal"),
-        QStringLiteral("konsole"),
-        QStringLiteral("xfce4-terminal"),
-        QStringLiteral("xterm")
-    };
+    // Użyj sugerowanego terminala dla aktualnego środowiska
+    QString termCmd = DistroInfo::suggestedTerminal();
 
-    QString termCmd;
-    for (const QString& c : candidates) {
-        if (!QStandardPaths::findExecutable(c).isEmpty()) {
-            termCmd = c;
-            break;
+    if (QStandardPaths::findExecutable(termCmd).isEmpty()) {
+        QString installCmd = DistroInfo::installCommand(termCmd);
+        QString msg = tr("Terminal '%1' not found.").arg(termCmd);
+        if (!installCmd.isEmpty()) {
+            msg += tr("\n\nInstall command:\n%1").arg(installCmd);
         }
-    }
 
-    if (termCmd.isEmpty()) {
-        QMessageBox::warning(this,
-                             tr("Terminal"),
-                             tr("No terminal emulator found (tried gnome-terminal, konsole, xfce4-terminal, xterm)."));
+        QInputDialog dlg(this);
+        dlg.setWindowTitle(tr("Terminal"));
+        dlg.setLabelText(msg);
+        dlg.setTextValue(installCmd);
+        dlg.setOption(QInputDialog::UsePlainTextEditForTextInput, false);
+        // Make the line edit read-only
+        if (QLineEdit* le = dlg.findChild<QLineEdit*>()) {
+            le->setReadOnly(true);
+            le->selectAll();
+        }
+        dlg.exec();
         return;
     }
 
     QStringList args;
     // Specjalne argumenty dla niektórych terminali
     if (termCmd == QLatin1String("gnome-terminal") ||
-        termCmd == QLatin1String("xfce4-terminal")) {
+        termCmd == QLatin1String("xfce4-terminal") ||
+        termCmd == QLatin1String("mate-terminal")) {
         args << QStringLiteral("--working-directory=%1").arg(workDir);
     } else if (termCmd == QLatin1String("konsole")) {
         args << QStringLiteral("--workdir") << workDir;
     }
-    // dla xterm i innych – użyjemy tylko workingDirectory w QProcess
+    // dla xterm, qterminal i innych – użyjemy tylko workingDirectory w QProcess
 
     auto* proc = new QProcess(this);
     proc->setWorkingDirectory(workDir);
