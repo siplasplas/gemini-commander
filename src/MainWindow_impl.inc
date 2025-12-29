@@ -190,7 +190,7 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (!panel) return true;
 
-    // 1. Get current file FIRST (before clearing marks which resets selection)
+    // 1. Get current file
     auto [entry, row] = panel->currentEntryRow();
     if (!entry) {
         QMessageBox::information(this, tr("Extract"), tr("No file selected."));
@@ -200,13 +200,7 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
     QString fileName = entry->info.fileName();
     QString filePath = QDir(panel->currentPath).absoluteFilePath(fileName);
 
-    // 2. Clear all marked entries
-    for (auto& e : panel->entries) {
-        e.isMarked = false;
-    }
-    panel->model->refresh();
-
-    // 3. Check if it's an archive
+    // 2. Check if it's an archive
     QMimeDatabase mimeDb;
     QMimeType mt = mimeDb.mimeTypeForFile(filePath);
     auto [components, archiveType] = classifyArchive(mt, filePath);
@@ -217,11 +211,7 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
         return true;
     }
 
-    // 4. Mark current file
-    entry->isMarked = true;
-    panel->model->refresh();
-
-    // 5. Get destination from opposite panel
+    // 3. Get destination from opposite panel
     QString destPath;
     if (auto* oppPanel = oppositeFilePanel()) {
         destPath = oppPanel->currentPath;
@@ -229,20 +219,18 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
         destPath = panel->currentPath;
     }
 
-    // 6. Show destination dialog
+    // 4. Show destination dialog
     bool ok;
     QString dest = QInputDialog::getText(this, tr("Extract files"),
         tr("Extract to:"), QLineEdit::Normal, destPath, &ok);
 
     if (!ok || dest.isEmpty()) {
-        entry->isMarked = false;
-        panel->model->refresh();
         return true;
     }
 
     dest = QDir(dest).absolutePath();
 
-    // 7. Check archive structure and target directory
+    // 5. Check archive structure and target directory
     ArchiveContents contents = readArchive(filePath);
     bool hasSingleRoot = archiveHasSingleRoot(contents);
     bool targetNotEmpty = !QDir(dest).isEmpty();
@@ -277,8 +265,6 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
 
         int result = msgBox.exec();
         if (result == QMessageBox::Cancel) {
-            entry->isMarked = false;
-            panel->model->refresh();
             return true;
         }
         if (result == QMessageBox::Yes) {
@@ -286,7 +272,7 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
         }
     }
 
-    // 8. Extract
+    // 6. Extract
     QProgressDialog progress(tr("Extracting files..."), QString(), 0, 0, this);
     progress.setWindowTitle(tr("Extract"));
     progress.setWindowModality(Qt::WindowModal);
@@ -303,10 +289,9 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
         QMessageBox::warning(this, tr("Extract Error"), error);
     }
 
-    // Unmark and refresh
-    entry->isMarked = false;
-    panel->model->refresh();
+    // Refresh panels and restore selection on archive
     reloadAllPanels();
+    panel->selectEntryByName(fileName);
 
     return true;
 }
