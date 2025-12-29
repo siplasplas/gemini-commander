@@ -42,6 +42,8 @@ Key licensing assumptions regarding the use of Qt in this project:
 **In summary:** Your contributions to this project are licensed under Apache 2.0. However, because the project uses Qt libraries under the LGPLv3, the work as a whole (especially in binary form) is also subject to the terms of the LGPLv3 concerning the Qt parts. Users have rights and obligations stemming from both licenses, applicable to the respective components of the project.
 
 ## Prerequisites
+Qt5/Qt6 is autmatic installed with texteditor package
+
 On Ubuntu 24.04 LTS/Mint/Debian/Pop!_OS 24.04 LTS with old KDE Frameworks
 ```
 sudo apt update
@@ -65,13 +67,13 @@ sudo dnf install extra-cmake-modules pkgconf-pkg-config kf6-ktexteditor-devel bo
 On Arch-based systems (e.g., Arch Linux, Manjaro):
 ```
 sudo pacman -Syu cmake extra-cmake-modules pkgconf ktexteditor botan \
-    icu nlohmann-json gtest librsvg 
+    icu nlohmann-json libarchive gtest librsvg 
 ```
 
 On openSUSE:
 ```
 sudo zypper install cmake extra-cmake-modules pkgconf-pkg-config kf6-ktexteditor-devel libbotan-devel \
-    libicu-devel nlohmann_json-devel gtest rsvg-convert
+    libicu-devel nlohmann_json-devel libarchive-devel gtest rsvg-convert
 ```
 
 On Windows (using MSYS2 or Chocolatey; note that KDE development on Windows may require additional setup):
