@@ -257,6 +257,9 @@ QPair<QVarLengthArray<QString, 2>, DetailedArchiveType> classifyArchive(
                     compType.contains("oasis.opendocument")) {
                     return {result, DetailedArchiveType::CompressedOther};
                 }
+                if (compType == "efi.iso") {
+                    return {result, DetailedArchiveType::ArchiveOther};
+                }
                 if (standardCompressed.contains(compType)) {
                     return {result, DetailedArchiveType::Compressed};
                 }
