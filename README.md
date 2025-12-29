@@ -1,9 +1,16 @@
-
-# gemini-commander
+# Gemini Commander
 Twin-panel file manager written in C++ with the Qt library.
 ```shell
 git clone --recursive https://github.com/siplasplas/gemini-commander
 ```
+
+<p align="center">
+  <a href="screenshots/main-window.png">
+    <img src="screenshots/main-window.png" alt="Gemini Commander">
+  </a><br>
+  <em>Dual-pane file manager built with Qt6 and KDE Frameworks</em>
+</p>
+
 ## Features
 
 - **Hidden file search** — Incremental search handles dot-prefixed files naturally (e.g., typing "git" finds ".gitignore")
