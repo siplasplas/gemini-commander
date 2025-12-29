@@ -120,8 +120,8 @@ public:
     QList<PanelEntry> entries;
     bool branchMode = false;  // Branch View mode (flat list of files from subdirectories)
 
-    int sortColumn = COLUMN_NAME;
-    Qt::SortOrder sortOrder = Qt::AscendingOrder;
+    int sortColumn = COLUMN_DATE;
+    Qt::SortOrder sortOrder = Qt::DescendingOrder;
 
     FilePanel(Side side, QWidget* parent = nullptr);
     ~FilePanel() override;
