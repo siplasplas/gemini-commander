@@ -651,6 +651,7 @@ void MainWindow::pack7z(const QString& archivePath, const QStringList& files,
         } else {
             args << QString("-ms=%1").arg(solidBlockSize);
         }
+        args << "-mqs=on";  // sort files by extension for better compression
     }
 
     args << archivePath;
