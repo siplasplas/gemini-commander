@@ -856,6 +856,8 @@ void MainWindow::onOpenTerminal()
     }
 
     QStringList args;
+    QString program = termCmd;
+
     // Specjalne argumenty dla niektórych terminali
     if (termCmd == QLatin1String("gnome-terminal") ||
         termCmd == QLatin1String("xfce4-terminal") ||
@@ -863,18 +865,23 @@ void MainWindow::onOpenTerminal()
         args << QStringLiteral("--working-directory=%1").arg(workDir);
     } else if (termCmd == QLatin1String("konsole")) {
         args << QStringLiteral("--workdir") << workDir;
+    } else if (termCmd == QLatin1String("wt")) {
+        // Windows Terminal: -d sets the starting directory
+        args << QStringLiteral("-d") << workDir;
+    } else if (termCmd == QLatin1String("powershell")) {
+        // PowerShell needs to be launched via cmd /c start to get a visible window
+        program = QStringLiteral("cmd");
+        args << QStringLiteral("/c") << QStringLiteral("start")
+             << QStringLiteral("powershell") << QStringLiteral("-NoExit")
+             << QStringLiteral("-Command") << QStringLiteral("cd '%1'").arg(workDir);
     }
     // dla xterm, qterminal i innych – użyjemy tylko workingDirectory w QProcess
 
-    auto* proc = new QProcess(this);
-    proc->setWorkingDirectory(workDir);
-    proc->start(termCmd, args);
-
-    if (!proc->waitForStarted(1000)) {
+    // Use startDetached to fully detach the process from our application
+    if (!QProcess::startDetached(program, args, workDir)) {
         QMessageBox::warning(this,
                              tr("Terminal"),
                              tr("Failed to start terminal: %1").arg(termCmd));
-        proc->deleteLater();
     }
 }
 
