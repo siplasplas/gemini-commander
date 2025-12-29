@@ -739,7 +739,7 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     setFont(f);
 
     QFontMetrics fm(font());
-    int rowHeight = iconSize().height()+2;// fm.ascent() + fm.descent() + 1;
+    int rowHeight = iconSize().height()+2;
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setMinimumSectionSize(rowHeight);
     verticalHeader()->setDefaultSectionSize(rowHeight);
