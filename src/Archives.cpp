@@ -344,9 +344,9 @@ QString pack7z(const QString& archivePath, const QStringList& files,
 
     QString error;
     if (proc.exitCode() != 0) {
-        QString stderr = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        QString standardError = QString::fromUtf8(proc.readAllStandardError()).trimmed();
         error = QObject::tr("7z failed with exit code %1:\n%2")
-                    .arg(proc.exitCode()).arg(stderr);
+                    .arg(proc.exitCode()).arg(standardError);
     }
 
     QFile::remove(listFile);
@@ -381,9 +381,9 @@ QString packZip(const QString& archivePath, const QStringList& files,
     proc.waitForFinished(-1);
 
     if (proc.exitCode() != 0) {
-        QString stderr = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        QString standardError = QString::fromUtf8(proc.readAllStandardError()).trimmed();
         return QObject::tr("zip failed with exit code %1:\n%2")
-                   .arg(proc.exitCode()).arg(stderr);
+                   .arg(proc.exitCode()).arg(standardError);
     }
 
     return {};
