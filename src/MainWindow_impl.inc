@@ -9,6 +9,7 @@
 #include <QInputDialog>
 #include <QMimeDatabase>
 #include <QProgressDialog>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
@@ -253,6 +254,10 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
         // Propose creating subdirectory
         QFileInfo fi(filePath);
         QString baseName = fi.completeBaseName();
+
+        // Strip multi-volume suffixes like .part01, .part1, etc.
+        static QRegularExpression multiVolPattern(R"(\.part\d+$)", QRegularExpression::CaseInsensitiveOption);
+        baseName.remove(multiVolPattern);
 
         // Find unique name
         QString subDir = baseName;
