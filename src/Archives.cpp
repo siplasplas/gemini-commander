@@ -571,3 +571,61 @@ ArchiveContents readArchive(const QString& archivePath)
 
     return result;
 }
+
+bool archiveHasSingleRoot(const ArchiveContents& contents)
+{
+    if (contents.allEntries.isEmpty())
+        return true;
+
+    QSet<QString> rootEntries;
+    for (const ArchiveEntry& entry : contents.allEntries) {
+        // Get the root component of the path
+        int slashPos = entry.path.indexOf('/');
+        QString root = (slashPos == -1) ? entry.path : entry.path.left(slashPos);
+        if (!root.isEmpty()) {
+            rootEntries.insert(root);
+        }
+    }
+
+    return rootEntries.size() <= 1;
+}
+
+QString extractArchive(const QString& archivePath, const QString& destDir)
+{
+    // Ensure destination directory exists
+    QDir().mkpath(destDir);
+
+    // Try 7z first (supports most formats)
+    QString exec7z = QStandardPaths::findExecutable("7z");
+    if (!exec7z.isEmpty()) {
+        QProcess proc;
+        QStringList args;
+        args << "x" << "-y" << QString("-o%1").arg(destDir) << archivePath;
+        proc.start(exec7z, args);
+        proc.waitForFinished(-1);
+
+        if (proc.exitCode() == 0) {
+            return {};  // Success
+        }
+        // If 7z failed, try unar
+    }
+
+    // Try unar as fallback
+    QString execUnar = QStandardPaths::findExecutable("unar");
+    if (!execUnar.isEmpty()) {
+        QProcess proc;
+        QStringList args;
+        args << "-f" << "-o" << destDir << archivePath;
+        proc.start(execUnar, args);
+        proc.waitForFinished(-1);
+
+        if (proc.exitCode() == 0) {
+            return {};  // Success
+        }
+        QString stderr = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        return QObject::tr("unar failed with exit code %1:\n%2")
+                   .arg(proc.exitCode()).arg(stderr);
+    }
+
+    return QObject::tr("No extraction tool found. Install 7z or unar.");
+}

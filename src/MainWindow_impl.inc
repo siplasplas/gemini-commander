@@ -6,6 +6,8 @@
 #include "DistroInfo.h"
 
 #include <QApplication>
+#include <QInputDialog>
+#include <QMimeDatabase>
 #include <QProgressDialog>
 #include <QStandardPaths>
 
@@ -183,8 +185,125 @@ bool MainWindow::doEditNew(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doExtractFiles";
-    return false;
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel) return true;
+
+    // 1. Get current file FIRST (before clearing marks which resets selection)
+    auto [entry, row] = panel->currentEntryRow();
+    if (!entry) {
+        QMessageBox::information(this, tr("Extract"), tr("No file selected."));
+        return true;
+    }
+
+    QString fileName = entry->info.fileName();
+    QString filePath = QDir(panel->currentPath).absoluteFilePath(fileName);
+
+    // 2. Clear all marked entries
+    for (auto& e : panel->entries) {
+        e.isMarked = false;
+    }
+    panel->model->refresh();
+
+    // 3. Check if it's an archive
+    QMimeDatabase mimeDb;
+    QMimeType mt = mimeDb.mimeTypeForFile(filePath);
+    auto [components, archiveType] = classifyArchive(mt, filePath);
+
+    if (archiveType == DetailedArchiveType::NotArchive) {
+        QMessageBox::information(this, tr("Extract"),
+            tr("'%1' is not a recognized archive format.").arg(fileName));
+        return true;
+    }
+
+    // 4. Mark current file
+    entry->isMarked = true;
+    panel->model->refresh();
+
+    // 5. Get destination from opposite panel
+    QString destPath;
+    if (auto* oppPanel = oppositeFilePanel()) {
+        destPath = oppPanel->currentPath;
+    } else {
+        destPath = panel->currentPath;
+    }
+
+    // 6. Show destination dialog
+    bool ok;
+    QString dest = QInputDialog::getText(this, tr("Extract files"),
+        tr("Extract to:"), QLineEdit::Normal, destPath, &ok);
+
+    if (!ok || dest.isEmpty()) {
+        entry->isMarked = false;
+        panel->model->refresh();
+        return true;
+    }
+
+    dest = QDir(dest).absolutePath();
+
+    // 7. Check archive structure and target directory
+    ArchiveContents contents = readArchive(filePath);
+    bool hasSingleRoot = archiveHasSingleRoot(contents);
+    bool targetNotEmpty = !QDir(dest).isEmpty();
+
+    QString finalDest = dest;
+
+    if (!hasSingleRoot && targetNotEmpty) {
+        // Archive has multiple roots and target is not empty
+        // Propose creating subdirectory
+        QFileInfo fi(filePath);
+        QString baseName = fi.completeBaseName();
+
+        // Find unique name
+        QString subDir = baseName;
+        int counter = 1;
+        while (QDir(dest).exists(subDir)) {
+            subDir = QString("%1(%2)").arg(baseName).arg(counter++);
+        }
+
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle(tr("Extract to subdirectory?"));
+        msgBox.setText(tr("Archive contains multiple items and target directory is not empty.\n\n"
+                          "Create subdirectory '%1'?").arg(subDir));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+        msgBox.button(QMessageBox::Yes)->setText(tr("Create subdirectory"));
+        msgBox.button(QMessageBox::No)->setText(tr("Extract here"));
+
+        int result = msgBox.exec();
+        if (result == QMessageBox::Cancel) {
+            entry->isMarked = false;
+            panel->model->refresh();
+            return true;
+        }
+        if (result == QMessageBox::Yes) {
+            finalDest = QDir(dest).absoluteFilePath(subDir);
+        }
+    }
+
+    // 8. Extract
+    QProgressDialog progress(tr("Extracting files..."), QString(), 0, 0, this);
+    progress.setWindowTitle(tr("Extract"));
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setMinimumDuration(0);
+    progress.setValue(0);
+    progress.show();
+    QApplication::processEvents();
+
+    QString error = extractArchive(filePath, finalDest);
+
+    progress.close();
+
+    if (!error.isEmpty()) {
+        QMessageBox::warning(this, tr("Extract Error"), error);
+    }
+
+    // Unmark and refresh
+    entry->isMarked = false;
+    panel->model->refresh();
+    reloadAllPanels();
+
+    return true;
 }
 
 bool MainWindow::doFocusCommandLine(QObject *obj, QKeyEvent *keyEvent) {

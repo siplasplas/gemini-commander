@@ -354,6 +354,13 @@ void MainWindow::setupUi() {
     });
     fileMenu->addAction(packAction);
 
+    QAction* extractAction = new QAction(tr("Extract files..."), this);
+    extractAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F9));
+    connect(extractAction, &QAction::triggered, this, [this]() {
+        doExtractFiles(nullptr, nullptr);
+    });
+    fileMenu->addAction(extractAction);
+
     fileMenu->addSeparator();
 
     QAction* quitAction = new QAction(tr("Quit"), this);

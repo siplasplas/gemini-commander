@@ -84,4 +84,12 @@ QString pack7z(const QString& archivePath, const QStringList& files,
 QString packZip(const QString& archivePath, const QStringList& files,
                 bool moveFiles);
 
+// Check if archive has single root entry (file or directory)
+// Returns true if single root, false if multiple roots
+bool archiveHasSingleRoot(const ArchiveContents& contents);
+
+// Extract archive to destination directory
+// Returns empty string on success, error message on failure
+QString extractArchive(const QString& archivePath, const QString& destDir);
+
 #endif // ARCHIVES_H
