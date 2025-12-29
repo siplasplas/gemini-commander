@@ -315,6 +315,7 @@ bool MainWindow::doGoToHome(QObject *obj, QKeyEvent *keyEvent) {
     QString homePath = QDir::homePath();
     panel->currentPath = homePath;
     panel->loadDirectory();
+    panel->selectFirstEntry();
     panel->setFocus();
 
     return true;
@@ -331,6 +332,7 @@ bool MainWindow::doGoToRoot(QObject *obj, QKeyEvent *keyEvent) {
     QString rootPath = QDir::rootPath();
     panel->currentPath = rootPath;
     panel->loadDirectory();
+    panel->selectFirstEntry();
     panel->setFocus();
 
     return true;
