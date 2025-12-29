@@ -1,6 +1,8 @@
 #ifndef PANEL_H
 #define PANEL_H
 
+#include "Archives.h"
+
 #include <QAbstractTableModel>
 #include <QDir>
 #include <QTableView>
@@ -41,10 +43,12 @@ enum class TotalSizeStatus {
 struct PanelEntry {
     QFileInfo info;
     QString branch;  // Relative path from base directory (used in Branch Mode)
+                     // For archive mode: full path inside archive
     bool isMarked = false;
     EntryContentState contentState = EntryContentState::NotDirectory;
     std::size_t totalSizeBytes = 0;
     TotalSizeStatus hasTotalSize = TotalSizeStatus::Unknown;
+    QDateTime archiveModTime;  // Modification time for archive entries
     PanelEntry() = default;
     explicit PanelEntry(const QFileInfo& fi, const QString& branchPath = QString())
         : info(fi), branch(branchPath)
@@ -120,6 +124,12 @@ public:
     QList<PanelEntry> entries;
     bool branchMode = false;  // Branch View mode (flat list of files from subdirectories)
 
+    // Archive browsing mode
+    bool insideArchive = false;
+    QString archiveFilePath;      // Path to the archive file
+    QString archiveCurrentDir;    // Current directory inside archive (empty = root)
+    ArchiveContents archiveContents;
+
     int sortColumn = COLUMN_DATE;
     Qt::SortOrder sortOrder = Qt::DescendingOrder;
 
@@ -170,6 +180,11 @@ public:
     bool renameEntry(const QString& oldRelPath, const QString& newRelPath);
     bool updateEntryBranch(const QString& relPath, const QString& newBranch);
     bool addEntryFromPath(const QString& fullPath, const QString& branch = QString());
+
+    // Archive browsing mode
+    void enterArchive(const QString& archivePath);
+    void exitArchive();
+    void loadArchiveDirectory();
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;

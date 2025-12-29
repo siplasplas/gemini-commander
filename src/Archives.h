@@ -2,6 +2,9 @@
 #define ARCHIVES_H
 
 #include <QString>
+#include <QStringList>
+#include <QList>
+#include <QDateTime>
 #include <QVarLengthArray>
 #include <QMimeType>
 #include <QPair>
@@ -41,6 +44,34 @@ QPair<QVarLengthArray<QString, 2>, DetailedArchiveType> classifyArchive(
 
 // Convert DetailedArchiveType to human-readable string
 QString archiveTypeToString(DetailedArchiveType type);
+
+// Entry in an archive (file or directory)
+struct ArchiveEntry {
+    QString path;           // Full path inside archive (e.g., "dir1/dir2/file.txt")
+    QString name;           // Just the filename
+    bool isDirectory = false;
+    qint64 size = 0;
+    QDateTime modTime;
+};
+
+// Contents of an archive
+struct ArchiveContents {
+    QString archivePath;                    // Path to archive file
+    QList<ArchiveEntry> allEntries;         // Flat list of all entries
+
+    // Get entries for a specific directory path inside archive
+    // Returns only direct children (not recursive)
+    QList<ArchiveEntry> entriesAt(const QString& dirPath) const;
+
+    // Check if path is a directory (has children or marked as dir)
+    bool isDirectory(const QString& path) const;
+
+    // Clear all data
+    void clear();
+};
+
+// Read archive contents using libarchive, fallback to unar
+ArchiveContents readArchive(const QString& archivePath);
 
 // Pack files into 7z archive
 // Returns empty string on success, error message on failure

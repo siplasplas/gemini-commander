@@ -34,6 +34,7 @@
 #include "SortedDirIterator.h"
 #include "keys/KeyRouter.h"
 #include <QDateTime>
+#include <QMimeDatabase>
 
 namespace {
 
@@ -205,6 +206,9 @@ FilePanelModel::FilePanelModel(FilePanel *panel, QObject *parent) : QAbstractTab
 }
 
 bool FilePanelModel::hasParentEntry() const {
+    // In archive mode, always show [..] to allow going up or exiting
+    if (m_panel->insideArchive)
+        return true;
     // [..] entry exists when: not in branch mode AND not in root directory
     if (m_panel->branchMode)
         return false;
@@ -294,6 +298,14 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
             case COLUMN_EXT:
                 return ext;
             case COLUMN_SIZE: {
+                // In archive mode, use stored size for all entries
+                if (m_panel->insideArchive) {
+                    if (entry.contentState == EntryContentState::NotDirectory) {
+                        return QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
+                    }
+                    return QStringLiteral("<DIR>");
+                }
+                // Normal mode
                 if (!entry.info.isDir()) {
                     return QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
                 } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
@@ -304,6 +316,10 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
                 return QStringLiteral("<DIR>");
             }
             case COLUMN_DATE:
+                // In archive mode, use stored modification time
+                if (m_panel->insideArchive && entry.archiveModTime.isValid()) {
+                    return entry.archiveModTime.toString("yyyy-MM-dd hh:mm");
+                }
                 return entry.info.lastModified().toString("yyyy-MM-dd hh:mm");
         }
     }
@@ -380,8 +396,14 @@ void FilePanel::sortEntries() {
     std::sort(entries.begin(), entries.end(), [this](const PanelEntry &c, const PanelEntry &d) {
         auto a = c.info;
         auto b = d.info;
-        const bool aDir = a.isDir();
-        const bool bDir = b.isDir();
+        // In archive mode, use contentState to determine if entry is a directory
+        // (since QFileInfo points to fake paths that don't exist)
+        const bool aDir = insideArchive
+            ? (c.contentState != EntryContentState::NotDirectory)
+            : a.isDir();
+        const bool bDir = insideArchive
+            ? (d.contentState != EntryContentState::NotDirectory)
+            : b.isDir();
 
         // Directories always on top
         if (aDir != bDir)
@@ -444,14 +466,18 @@ void FilePanel::sortEntries() {
                         return asc ? (c.info.size() < d.info.size()) : (c.info.size() > d.info.size());
                     return cmpNames(asc);
                 } else if (!aDir && !bDir) {
-                    if (a.size() != b.size())
-                        return asc ? (a.size() < b.size()) : (a.size() > b.size());
+                    // In archive mode, use stored size
+                    qint64 sizeA = insideArchive ? static_cast<qint64>(c.totalSizeBytes) : a.size();
+                    qint64 sizeB = insideArchive ? static_cast<qint64>(d.totalSizeBytes) : b.size();
+                    if (sizeA != sizeB)
+                        return asc ? (sizeA < sizeB) : (sizeA > sizeB);
                     return cmpNames(asc);
                 }
                 return aDir; // dirs before files
             case COLUMN_DATE: {
-                QDateTime da = a.lastModified();
-                QDateTime db = b.lastModified();
+                // In archive mode, use stored modification time
+                QDateTime da = insideArchive ? c.archiveModTime : a.lastModified();
+                QDateTime db = insideArchive ? d.archiveModTime : b.lastModified();
                 if (da != db)
                     return asc ? (da < db) : (da > db);
                 return cmpNames(asc);
@@ -602,6 +628,39 @@ void FilePanel::navigateToPath(const QString& path)
 }
 
 void FilePanel::trigger(const QString &name) {
+    // Handle archive mode navigation
+    if (insideArchive) {
+        if (name.isEmpty()) {
+            // Going up - either to parent dir in archive or exit archive
+            if (archiveCurrentDir.isEmpty()) {
+                // At archive root - exit archive
+                exitArchive();
+            } else {
+                // Go to parent dir in archive
+                int lastSlash = archiveCurrentDir.lastIndexOf('/');
+                if (lastSlash >= 0) {
+                    archiveCurrentDir = archiveCurrentDir.left(lastSlash);
+                } else {
+                    archiveCurrentDir.clear();
+                }
+                loadArchiveDirectory();
+            }
+        } else {
+            // Find entry by name and check if it's a directory
+            auto p = currentEntryRow();
+            if (p.first) {
+                PanelEntry *entry = p.first;
+                // entry->branch contains the full path inside archive
+                if (archiveContents.isDirectory(entry->branch)) {
+                    archiveCurrentDir = entry->branch;
+                    loadArchiveDirectory();
+                }
+                // else: it's a file - do nothing for now (extraction not implemented)
+            }
+        }
+        return;
+    }
+
     // Handle branch mode navigation
     if (branchMode) {
         auto p = currentEntryRow();
@@ -636,6 +695,21 @@ void FilePanel::trigger(const QString &name) {
             currentPath = dir.absolutePath();
             selectedName = ""; // select parent entry when going down
         } else {
+            // Check if file is an archive
+            QString fullPath = dir.absoluteFilePath(name);
+            QMimeDatabase mimeDb;
+            QMimeType mt = mimeDb.mimeTypeForFile(fullPath);
+            auto [components, archiveType] = classifyArchive(mt, fullPath);
+
+            if (archiveType == DetailedArchiveType::Compressed ||
+                archiveType == DetailedArchiveType::Archive ||
+                archiveType == DetailedArchiveType::CompressedArchive ||
+                archiveType == DetailedArchiveType::ArchiveOther) {
+                // Enter archive
+                enterArchive(fullPath);
+                return;
+            }
+
             // Regular file: open with system default application
             selectedName = name;
             run(qEscapePathForShell(name));
@@ -1728,6 +1802,84 @@ bool FilePanel::refreshEntryByPath(const QString &filePath) {
         }
     }
     return false;
+}
+
+// ============================================================================
+// Archive browsing mode
+// ============================================================================
+
+void FilePanel::enterArchive(const QString& archivePath) {
+    archiveContents = readArchive(archivePath);
+
+    if (archiveContents.allEntries.isEmpty()) {
+        // Archive is empty or couldn't be read
+        return;
+    }
+
+    insideArchive = true;
+    archiveFilePath = archivePath;
+    archiveCurrentDir.clear();
+    loadArchiveDirectory();
+}
+
+void FilePanel::exitArchive() {
+    // Save archive name before clearing
+    QString archiveName = QFileInfo(archiveFilePath).fileName();
+
+    insideArchive = false;
+    archiveFilePath.clear();
+    archiveCurrentDir.clear();
+    archiveContents.clear();
+
+    // Reload normal directory and select the archive file
+    loadDirectory();
+    selectEntryByName(archiveName);
+}
+
+void FilePanel::loadArchiveDirectory() {
+    entries.clear();
+
+    // Get entries for current directory in archive
+    QList<ArchiveEntry> dirEntries = archiveContents.entriesAt(archiveCurrentDir);
+
+    for (const ArchiveEntry& ae : dirEntries) {
+        // Create PanelEntry from ArchiveEntry
+        // We create a "virtual" QFileInfo based on archive entry data
+        PanelEntry entry;
+
+        // Use archiveFilePath as base for a fake path - just for info storage
+        // The actual file doesn't exist on disk
+        entry.info = QFileInfo(archiveFilePath + "/" + ae.path);
+
+        // Store archive-specific info
+        entry.branch = ae.path;  // Store full path inside archive for navigation
+
+        // Store size and modification time from archive entry
+        entry.totalSizeBytes = static_cast<std::size_t>(ae.size);
+        entry.hasTotalSize = TotalSizeStatus::Has;
+        entry.archiveModTime = ae.modTime;
+
+        // Set content state based on whether it's a directory
+        if (ae.isDirectory) {
+            entry.contentState = EntryContentState::DirNotEmpty;
+        } else {
+            entry.contentState = EntryContentState::NotDirectory;
+        }
+
+        entries.append(entry);
+    }
+
+    sortEntries();
+    model->refresh();
+    selectFirstEntry();
+
+    // Emit directory changed with archive path info
+    QString displayPath = archiveFilePath;
+    if (!archiveCurrentDir.isEmpty()) {
+        displayPath += "/" + archiveCurrentDir;
+    }
+    emit directoryChanged(displayPath);
+    emit selectionChanged();
 }
 
 #include "FilePanel_impl.inc"

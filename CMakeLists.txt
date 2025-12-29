@@ -43,6 +43,7 @@ pkg_check_modules(BOTAN botan-2)
 if(NOT BOTAN_FOUND)
     pkg_check_modules(BOTAN REQUIRED botan-3)
 endif()
+pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
 
 set(TOMLPLUSPLUS_INCLUDE_DIR
         ${CMAKE_CURRENT_SOURCE_DIR}/external/tomlplusplus/include
@@ -160,6 +161,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
         ${CMAKE_SOURCE_DIR}/external/textviewers
         ${TOMLPLUSPLUS_INCLUDE_DIR}
+        ${LIBARCHIVE_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -176,6 +178,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         KF${KF_MAJOR_VERSION}::KIOWidgets
         KF${KF_MAJOR_VERSION}::Parts
         ICU::uc ICU::i18n
+        ${LIBARCHIVE_LIBRARIES}
  )
 
 # Generate git_version.h at build time (not configure time)

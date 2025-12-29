@@ -5,6 +5,13 @@
 #include <QTextStream>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QSet>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+#include <archive.h>
+#include <archive_entry.h>
 
 namespace {
 
@@ -377,4 +384,187 @@ QString packZip(const QString& archivePath, const QStringList& files,
     }
 
     return {};
+}
+
+// ============================================================================
+// Archive Reading
+// ============================================================================
+
+void ArchiveContents::clear()
+{
+    archivePath.clear();
+    allEntries.clear();
+}
+
+QList<ArchiveEntry> ArchiveContents::entriesAt(const QString& dirPath) const
+{
+    QList<ArchiveEntry> result;
+    QSet<QString> addedPaths;  // Track paths we've already added
+
+    QString prefix = dirPath.isEmpty() ? QString() : dirPath + "/";
+
+    for (const ArchiveEntry& entry : allEntries) {
+        // Skip entries not under this directory
+        if (!prefix.isEmpty() && !entry.path.startsWith(prefix))
+            continue;
+
+        // Get the relative path from dirPath
+        QString relativePath = prefix.isEmpty() ? entry.path : entry.path.mid(prefix.length());
+
+        // Skip empty paths (the directory itself)
+        if (relativePath.isEmpty())
+            continue;
+
+        // Check if this is a direct child or deeper
+        int slashPos = relativePath.indexOf('/');
+
+        if (slashPos == -1) {
+            // Direct child - add it if not already added
+            if (!addedPaths.contains(entry.path)) {
+                addedPaths.insert(entry.path);
+                result.append(entry);
+            }
+        } else {
+            // Deeper entry - add the intermediate directory if not already added
+            QString dirName = relativePath.left(slashPos);
+            QString fullDirPath = prefix.isEmpty() ? dirName : prefix + dirName;
+
+            if (!addedPaths.contains(fullDirPath)) {
+                addedPaths.insert(fullDirPath);
+
+                // Create a synthetic directory entry
+                ArchiveEntry dirEntry;
+                dirEntry.path = fullDirPath;
+                dirEntry.name = dirName;
+                dirEntry.isDirectory = true;
+                dirEntry.size = 0;
+                result.append(dirEntry);
+            }
+        }
+    }
+
+    return result;
+}
+
+bool ArchiveContents::isDirectory(const QString& path) const
+{
+    if (path.isEmpty())
+        return true;  // Root is always a directory
+
+    // Check if any entry has this as a directory or has children under it
+    QString prefix = path + "/";
+
+    for (const ArchiveEntry& entry : allEntries) {
+        if (entry.path == path && entry.isDirectory)
+            return true;
+        if (entry.path.startsWith(prefix))
+            return true;  // Has children, so it's a directory
+    }
+
+    return false;
+}
+
+namespace {
+
+ArchiveContents readArchiveWithLibarchive(const QString& archivePath)
+{
+    ArchiveContents result;
+    result.archivePath = archivePath;
+
+    struct archive* a = archive_read_new();
+    archive_read_support_filter_all(a);
+    archive_read_support_format_all(a);
+
+    QByteArray pathBytes = archivePath.toUtf8();
+    if (archive_read_open_filename(a, pathBytes.constData(), 10240) == ARCHIVE_OK) {
+        struct archive_entry* entry;
+        while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+            ArchiveEntry e;
+            e.path = QString::fromUtf8(archive_entry_pathname(entry));
+
+            // Remove trailing slash from directories
+            while (e.path.endsWith('/'))
+                e.path.chop(1);
+
+            e.name = QFileInfo(e.path).fileName();
+            e.isDirectory = (archive_entry_filetype(entry) == AE_IFDIR);
+            e.size = archive_entry_size(entry);
+            e.modTime = QDateTime::fromSecsSinceEpoch(archive_entry_mtime(entry));
+
+            // Skip empty paths
+            if (!e.path.isEmpty() && !e.name.isEmpty()) {
+                result.allEntries.append(e);
+            }
+
+            archive_read_data_skip(a);
+        }
+    }
+
+    archive_read_free(a);
+    return result;
+}
+
+ArchiveContents readArchiveWithUnar(const QString& archivePath)
+{
+    ArchiveContents result;
+    result.archivePath = archivePath;
+
+    // Use lsar (list archive) with JSON output
+    QProcess proc;
+    proc.start("lsar", {"-j", archivePath});
+    if (!proc.waitForFinished(30000))
+        return result;
+
+    if (proc.exitCode() != 0)
+        return result;
+
+    QByteArray output = proc.readAllStandardOutput();
+    QJsonDocument doc = QJsonDocument::fromJson(output);
+    if (!doc.isObject())
+        return result;
+
+    QJsonObject root = doc.object();
+    QJsonArray contents = root["lsarContents"].toArray();
+
+    for (const QJsonValue& val : contents) {
+        QJsonObject obj = val.toObject();
+
+        ArchiveEntry e;
+        e.path = obj["XADFileName"].toString();
+
+        // Remove trailing slash from directories
+        while (e.path.endsWith('/'))
+            e.path.chop(1);
+
+        e.name = QFileInfo(e.path).fileName();
+        e.isDirectory = obj["XADIsDirectory"].toBool();
+        e.size = obj["XADFileSize"].toInteger();
+
+        // Parse date if available
+        QString dateStr = obj["XADLastModificationDate"].toString();
+        if (!dateStr.isEmpty()) {
+            e.modTime = QDateTime::fromString(dateStr, Qt::ISODate);
+        }
+
+        if (!e.path.isEmpty() && !e.name.isEmpty()) {
+            result.allEntries.append(e);
+        }
+    }
+
+    return result;
+}
+
+} // anonymous namespace
+
+ArchiveContents readArchive(const QString& archivePath)
+{
+    // Try libarchive first
+    ArchiveContents result = readArchiveWithLibarchive(archivePath);
+
+    // If libarchive failed or returned empty, try unar
+    if (result.allEntries.isEmpty()) {
+        result = readArchiveWithUnar(archivePath);
+    }
+
+    return result;
 }

@@ -5,6 +5,7 @@
 #include "FilePanel.h"
 
 #include "editor/EditorFrame.h"
+#include "editor/editor.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QKeyEvent>
