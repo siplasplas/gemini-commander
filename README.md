@@ -59,7 +59,7 @@ sudo apt install git cmake extra-cmake-modules pkg-config libkf6texteditor-dev l
 On Fedora/RHEL-based systems:
 ```
 sudo dnf install extra-cmake-modules pkgconf-pkg-config kf6-ktexteditor-devel botan2-devel \
-    libicu-devel json-devel gtest-devel librsvg2 librsvg2-tools
+    libicu-devel json-devel libarchive-devel gtest-devel librsvg2 librsvg2-tools
 ```
 
 On Arch-based systems (e.g., Arch Linux, Manjaro):
