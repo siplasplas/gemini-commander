@@ -833,7 +833,7 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
 
     // Optional: initial sizes
     setColumnWidth(COLUMN_NAME, 200);
-    setColumnWidth(COLUMN_EXT, 80);
+    setColumnWidth(COLUMN_EXT, 70);
     setColumnWidth(COLUMN_SIZE, 100);
     setColumnWidth(COLUMN_DATE, 125);
 
