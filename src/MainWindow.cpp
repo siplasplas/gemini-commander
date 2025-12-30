@@ -216,6 +216,8 @@ void MainWindow::onConfigSaved()
     Config::instance().load(Config::instance().configPath());
 
     // Apply window geometry
+    // NOTE: On Wayland, the compositor may block programmatic window enlargement
+    // for security reasons. The new size will be applied on next app start.
     applyConfigGeometry();
 
     // Update external tool button (in case path changed)
