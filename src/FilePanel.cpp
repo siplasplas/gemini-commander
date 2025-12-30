@@ -384,6 +384,10 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
         return QBrush(Qt::red);
     }
 
+    if (role == Qt::TextAlignmentRole && colName == "Size") {
+        return QVariant(Qt::AlignRight | Qt::AlignVCenter);
+    }
+
     return {};
 }
 
