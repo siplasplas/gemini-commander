@@ -76,7 +76,6 @@ private:
     QToolBar* m_storageInfoToolBar = nullptr;
     QAction* m_openTerminalAction = nullptr;
     QAction* m_searchAction = nullptr;
-    QAction* m_externalToolAction = nullptr;
 
     void createMountsToolbar();
     void copyFromPanel(FilePanel* srcPanel, bool inPlace = false);
@@ -87,10 +86,6 @@ private:
     QString currentPanelName();
     QString currentPanelPath();
     void updateCurrentPathLabel();
-
-    void updateExternalToolButton();
-    QString findDesktopFile(const QString& executablePath);
-    QString extractIconFromDesktop(const QString& desktopFilePath);
 
     // Methods for opening editor/viewer with specific file
     void openEditorForFile(const QString& filePath);
@@ -133,9 +128,6 @@ public slots:
 
 private slots:
     void onOpenTerminal();
-    void onExternalToolClicked();
-    void onExternalToolContextMenu(const QPoint& pos);
-    void configureExternalTool();
     void onDirectoryChanged(const QString& path);
     void onVisibleFilesChanged(Side side, const QStringList& paths);
     void onLeftFileChanged(const QString& path);
