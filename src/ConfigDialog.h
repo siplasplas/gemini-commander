@@ -18,6 +18,7 @@ public:
 
 signals:
     void settingsApplied();
+    void sortingChanged(int side, int column, int order);  // side: 0=Left, 1=Right
 
 private slots:
     void onCategoryChanged(int index);
@@ -40,6 +41,10 @@ private:
     // Initial values to detect changes
     int m_initialWidth = 0;
     int m_initialHeight = 0;
+    int m_initialLeftSortColumn = 0;
+    int m_initialLeftSortOrder = 0;
+    int m_initialRightSortColumn = 0;
+    int m_initialRightSortOrder = 0;
 
     // UI elements
     QListWidget* m_categoryList;

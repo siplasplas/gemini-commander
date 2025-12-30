@@ -399,14 +399,21 @@ void ConfigDialog::loadSettings()
     m_viewerX->setValue(cfg.viewerX());
     m_viewerY->setValue(cfg.viewerY());
 
-    // Panels page - new options, will have defaults
-    // TODO: Load from config when implemented
+    // Panels page
     m_leftPanelStartDir->clear();
     m_rightPanelStartDir->clear();
-    m_leftSortColumn->setCurrentIndex(0);  // Name
-    m_leftSortOrder->setCurrentIndex(0);   // Ascending
-    m_rightSortColumn->setCurrentIndex(0);
-    m_rightSortOrder->setCurrentIndex(0);
+
+    // Load sorting from config (column: 1-4 -> combo index 0-3)
+    m_leftSortColumn->setCurrentIndex(cfg.leftSortColumn() - 1);
+    m_leftSortOrder->setCurrentIndex(cfg.leftSortOrder());
+    m_rightSortColumn->setCurrentIndex(cfg.rightSortColumn() - 1);
+    m_rightSortOrder->setCurrentIndex(cfg.rightSortOrder());
+
+    // Remember initial sorting values to detect changes
+    m_initialLeftSortColumn = cfg.leftSortColumn();
+    m_initialLeftSortOrder = cfg.leftSortOrder();
+    m_initialRightSortColumn = cfg.rightSortColumn();
+    m_initialRightSortOrder = cfg.rightSortOrder();
 
     // History page
     m_maxHistorySize->setValue(cfg.maxHistorySize());
@@ -432,9 +439,26 @@ void ConfigDialog::saveSettings()
     cfg.setViewerGeometry(m_viewerX->value(), m_viewerY->value(),
                           m_viewerWidth->value(), m_viewerHeight->value());
 
-    // Panels - TODO: implement in Config when ready
-    // cfg.setLeftPanelStartDir(m_leftPanelStartDir->text());
-    // cfg.setRightPanelStartDir(m_rightPanelStartDir->text());
+    // Panels - sorting (combo index 0-3 -> column 1-4)
+    int newLeftCol = m_leftSortColumn->currentIndex() + 1;
+    int newLeftOrd = m_leftSortOrder->currentIndex();
+    int newRightCol = m_rightSortColumn->currentIndex() + 1;
+    int newRightOrd = m_rightSortOrder->currentIndex();
+
+    cfg.setLeftSort(newLeftCol, newLeftOrd);
+    cfg.setRightSort(newRightCol, newRightOrd);
+
+    // Emit signals if sorting changed
+    if (newLeftCol != m_initialLeftSortColumn || newLeftOrd != m_initialLeftSortOrder) {
+        emit sortingChanged(0, newLeftCol, newLeftOrd);  // 0 = Left
+        m_initialLeftSortColumn = newLeftCol;
+        m_initialLeftSortOrder = newLeftOrd;
+    }
+    if (newRightCol != m_initialRightSortColumn || newRightOrd != m_initialRightSortOrder) {
+        emit sortingChanged(1, newRightCol, newRightOrd);  // 1 = Right
+        m_initialRightSortColumn = newRightCol;
+        m_initialRightSortOrder = newRightOrd;
+    }
 
     // History
     cfg.setMaxHistorySize(m_maxHistorySize->value());

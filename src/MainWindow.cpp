@@ -408,6 +408,14 @@ void MainWindow::setupUi() {
             m_geometryDirty = false;
             onConfigSaved();
         });
+        connect(&dlg, &ConfigDialog::sortingChanged, this, [this](int side, int column, int order) {
+            FilePanel* panel = filePanelForSide(side == 0 ? Side::Left : Side::Right);
+            if (panel) {
+                panel->sortColumn = column;
+                panel->sortOrder = static_cast<Qt::SortOrder>(order);
+                panel->addAllEntries();
+            }
+        });
         dlg.exec();
     });
     configMenu->addAction(settingsAction);
