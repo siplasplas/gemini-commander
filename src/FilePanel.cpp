@@ -37,6 +37,10 @@
 #include <QDateTime>
 #include <QMimeDatabase>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace {
 
 // Parse command line into program and arguments, handling quotes
@@ -329,13 +333,37 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
         }
 
         if (colName == "Attr") {
-            // Return file attributes/permissions
+#ifdef _WIN32
+            // Windows: 7 attributes RHSACEI (no D for directory)
+            QString result;
+            DWORD attrs = GetFileAttributesW(reinterpret_cast<LPCWSTR>(entry.info.absoluteFilePath().utf16()));
+            if (attrs != INVALID_FILE_ATTRIBUTES) {
+                result += (attrs & FILE_ATTRIBUTE_READONLY) ? 'r' : '-';
+                result += (attrs & FILE_ATTRIBUTE_HIDDEN) ? 'h' : '-';
+                result += (attrs & FILE_ATTRIBUTE_SYSTEM) ? 's' : '-';
+                result += (attrs & FILE_ATTRIBUTE_ARCHIVE) ? 'a' : '-';
+                result += (attrs & FILE_ATTRIBUTE_COMPRESSED) ? 'c' : '-';
+                result += (attrs & FILE_ATTRIBUTE_ENCRYPTED) ? 'e' : '-';
+                result += (attrs & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED) ? 'i' : '-';
+            } else {
+                result = "-------";
+            }
+            return result;
+#else
+            // Unix: 9 characters rwxrwxrwx (owner, group, other - no d for directory)
             QFile::Permissions perms = entry.info.permissions();
             QString result;
             result += (perms & QFile::ReadOwner) ? 'r' : '-';
             result += (perms & QFile::WriteOwner) ? 'w' : '-';
             result += (perms & QFile::ExeOwner) ? 'x' : '-';
+            result += (perms & QFile::ReadGroup) ? 'r' : '-';
+            result += (perms & QFile::WriteGroup) ? 'w' : '-';
+            result += (perms & QFile::ExeGroup) ? 'x' : '-';
+            result += (perms & QFile::ReadOther) ? 'r' : '-';
+            result += (perms & QFile::WriteOther) ? 'w' : '-';
+            result += (perms & QFile::ExeOther) ? 'x' : '-';
             return result;
+#endif
         }
     }
 
