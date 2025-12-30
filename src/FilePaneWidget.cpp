@@ -8,8 +8,10 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDir>
+#include <QFileInfo>
 #include <QMenu>
 #include <QEvent>
+#include <QTabWidget>
 
 #include "keys/ObjectRegistry.h"
 
@@ -130,6 +132,28 @@ void FilePaneWidget::onDirectoryChanged(const QString& path)
 {
     m_pathEdit->setText(path);
     addToHistory(path);
+
+    // Update tab title to last path component
+    // QTabWidget uses internal QStackedWidget, so we need to traverse up
+    QWidget* p = parentWidget();
+    while (p && !qobject_cast<QTabWidget*>(p)) {
+        p = p->parentWidget();
+    }
+    if (auto* tabWidget = qobject_cast<QTabWidget*>(p)) {
+        int tabIndex = tabWidget->indexOf(this);
+        if (tabIndex >= 0) {
+            QString title;
+            if (path == "/" || path.isEmpty()) {
+                title = "/";
+            } else {
+                QFileInfo info(path);
+                title = info.fileName();
+                if (title.isEmpty())
+                    title = path;
+            }
+            tabWidget->setTabText(tabIndex, title);
+        }
+    }
 }
 
 void FilePaneWidget::onSelectionChanged()

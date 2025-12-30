@@ -93,6 +93,10 @@ bool Config::load(const QString& path)
     m_viewerHeight = 600;
     m_viewerX = 0;
     m_viewerY = 0;
+    m_leftTabDirs.clear();
+    m_leftTabIndex = 0;
+    m_rightTabDirs.clear();
+    m_rightTabIndex = 0;
 
     QFile f(path);
     if (!f.exists()) {
@@ -221,6 +225,31 @@ bool Config::load(const QString& path)
                 if (props.size() == m_rightColumns.size())
                     m_rightProportions = props;
             }
+        }
+
+        // [tabs] section - tab directories
+        if (tbl.contains("tabs")) {
+            auto& tabs = *tbl["tabs"].as_table();
+
+            // Left tabs
+            if (tabs.contains("left_dirs") && tabs["left_dirs"].is_array()) {
+                for (const auto& node : *tabs["left_dirs"].as_array()) {
+                    if (auto s = node.value<std::string>())
+                        m_leftTabDirs.append(QString::fromStdString(*s));
+                }
+            }
+            if (auto idx = tabs["left_index"].value<int64_t>())
+                m_leftTabIndex = static_cast<int>(*idx);
+
+            // Right tabs
+            if (tabs.contains("right_dirs") && tabs["right_dirs"].is_array()) {
+                for (const auto& node : *tabs["right_dirs"].as_array()) {
+                    if (auto s = node.value<std::string>())
+                        m_rightTabDirs.append(QString::fromStdString(*s));
+                }
+            }
+            if (auto idx = tabs["right_index"].value<int64_t>())
+                m_rightTabIndex = static_cast<int>(*idx);
         }
 
         if (tbl.contains("favorites")) {
@@ -356,6 +385,19 @@ bool Config::save() const
     panelsTbl.insert("right_proportions", rightPropsArr);
 
     tbl.insert("panels", panelsTbl);
+
+    // [tabs] section - tab directories
+    toml::table tabsTbl;
+    toml::array leftDirsArr, rightDirsArr;
+    for (const QString& dir : m_leftTabDirs)
+        leftDirsArr.push_back(dir.toStdString());
+    for (const QString& dir : m_rightTabDirs)
+        rightDirsArr.push_back(dir.toStdString());
+    tabsTbl.insert("left_dirs", leftDirsArr);
+    tabsTbl.insert("left_index", static_cast<int64_t>(m_leftTabIndex));
+    tabsTbl.insert("right_dirs", rightDirsArr);
+    tabsTbl.insert("right_index", static_cast<int64_t>(m_rightTabIndex));
+    tbl.insert("tabs", tabsTbl);
 
     // [external_tool] section
     if (!m_externalToolPath.isEmpty()) {

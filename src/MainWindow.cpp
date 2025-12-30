@@ -203,6 +203,53 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         cfg.setWindowGeometry(winX, winY, width(), height());
     }
 
+    // Save tab directories (with deduplication)
+    auto saveTabsForSide = [](QTabWidget* tabWidget) -> std::pair<QStringList, int> {
+        QStringList dirs;
+        int selectedIndex = tabWidget->currentIndex();
+        QString selectedDir;
+
+        // Get selected directory before deduplication
+        if (selectedIndex >= 0 && selectedIndex < tabWidget->count()) {
+            if (auto* pane = qobject_cast<FilePaneWidget*>(tabWidget->widget(selectedIndex))) {
+                selectedDir = QDir::cleanPath(pane->filePanel()->currentPath);
+            }
+        }
+
+        // Collect all directories
+        for (int i = 0; i < tabWidget->count(); ++i) {
+            if (auto* pane = qobject_cast<FilePaneWidget*>(tabWidget->widget(i))) {
+                dirs.append(pane->filePanel()->currentPath);
+            }
+        }
+
+        // Remove duplicates, keeping first occurrence
+        QStringList uniqueDirs;
+        QSet<QString> seen;
+        for (const QString& dir : dirs) {
+            QString clean = QDir::cleanPath(dir);
+            if (!seen.contains(clean)) {
+                seen.insert(clean);
+                uniqueDirs.append(clean);
+            }
+        }
+
+        // Find new index for selected directory after deduplication
+        int newIndex = 0;
+        if (!selectedDir.isEmpty()) {
+            int idx = uniqueDirs.indexOf(selectedDir);
+            if (idx >= 0)
+                newIndex = idx;
+        }
+
+        return {uniqueDirs, newIndex};
+    };
+
+    auto [leftDirs, leftIndex] = saveTabsForSide(m_leftTabs);
+    auto [rightDirs, rightIndex] = saveTabsForSide(m_rightTabs);
+    cfg.setLeftTabs(leftDirs, leftIndex);
+    cfg.setRightTabs(rightDirs, rightIndex);
+
     // Always save config (at least sorting settings)
     cfg.save();
 
@@ -290,22 +337,70 @@ void MainWindow::setupUi() {
     splitter->setStretchFactor(0, 1);
     splitter->setStretchFactor(1, 1);
 
-    auto* leftPane  = new FilePaneWidget(Side::Left, m_leftTabs);
-    auto* rightPane = new FilePaneWidget(Side::Right, m_rightTabs);
-    m_leftTabs->addTab(leftPane,  "Left");
-    m_rightTabs->addTab(rightPane, "Right");
+    // Helper: compute tab title from path (last component or "/" for root)
+    auto tabTitleFromPath = [](const QString& path) -> QString {
+        if (path == "/" || path.isEmpty())
+            return "/";
+        QFileInfo info(path);
+        QString name = info.fileName();
+        return name.isEmpty() ? path : name;
+    };
 
-    // Connect favorites button signals
-    connect(leftPane, &FilePaneWidget::favoritesRequested, this, [this, leftPane](const QPoint& pos) {
-        showFavoriteDirsMenu(leftPane->filePanel()->side(), pos);
-    });
-    connect(rightPane, &FilePaneWidget::favoritesRequested, this, [this, rightPane](const QPoint& pos) {
-        showFavoriteDirsMenu(rightPane->filePanel()->side(), pos);
-    });
+    // Helper: remove duplicates from list, keeping first occurrence
+    auto removeDuplicates = [](const QStringList& list) -> QStringList {
+        QStringList result;
+        QSet<QString> seen;
+        for (const QString& item : list) {
+            QString clean = QDir::cleanPath(item);
+            if (!seen.contains(clean)) {
+                seen.insert(clean);
+                result.append(clean);
+            }
+        }
+        return result;
+    };
 
-    // Install event filter on path edits for selectAll on focus
-    leftPane->pathEdit()->installEventFilter(this);
-    rightPane->pathEdit()->installEventFilter(this);
+    // Helper: create tabs for a side
+    auto createTabsForSide = [&](QTabWidget* tabWidget, Side side,
+                                  const QStringList& dirs, int selectedIndex) {
+        QStringList uniqueDirs = removeDuplicates(dirs);
+
+        // If no dirs configured, use home directory
+        if (uniqueDirs.isEmpty()) {
+            uniqueDirs.append(QDir::homePath());
+        }
+
+        // Adjust selectedIndex after deduplication
+        if (selectedIndex < 0 || selectedIndex >= uniqueDirs.size()) {
+            selectedIndex = 0;
+        }
+
+        for (int i = 0; i < uniqueDirs.size(); ++i) {
+            const QString& dir = uniqueDirs[i];
+            auto* pane = new FilePaneWidget(side, tabWidget);
+
+            // Set initial path (lazy loading - will try to load when activated)
+            pane->filePanel()->currentPath = dir;
+
+            QString title = tabTitleFromPath(dir);
+            tabWidget->addTab(pane, title);
+
+            // Connect favorites button signal
+            connect(pane, &FilePaneWidget::favoritesRequested, this, [this, pane](const QPoint& pos) {
+                showFavoriteDirsMenu(pane->filePanel()->side(), pos);
+            });
+
+            // Install event filter on path edit
+            pane->pathEdit()->installEventFilter(this);
+        }
+
+        tabWidget->setCurrentIndex(selectedIndex);
+    };
+
+    // Create tabs from config
+    auto& cfg = Config::instance();
+    createTabsForSide(m_leftTabs, Side::Left, cfg.leftTabDirs(), cfg.leftTabIndex());
+    createTabsForSide(m_rightTabs, Side::Right, cfg.rightTabDirs(), cfg.rightTabIndex());
 
     // Bottom line: currentPath label (3/4 of left panel) + command line (rest)
     auto* bottomLayout = new QHBoxLayout();

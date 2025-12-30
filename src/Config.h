@@ -99,6 +99,15 @@ public:
   static QStringList defaultColumns() { return {"Name", "Ext", "Size", "Date"}; }
   static QVector<double> defaultProportions() { return {0.40, 0.14, 0.20, 0.26}; }
 
+  // Tab directories configuration
+  QStringList leftTabDirs() const { return m_leftTabDirs; }
+  int leftTabIndex() const { return m_leftTabIndex; }
+  void setLeftTabs(const QStringList& dirs, int index) { m_leftTabDirs = dirs; m_leftTabIndex = index; }
+
+  QStringList rightTabDirs() const { return m_rightTabDirs; }
+  int rightTabIndex() const { return m_rightTabIndex; }
+  void setRightTabs(const QStringList& dirs, int index) { m_rightTabDirs = dirs; m_rightTabIndex = index; }
+
 private:
   Config() = default;
 
@@ -136,6 +145,12 @@ private:
   QVector<double> m_leftProportions = {0.40, 0.14, 0.20, 0.26};
   QStringList m_rightColumns = {"Name", "Ext", "Size", "Date"};
   QVector<double> m_rightProportions = {0.40, 0.14, 0.20, 0.26};
+
+  // Tab directories (empty means use default/cwd)
+  QStringList m_leftTabDirs;
+  int m_leftTabIndex = 0;
+  QStringList m_rightTabDirs;
+  int m_rightTabIndex = 0;
 };
 
 #endif
