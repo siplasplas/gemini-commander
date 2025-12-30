@@ -134,6 +134,8 @@ add_executable(${PROJECT_NAME}
         external/textviewers/misc/selection.cpp
         src/Config.cpp
         src/Config.h
+        src/ConfigDialog.cpp
+        src/ConfigDialog.h
         src/FilePaneWidget.cpp
         src/FilePaneWidget.h
         src/FunctionBar.cpp

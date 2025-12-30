@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "Config.h"
+#include "ConfigDialog.h"
 #include "FilePaneWidget.h"
 #include "FilePanel.h"
 
@@ -158,6 +159,14 @@ MainWindow::MainWindow(QWidget *parent)
     }
 }
 
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+    QMainWindow::resizeEvent(event);
+    // Mark geometry as dirty when user interactively resizes
+    // This prevents overwriting config values that couldn't be applied (e.g., on Wayland)
+    m_geometryDirty = true;
+}
+
 void MainWindow::closeEvent(QCloseEvent *event) {
     // If editor is visible, close it first instead of closing the app
     if (editorFrame && editorFrame->isVisible()) {
@@ -166,21 +175,23 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         return;
     }
 
-    // Save window geometry before closing
-    // Use frameGeometry for position (includes window decorations)
-    QRect frame = frameGeometry();
-    int winX = frame.x();
-    int winY = frame.y();
+    // Only save window geometry if user interactively resized the window
+    // This prevents overwriting config values that couldn't be applied (e.g., on Wayland)
+    if (m_geometryDirty) {
+        QRect frame = frameGeometry();
+        int winX = frame.x();
+        int winY = frame.y();
 
-    // On Wayland, window positions are not reliable - don't save them
-    // On X11 (xcb), negative positions are valid (e.g., monitor to the left)
-    bool isWayland = QGuiApplication::platformName() == QLatin1String("wayland");
-    if (isWayland) {
-        winX = -1;  // Mark as "not set" - Wayland doesn't support positioning
-        winY = -1;
+        // On Wayland, window positions are not reliable - don't save them
+        // On X11 (xcb), negative positions are valid (e.g., monitor to the left)
+        bool isWayland = QGuiApplication::platformName() == QLatin1String("wayland");
+        if (isWayland) {
+            winX = -1;  // Mark as "not set" - Wayland doesn't support positioning
+            winY = -1;
+        }
+        Config::instance().setWindowGeometry(winX, winY, width(), height());
+        Config::instance().save();
     }
-    Config::instance().setWindowGeometry(winX, winY, width(), height());
-    Config::instance().save();
 
     if (!Config::instance().confirmExit()) {
         event->accept();
@@ -201,12 +212,20 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     }
 }
 
-void MainWindow::applyConfigGeometry()
+void MainWindow::applyConfigGeometry(bool isStartup)
 {
     const auto& cfg = Config::instance();
-    resize(cfg.windowWidth(), cfg.windowHeight());
-    if (cfg.windowX() >= 0 && cfg.windowY() >= 0) {
-        move(cfg.windowX(), cfg.windowY());
+    bool isWayland = QGuiApplication::platformName() == QLatin1String("wayland");
+
+    // On Wayland, the compositor blocks programmatic window resize for security reasons.
+    // At startup we must set the size (it works for initial geometry).
+    // After startup, calling resize() would be ignored anyway, but it would trigger
+    // resizeEvent() which sets m_geometryDirty = true, overwriting user's config dialog changes.
+    if (isStartup || !isWayland) {
+        resize(cfg.windowWidth(), cfg.windowHeight());
+        if (cfg.windowX() >= 0 && cfg.windowY() >= 0) {
+            move(cfg.windowX(), cfg.windowY());
+        }
     }
 }
 
@@ -215,10 +234,10 @@ void MainWindow::onConfigSaved()
     // Reload config from file
     Config::instance().load(Config::instance().configPath());
 
-    // Apply window geometry
+    // Apply window geometry (not startup, so skip resize on Wayland)
     // NOTE: On Wayland, the compositor may block programmatic window enlargement
     // for security reasons. The new size will be applied on next app start.
-    applyConfigGeometry();
+    applyConfigGeometry(false);
 
     // Update external tool button (in case path changed)
     updateExternalToolButton();
@@ -371,6 +390,17 @@ void MainWindow::setupUi() {
     fileMenu->addAction(quitAction);
 
     // Configuration menu
+    QAction* settingsAction = new QAction(tr("Settings..."), this);
+    connect(settingsAction, &QAction::triggered, this, [this]() {
+        ConfigDialog dlg(this);
+        connect(&dlg, &ConfigDialog::settingsApplied, this, [this]() {
+            m_geometryDirty = false;
+            onConfigSaved();
+        });
+        dlg.exec();
+    });
+    configMenu->addAction(settingsAction);
+
     QAction* editConfigAction = new QAction(tr("Change Settings Files Directly..."), this);
     connect(editConfigAction, &QAction::triggered, this, [this]() {
         QString configPath = Config::instance().configPath();

@@ -36,7 +36,9 @@ public:
 #include "MainWindow_decl.inc"
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 private:
+    bool m_geometryDirty = false;  // True if user resized window interactively
     void setupUi();
     static Side opposite(Side side);
     bool eventFilter(QObject *obj, QEvent *event) override;
@@ -93,7 +95,7 @@ private:
     void openViewerForFile(const QString& filePath);
     void goToFile(const QString& dir, const QString& name);
 
-    void applyConfigGeometry();
+    void applyConfigGeometry(bool isStartup = true);
 
     // Directory monitoring
     QFileSystemWatcher* m_dirWatcher = nullptr;
