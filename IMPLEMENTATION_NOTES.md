@@ -7,7 +7,6 @@
     • Visibility filtering by folders/hidden/other.
     • Editor must handle encrypted files
     • F3 action on folders – should display total size in bytes.
-    • Optional status line.
     • Configuration dialog bound to Ctrl+D.
     • Navigation history (Alt+Down).
     • Handling of symbolic links or file attributes (permissions, hidden). 
