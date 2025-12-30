@@ -2075,8 +2075,8 @@ void MainWindow::refreshMountsToolbar()
         QString tooltip = QString("%1\n%2\nFree: %3 / %4")
             .arg(vol.rootPath())
             .arg(QString::fromUtf8(vol.fileSystemType()))
-            .arg(QLocale().formattedDataSize(vol.bytesFree()))
-            .arg(QLocale().formattedDataSize(vol.bytesTotal()));
+            .arg(qFormatSize(vol.bytesFree()), false))
+            .arg(qFormatSize(vol.bytesTotal()), false));
 
         QAction* act = new QAction(displayLabel, m_mountsToolBar);
         act->setToolTip(tooltip);
