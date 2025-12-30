@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QDebug>
 #include <QStandardPaths>
+#include <cmath>
 
 #include <toml++/toml.h>
 
@@ -194,8 +195,8 @@ bool Config::load(const QString& path)
             if (panels.contains("left_proportions") && panels["left_proportions"].is_array()) {
                 QVector<double> props;
                 for (const auto& node : *panels["left_proportions"].as_array()) {
-                    if (auto d = node.value<double>())
-                        props.append(*d);
+                    if (auto i = node.value<int64_t>())
+                        props.append(*i / 100.0);
                 }
                 if (props.size() == m_leftColumns.size())
                     m_leftProportions = props;
@@ -214,8 +215,8 @@ bool Config::load(const QString& path)
             if (panels.contains("right_proportions") && panels["right_proportions"].is_array()) {
                 QVector<double> props;
                 for (const auto& node : *panels["right_proportions"].as_array()) {
-                    if (auto d = node.value<double>())
-                        props.append(*d);
+                    if (auto i = node.value<int64_t>())
+                        props.append(*i / 100.0);
                 }
                 if (props.size() == m_rightColumns.size())
                     m_rightProportions = props;
@@ -341,7 +342,7 @@ bool Config::save() const
     for (const QString& col : m_leftColumns)
         leftColsArr.push_back(col.toStdString());
     for (double prop : m_leftProportions)
-        leftPropsArr.push_back(prop);
+        leftPropsArr.push_back(static_cast<int64_t>(std::round(prop * 100.0)));
     panelsTbl.insert("left_columns", leftColsArr);
     panelsTbl.insert("left_proportions", leftPropsArr);
 
@@ -350,7 +351,7 @@ bool Config::save() const
     for (const QString& col : m_rightColumns)
         rightColsArr.push_back(col.toStdString());
     for (double prop : m_rightProportions)
-        rightPropsArr.push_back(prop);
+        rightPropsArr.push_back(static_cast<int64_t>(std::round(prop * 100.0)));
     panelsTbl.insert("right_columns", rightColsArr);
     panelsTbl.insert("right_proportions", rightPropsArr);
 
