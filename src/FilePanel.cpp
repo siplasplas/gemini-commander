@@ -260,8 +260,6 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
     if (entryIdx < 0) {
         if (role == Qt::DisplayRole) {
             switch (col) {
-                case COLUMN_ID:
-                    return QString();
                 case COLUMN_NAME:
                     return QStringLiteral("[..]");
                 case COLUMN_EXT:
@@ -292,8 +290,6 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
     if (role == Qt::DisplayRole) {
         auto [base, ext] = splitFileName(entry.info);
         switch (col) {
-            case COLUMN_ID:
-                return QString();
             case COLUMN_NAME:
                 return base;
             case COLUMN_EXT:
@@ -350,8 +346,6 @@ QVariant FilePanelModel::headerData(int section, Qt::Orientation orientation, in
         return {};
 
     switch (section) {
-        case COLUMN_ID:
-            return QStringLiteral("id");
         case COLUMN_NAME:
             return QStringLiteral("Name");
         case COLUMN_EXT:
@@ -805,7 +799,6 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     m_visibilityDebounceTimer->setInterval(1000);
     connect(m_visibilityDebounceTimer, &QTimer::timeout, this, &FilePanel::emitVisibleFiles);
 
-    hideColumn(COLUMN_ID);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setEditTriggers(QAbstractItemView::NoEditTriggers);

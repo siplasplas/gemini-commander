@@ -61,11 +61,10 @@ struct PanelEntry {
 };
 
 enum Columns {
-        COLUMN_ID = 0,
-        COLUMN_NAME = 1,
-        COLUMN_EXT =  2,
-        COLUMN_SIZE = 3,
-        COLUMN_DATE = 4,
+        COLUMN_NAME = 0,
+        COLUMN_EXT =  1,
+        COLUMN_SIZE = 2,
+        COLUMN_DATE = 3,
 };
 
 // Forward declaration
