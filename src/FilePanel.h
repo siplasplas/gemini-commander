@@ -60,12 +60,8 @@ struct PanelEntry {
     }
 };
 
-enum Columns {
-        COLUMN_NAME = 0,
-        COLUMN_EXT =  1,
-        COLUMN_SIZE = 2,
-        COLUMN_DATE = 3,
-};
+// Column names are now strings: "Name", "Ext", "Size", "Date", "Attr"
+// Each panel can have different columns in any order
 
 // Forward declaration
 class FilePanel;
@@ -129,8 +125,12 @@ public:
     QString archiveCurrentDir;    // Current directory inside archive (empty = root)
     ArchiveContents archiveContents;
 
-    int sortColumn = COLUMN_DATE;
+    QString sortColumn = "Date";  // Column name to sort by
     Qt::SortOrder sortOrder = Qt::DescendingOrder;
+
+    // Column configuration - loaded from Config
+    QStringList columns() const { return m_columns; }
+    int columnIndex(const QString& name) const { return m_columns.indexOf(name); }
 
     FilePanel(Side side, QWidget* parent = nullptr);
     ~FilePanel() override;
@@ -234,7 +234,8 @@ private:
     void emitVisibleFiles();
     QStringList getVisibleFilePaths() const;
 
-    // Proportional column widths
+    // Column names and proportional widths
+    QStringList m_columns;  // e.g. {"Name", "Ext", "Size", "Date"}
     QVector<double> m_columnProportions;
     void updateColumnProportions();
 

@@ -41,9 +41,9 @@ private:
     // Initial values to detect changes
     int m_initialWidth = 0;
     int m_initialHeight = 0;
-    int m_initialLeftSortColumn = 0;
+    QString m_initialLeftSortColumn;
     int m_initialLeftSortOrder = 0;
-    int m_initialRightSortColumn = 0;
+    QString m_initialRightSortColumn;
     int m_initialRightSortOrder = 0;
 
     // UI elements

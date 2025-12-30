@@ -72,14 +72,32 @@ public:
   int maxHistorySize() const { return m_maxHistorySize; }
   void setMaxHistorySize(int size) { m_maxHistorySize = size; }
 
-  // Panel sorting (column: 1=Name, 2=Ext, 3=Size, 4=Date; order: 0=Asc, 1=Desc)
-  int leftSortColumn() const { return m_leftSortColumn; }
+  // Panel sorting (column: "Name", "Ext", "Size", "Date"; order: 0=Asc, 1=Desc)
+  QString leftSortColumn() const { return m_leftSortColumn; }
   int leftSortOrder() const { return m_leftSortOrder; }
-  void setLeftSort(int column, int order) { m_leftSortColumn = column; m_leftSortOrder = order; }
+  void setLeftSort(const QString& column, int order) { m_leftSortColumn = column; m_leftSortOrder = order; }
 
-  int rightSortColumn() const { return m_rightSortColumn; }
+  QString rightSortColumn() const { return m_rightSortColumn; }
   int rightSortOrder() const { return m_rightSortOrder; }
-  void setRightSort(int column, int order) { m_rightSortColumn = column; m_rightSortOrder = order; }
+  void setRightSort(const QString& column, int order) { m_rightSortColumn = column; m_rightSortOrder = order; }
+
+  // Panel columns configuration
+  QStringList leftPanelColumns() const { return m_leftColumns; }
+  QVector<double> leftPanelProportions() const { return m_leftProportions; }
+  void setLeftPanelColumns(const QStringList& cols, const QVector<double>& props) {
+      m_leftColumns = cols; m_leftProportions = props;
+  }
+
+  QStringList rightPanelColumns() const { return m_rightColumns; }
+  QVector<double> rightPanelProportions() const { return m_rightProportions; }
+  void setRightPanelColumns(const QStringList& cols, const QVector<double>& props) {
+      m_rightColumns = cols; m_rightProportions = props;
+  }
+
+  // Available column names (static)
+  static QStringList availableColumns() { return {"Name", "Ext", "Size", "Date", "Attr"}; }
+  static QStringList defaultColumns() { return {"Name", "Ext", "Size", "Date"}; }
+  static QVector<double> defaultProportions() { return {0.40, 0.14, 0.20, 0.26}; }
 
 private:
   Config() = default;
@@ -108,10 +126,16 @@ private:
   int m_viewerY = 0;
 
   // Panel sorting (defaults: Date, Descending)
-  int m_leftSortColumn = 4;   // COLUMN_DATE
+  QString m_leftSortColumn = "Date";
   int m_leftSortOrder = 1;    // Qt::DescendingOrder
-  int m_rightSortColumn = 4;
+  QString m_rightSortColumn = "Date";
   int m_rightSortOrder = 1;
+
+  // Panel columns (defaults: Name, Ext, Size, Date)
+  QStringList m_leftColumns = {"Name", "Ext", "Size", "Date"};
+  QVector<double> m_leftProportions = {0.40, 0.14, 0.20, 0.26};
+  QStringList m_rightColumns = {"Name", "Ext", "Size", "Date"};
+  QVector<double> m_rightProportions = {0.40, 0.14, 0.20, 0.26};
 };
 
 #endif

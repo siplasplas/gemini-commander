@@ -169,17 +169,57 @@ bool Config::load(const QString& path)
                 m_viewerY = static_cast<int>(*y);
         }
 
-        // [panels] section - sorting settings
+        // [panels] section - sorting settings and columns
         if (tbl.contains("panels")) {
             auto& panels = *tbl["panels"].as_table();
-            if (auto col = panels["left_sort_column"].value<int64_t>())
-                m_leftSortColumn = static_cast<int>(*col);
+            if (auto col = panels["left_sort_column"].value<std::string>())
+                m_leftSortColumn = QString::fromStdString(*col);
             if (auto ord = panels["left_sort_order"].value<int64_t>())
                 m_leftSortOrder = static_cast<int>(*ord);
-            if (auto col = panels["right_sort_column"].value<int64_t>())
-                m_rightSortColumn = static_cast<int>(*col);
+            if (auto col = panels["right_sort_column"].value<std::string>())
+                m_rightSortColumn = QString::fromStdString(*col);
             if (auto ord = panels["right_sort_order"].value<int64_t>())
                 m_rightSortOrder = static_cast<int>(*ord);
+
+            // Left panel columns
+            if (panels.contains("left_columns") && panels["left_columns"].is_array()) {
+                QStringList cols;
+                for (const auto& node : *panels["left_columns"].as_array()) {
+                    if (auto s = node.value<std::string>())
+                        cols.append(QString::fromStdString(*s));
+                }
+                if (!cols.isEmpty())
+                    m_leftColumns = cols;
+            }
+            if (panels.contains("left_proportions") && panels["left_proportions"].is_array()) {
+                QVector<double> props;
+                for (const auto& node : *panels["left_proportions"].as_array()) {
+                    if (auto d = node.value<double>())
+                        props.append(*d);
+                }
+                if (props.size() == m_leftColumns.size())
+                    m_leftProportions = props;
+            }
+
+            // Right panel columns
+            if (panels.contains("right_columns") && panels["right_columns"].is_array()) {
+                QStringList cols;
+                for (const auto& node : *panels["right_columns"].as_array()) {
+                    if (auto s = node.value<std::string>())
+                        cols.append(QString::fromStdString(*s));
+                }
+                if (!cols.isEmpty())
+                    m_rightColumns = cols;
+            }
+            if (panels.contains("right_proportions") && panels["right_proportions"].is_array()) {
+                QVector<double> props;
+                for (const auto& node : *panels["right_proportions"].as_array()) {
+                    if (auto d = node.value<double>())
+                        props.append(*d);
+                }
+                if (props.size() == m_rightColumns.size())
+                    m_rightProportions = props;
+            }
         }
 
         if (tbl.contains("favorites")) {
@@ -289,12 +329,31 @@ bool Config::save() const
     viewerTbl.insert("y", static_cast<int64_t>(m_viewerY));
     tbl.insert("viewer", viewerTbl);
 
-    // [panels] section - sorting settings
+    // [panels] section - sorting settings and columns
     toml::table panelsTbl;
-    panelsTbl.insert("left_sort_column", static_cast<int64_t>(m_leftSortColumn));
+    panelsTbl.insert("left_sort_column", m_leftSortColumn.toStdString());
     panelsTbl.insert("left_sort_order", static_cast<int64_t>(m_leftSortOrder));
-    panelsTbl.insert("right_sort_column", static_cast<int64_t>(m_rightSortColumn));
+    panelsTbl.insert("right_sort_column", m_rightSortColumn.toStdString());
     panelsTbl.insert("right_sort_order", static_cast<int64_t>(m_rightSortOrder));
+
+    // Left panel columns and proportions
+    toml::array leftColsArr, leftPropsArr;
+    for (const QString& col : m_leftColumns)
+        leftColsArr.push_back(col.toStdString());
+    for (double prop : m_leftProportions)
+        leftPropsArr.push_back(prop);
+    panelsTbl.insert("left_columns", leftColsArr);
+    panelsTbl.insert("left_proportions", leftPropsArr);
+
+    // Right panel columns and proportions
+    toml::array rightColsArr, rightPropsArr;
+    for (const QString& col : m_rightColumns)
+        rightColsArr.push_back(col.toStdString());
+    for (double prop : m_rightProportions)
+        rightPropsArr.push_back(prop);
+    panelsTbl.insert("right_columns", rightColsArr);
+    panelsTbl.insert("right_proportions", rightPropsArr);
+
     tbl.insert("panels", panelsTbl);
 
     // [external_tool] section

@@ -251,10 +251,10 @@ void ConfigDialog::createPanelsPage()
     // Left panel sorting
     auto* leftSortLayout = new QHBoxLayout();
     m_leftSortColumn = new QComboBox(sortGroup);
-    m_leftSortColumn->addItem(tr("Name"));
-    m_leftSortColumn->addItem(tr("Extension"));
-    m_leftSortColumn->addItem(tr("Size"));
-    m_leftSortColumn->addItem(tr("Date"));
+    m_leftSortColumn->addItem("Name");
+    m_leftSortColumn->addItem("Ext");
+    m_leftSortColumn->addItem("Size");
+    m_leftSortColumn->addItem("Date");
     m_leftSortOrder = new QComboBox(sortGroup);
     m_leftSortOrder->addItem(tr("Ascending"));
     m_leftSortOrder->addItem(tr("Descending"));
@@ -265,10 +265,10 @@ void ConfigDialog::createPanelsPage()
     // Right panel sorting
     auto* rightSortLayout = new QHBoxLayout();
     m_rightSortColumn = new QComboBox(sortGroup);
-    m_rightSortColumn->addItem(tr("Name"));
-    m_rightSortColumn->addItem(tr("Extension"));
-    m_rightSortColumn->addItem(tr("Size"));
-    m_rightSortColumn->addItem(tr("Date"));
+    m_rightSortColumn->addItem("Name");
+    m_rightSortColumn->addItem("Ext");
+    m_rightSortColumn->addItem("Size");
+    m_rightSortColumn->addItem("Date");
     m_rightSortOrder = new QComboBox(sortGroup);
     m_rightSortOrder->addItem(tr("Ascending"));
     m_rightSortOrder->addItem(tr("Descending"));
@@ -403,10 +403,15 @@ void ConfigDialog::loadSettings()
     m_leftPanelStartDir->clear();
     m_rightPanelStartDir->clear();
 
-    // Load sorting from config (column: 1-4 -> combo index 0-3)
-    m_leftSortColumn->setCurrentIndex(cfg.leftSortColumn() - 1);
+    // Load sorting from config (column name -> find in combo)
+    int leftColIdx = m_leftSortColumn->findText(cfg.leftSortColumn());
+    if (leftColIdx >= 0)
+        m_leftSortColumn->setCurrentIndex(leftColIdx);
     m_leftSortOrder->setCurrentIndex(cfg.leftSortOrder());
-    m_rightSortColumn->setCurrentIndex(cfg.rightSortColumn() - 1);
+
+    int rightColIdx = m_rightSortColumn->findText(cfg.rightSortColumn());
+    if (rightColIdx >= 0)
+        m_rightSortColumn->setCurrentIndex(rightColIdx);
     m_rightSortOrder->setCurrentIndex(cfg.rightSortOrder());
 
     // Remember initial sorting values to detect changes
@@ -439,23 +444,23 @@ void ConfigDialog::saveSettings()
     cfg.setViewerGeometry(m_viewerX->value(), m_viewerY->value(),
                           m_viewerWidth->value(), m_viewerHeight->value());
 
-    // Panels - sorting (combo index 0-3 -> column 1-4)
-    int newLeftCol = m_leftSortColumn->currentIndex() + 1;
+    // Panels - sorting (use column name from combobox)
+    QString newLeftCol = m_leftSortColumn->currentText();
     int newLeftOrd = m_leftSortOrder->currentIndex();
-    int newRightCol = m_rightSortColumn->currentIndex() + 1;
+    QString newRightCol = m_rightSortColumn->currentText();
     int newRightOrd = m_rightSortOrder->currentIndex();
 
     cfg.setLeftSort(newLeftCol, newLeftOrd);
     cfg.setRightSort(newRightCol, newRightOrd);
 
-    // Emit signals if sorting changed
+    // Emit signals if sorting changed (column index for signal)
     if (newLeftCol != m_initialLeftSortColumn || newLeftOrd != m_initialLeftSortOrder) {
-        emit sortingChanged(0, newLeftCol, newLeftOrd);  // 0 = Left
+        emit sortingChanged(0, m_leftSortColumn->currentIndex(), newLeftOrd);  // 0 = Left
         m_initialLeftSortColumn = newLeftCol;
         m_initialLeftSortOrder = newLeftOrd;
     }
     if (newRightCol != m_initialRightSortColumn || newRightOrd != m_initialRightSortOrder) {
-        emit sortingChanged(1, newRightCol, newRightOrd);  // 1 = Right
+        emit sortingChanged(1, m_rightSortColumn->currentIndex(), newRightOrd);  // 1 = Right
         m_initialRightSortColumn = newRightCol;
         m_initialRightSortOrder = newRightOrd;
     }

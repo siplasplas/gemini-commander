@@ -245,7 +245,7 @@ int FilePanelModel::rowCount(const QModelIndex &parent) const {
 int FilePanelModel::columnCount(const QModelIndex &parent) const {
     if (parent.isValid())
         return 0;
-    return 5; // ID, Name, Ext, Size, Date
+    return m_panel->m_columns.size();
 }
 
 QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
@@ -256,26 +256,31 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
     const int col = index.column();
     const int entryIdx = rowToEntryIndex(row);
 
+    // Get column name from panel's column list
+    if (col < 0 || col >= m_panel->m_columns.size())
+        return {};
+    const QString& colName = m_panel->m_columns[col];
+
     // Handle [..] row
     if (entryIdx < 0) {
         if (role == Qt::DisplayRole) {
-            switch (col) {
-                case COLUMN_NAME:
-                    return QStringLiteral("[..]");
-                case COLUMN_EXT:
-                    return QString();
-                case COLUMN_SIZE:
-                    return QStringLiteral("<DIR>");
-                case COLUMN_DATE: {
-                    QFileInfo info(".");
-                    return info.lastModified().toString("yyyy-MM-dd hh:mm");
-                }
+            if (colName == "Name")
+                return QStringLiteral("[..]");
+            if (colName == "Ext")
+                return QString();
+            if (colName == "Size")
+                return QStringLiteral("<DIR>");
+            if (colName == "Date") {
+                QFileInfo info(".");
+                return info.lastModified().toString("yyyy-MM-dd hh:mm");
             }
+            if (colName == "Attr")
+                return QString();
         }
-        if (role == Qt::DecorationRole && col == COLUMN_NAME) {
+        if (role == Qt::DecorationRole && colName == "Name") {
             return m_panel->style()->standardIcon(QStyle::SP_FileDialogToParent);
         }
-        if (role == Qt::UserRole && col == COLUMN_NAME) {
+        if (role == Qt::UserRole && colName == "Name") {
             return QString(); // empty fullName for [..]
         }
         return {};
@@ -289,44 +294,57 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
 
     if (role == Qt::DisplayRole) {
         auto [base, ext] = splitFileName(entry.info);
-        switch (col) {
-            case COLUMN_NAME:
-                return base;
-            case COLUMN_EXT:
-                return ext;
-            case COLUMN_SIZE: {
-                // In archive mode, use stored size for all entries
-                if (m_panel->insideArchive) {
-                    if (entry.contentState == EntryContentState::NotDirectory) {
-                        return QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
-                    }
-                    return QStringLiteral("<DIR>");
-                }
-                // Normal mode
-                if (!entry.info.isDir()) {
-                    return QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
-                } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
+
+        if (colName == "Name")
+            return base;
+
+        if (colName == "Ext")
+            return ext;
+
+        if (colName == "Size") {
+            // In archive mode, use stored size for all entries
+            if (m_panel->insideArchive) {
+                if (entry.contentState == EntryContentState::NotDirectory) {
                     return QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
-                } else if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
-                    return QStringLiteral("....");
                 }
                 return QStringLiteral("<DIR>");
             }
-            case COLUMN_DATE:
-                // In archive mode, use stored modification time
-                if (m_panel->insideArchive && entry.archiveModTime.isValid()) {
-                    return entry.archiveModTime.toString("yyyy-MM-dd hh:mm");
-                }
-                return entry.info.lastModified().toString("yyyy-MM-dd hh:mm");
+            // Normal mode
+            if (!entry.info.isDir()) {
+                return QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
+            } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
+                return QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
+            } else if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
+                return QStringLiteral("....");
+            }
+            return QStringLiteral("<DIR>");
+        }
+
+        if (colName == "Date") {
+            // In archive mode, use stored modification time
+            if (m_panel->insideArchive && entry.archiveModTime.isValid()) {
+                return entry.archiveModTime.toString("yyyy-MM-dd hh:mm");
+            }
+            return entry.info.lastModified().toString("yyyy-MM-dd hh:mm");
+        }
+
+        if (colName == "Attr") {
+            // Return file attributes/permissions
+            QFile::Permissions perms = entry.info.permissions();
+            QString result;
+            result += (perms & QFile::ReadOwner) ? 'r' : '-';
+            result += (perms & QFile::WriteOwner) ? 'w' : '-';
+            result += (perms & QFile::ExeOwner) ? 'x' : '-';
+            return result;
         }
     }
 
-    if (role == Qt::DecorationRole && col == COLUMN_NAME) {
+    if (role == Qt::DecorationRole && colName == "Name") {
         EntryContentState state = m_panel->ensureContentState(entry);
         return FilePanel::getIconForEntry(entry.info, state);
     }
 
-    if (role == Qt::UserRole && col == COLUMN_NAME) {
+    if (role == Qt::UserRole && colName == "Name") {
         // Full filename for selection/search
         auto [base, ext] = splitFileName(entry.info);
         if (ext.isEmpty())
@@ -345,17 +363,10 @@ QVariant FilePanelModel::headerData(int section, Qt::Orientation orientation, in
     if (orientation != Qt::Horizontal || role != Qt::DisplayRole)
         return {};
 
-    switch (section) {
-        case COLUMN_NAME:
-            return QStringLiteral("Name");
-        case COLUMN_EXT:
-            return QStringLiteral("Ext");
-        case COLUMN_SIZE:
-            return QStringLiteral("Size");
-        case COLUMN_DATE:
-            return QStringLiteral("Date");
-    }
-    return {};
+    if (section < 0 || section >= m_panel->m_columns.size())
+        return {};
+
+    return m_panel->m_columns[section];
 }
 
 Qt::ItemFlags FilePanelModel::flags(const QModelIndex& index) const {
@@ -419,68 +430,69 @@ void FilePanel::sortEntries() {
             return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
         };
 
-        switch (sortColumn) {
+        if (sortColumn == "Name") {
+            return cmpNames(asc);
+        }
 
-            case COLUMN_NAME:
+        if (sortColumn == "Ext") {
+            if (aDir && bDir) {
                 return cmpNames(asc);
-
-            case COLUMN_EXT:
-                if (aDir && bDir) {
-                    return cmpNames(asc);
-                } else if (!aDir && !bDir) {
-                    // Use splitFileName to handle hidden files consistently
-                    auto [baseA, ea] = splitFileName(a);
-                    auto [baseB, eb] = splitFileName(b);
-                    int cmp = ea.compare(eb, Qt::CaseInsensitive);
-                    if (cmp != 0)
-                        return asc ? (cmp < 0) : (cmp > 0);
-                    return cmpNames(asc);
-                } else {
-                    return cmpNames(asc);
-                }
-
-            case COLUMN_SIZE:
-                if (aDir && bDir) {
-                    const bool aHas = c.hasTotalSize == TotalSizeStatus::Has;
-                    const bool bHas = d.hasTotalSize == TotalSizeStatus::Has;
-
-                    // 1) directories with calculated size always at the top,
-                    // regardless of asc/desc
-                    if (aHas != bHas) {
-                        return aHas; // true < false → counted before uncountable
-                    }
-
-                    // 2) both have their size calculated → we sort by totalSizeBytes
-                    if (aHas && bHas) {
-                        if (c.totalSizeBytes != d.totalSizeBytes)
-                            return asc ? (c.totalSizeBytes < d.totalSizeBytes) : (c.totalSizeBytes > d.totalSizeBytes);
-                        return cmpNames(asc);
-                    }
-
-                    if (c.info.size() != d.info.size())
-                        return asc ? (c.info.size() < d.info.size()) : (c.info.size() > d.info.size());
-                    return cmpNames(asc);
-                } else if (!aDir && !bDir) {
-                    // In archive mode, use stored size
-                    qint64 sizeA = insideArchive ? static_cast<qint64>(c.totalSizeBytes) : a.size();
-                    qint64 sizeB = insideArchive ? static_cast<qint64>(d.totalSizeBytes) : b.size();
-                    if (sizeA != sizeB)
-                        return asc ? (sizeA < sizeB) : (sizeA > sizeB);
-                    return cmpNames(asc);
-                }
-                return aDir; // dirs before files
-            case COLUMN_DATE: {
-                // In archive mode, use stored modification time
-                QDateTime da = insideArchive ? c.archiveModTime : a.lastModified();
-                QDateTime db = insideArchive ? d.archiveModTime : b.lastModified();
-                if (da != db)
-                    return asc ? (da < db) : (da > db);
+            } else if (!aDir && !bDir) {
+                // Use splitFileName to handle hidden files consistently
+                auto [baseA, ea] = splitFileName(a);
+                auto [baseB, eb] = splitFileName(b);
+                int cmp = ea.compare(eb, Qt::CaseInsensitive);
+                if (cmp != 0)
+                    return asc ? (cmp < 0) : (cmp > 0);
+                return cmpNames(asc);
+            } else {
                 return cmpNames(asc);
             }
-
-            default:
-                return cmpNames(asc);
         }
+
+        if (sortColumn == "Size") {
+            if (aDir && bDir) {
+                const bool aHas = c.hasTotalSize == TotalSizeStatus::Has;
+                const bool bHas = d.hasTotalSize == TotalSizeStatus::Has;
+
+                // 1) directories with calculated size always at the top,
+                // regardless of asc/desc
+                if (aHas != bHas) {
+                    return aHas; // true < false → counted before uncountable
+                }
+
+                // 2) both have their size calculated → we sort by totalSizeBytes
+                if (aHas && bHas) {
+                    if (c.totalSizeBytes != d.totalSizeBytes)
+                        return asc ? (c.totalSizeBytes < d.totalSizeBytes) : (c.totalSizeBytes > d.totalSizeBytes);
+                    return cmpNames(asc);
+                }
+
+                if (c.info.size() != d.info.size())
+                    return asc ? (c.info.size() < d.info.size()) : (c.info.size() > d.info.size());
+                return cmpNames(asc);
+            } else if (!aDir && !bDir) {
+                // In archive mode, use stored size
+                qint64 sizeA = insideArchive ? static_cast<qint64>(c.totalSizeBytes) : a.size();
+                qint64 sizeB = insideArchive ? static_cast<qint64>(d.totalSizeBytes) : b.size();
+                if (sizeA != sizeB)
+                    return asc ? (sizeA < sizeB) : (sizeA > sizeB);
+                return cmpNames(asc);
+            }
+            return aDir; // dirs before files
+        }
+
+        if (sortColumn == "Date") {
+            // In archive mode, use stored modification time
+            QDateTime da = insideArchive ? c.archiveModTime : a.lastModified();
+            QDateTime db = insideArchive ? d.archiveModTime : b.lastModified();
+            if (da != db)
+                return asc ? (da < db) : (da > db);
+            return cmpNames(asc);
+        }
+
+        // Default: sort by name
+        return cmpNames(asc);
     });
 }
 
@@ -523,7 +535,7 @@ void FilePanel::loadDirectory() {
 QString FilePanel::getRowName(int row) const {
     if (row < 0 || row >= model->rowCount())
         return {};
-    QModelIndex idx = model->index(row, COLUMN_NAME);
+    QModelIndex idx = model->index(row, 0);
     return model->data(idx, Qt::UserRole).toString();
 }
 
@@ -578,7 +590,7 @@ void FilePanel::selectEntryByName(const QString &fullName) {
         if (currentPath != "/" && model->rowCount() > 0)
             m_lastSelectedRow = 0;
     } else {
-        QModelIndex start = model->index(0, COLUMN_NAME);
+        QModelIndex start = model->index(0, 0);
         QModelIndexList matches = model->match(start,
                                                Qt::UserRole, // search fullName stored in UserRole
                                                fullName,
@@ -783,15 +795,25 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     setModel(model);
     setItemDelegate(new MarkedItemDelegate(this));
 
-    // Load sorting from config
+    // Load columns, proportions and sorting from config
     const auto& cfg = Config::instance();
     if (side == Side::Left) {
+        m_columns = cfg.leftPanelColumns();
+        m_columnProportions = cfg.leftPanelProportions();
         sortColumn = cfg.leftSortColumn();
         sortOrder = static_cast<Qt::SortOrder>(cfg.leftSortOrder());
     } else {
+        m_columns = cfg.rightPanelColumns();
+        m_columnProportions = cfg.rightPanelProportions();
         sortColumn = cfg.rightSortColumn();
         sortOrder = static_cast<Qt::SortOrder>(cfg.rightSortOrder());
     }
+
+    // Ensure proportions match columns count
+    while (m_columnProportions.size() < m_columns.size())
+        m_columnProportions.append(0.1);
+    while (m_columnProportions.size() > m_columns.size())
+        m_columnProportions.removeLast();
 
     // Debounce timer for visible files tracking (file watcher)
     m_visibilityDebounceTimer = new QTimer(this);
@@ -834,28 +856,20 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     header->setSectionResizeMode(QHeaderView::Interactive);
     header->setStretchLastSection(false);  // We handle proportional sizing
 
-    // Initial proportions: NAME=40%, EXT=14%, SIZE=20%, DATE=26%
-    m_columnProportions = {0.40, 0.14, 0.20, 0.26};
-
     // Update proportions when user resizes columns
     connect(header, &QHeaderView::sectionResized, this, [this](int logicalIndex, int, int newSize) {
-        if (logicalIndex < COLUMN_NAME || logicalIndex > COLUMN_DATE)
+        if (logicalIndex < 0 || logicalIndex >= m_columnProportions.size())
             return;
         int total = viewport()->width();
         if (total > 0) {
-            int propIndex = logicalIndex - COLUMN_NAME;  // COLUMN_ID is hidden
-            if (propIndex >= 0 && propIndex < m_columnProportions.size()) {
-                m_columnProportions[propIndex] = double(newSize) / total;
-            }
+            m_columnProportions[logicalIndex] = static_cast<double>(newSize) / total;
         }
     });
 
-    header->setSectionsClickable(true);
-    header->setSortIndicatorShown(true);
-    header->setHighlightSections(false);
-
     // Show initial sort indicator
-    header->setSortIndicator(sortColumn, sortOrder);
+    int sortColIdx = columnIndex(sortColumn);
+    if (sortColIdx >= 0)
+        header->setSortIndicator(sortColIdx, sortOrder);
 
     connect(header, &QHeaderView::sectionClicked, this, &FilePanel::onHeaderSectionClicked);
 
@@ -918,20 +932,24 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex) {
     // Save current selection before sorting
     QString currentRelPath = getRowRelPath(currentIndex().row());
 
-    if (sortColumn == logicalIndex) {
+    // Get column name for clicked column
+    QString clickedColumn = (logicalIndex >= 0 && logicalIndex < m_columns.size())
+                            ? m_columns[logicalIndex] : QString();
+
+    if (sortColumn == clickedColumn) {
         // Toggle direction
         sortOrder = (sortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
     } else {
-        sortColumn = logicalIndex;
+        sortColumn = clickedColumn;
         // For Date and Size, default to Descending (newest/largest first)
         // For Name and Ext, default to Ascending (A-Z)
-        if (logicalIndex == COLUMN_DATE || logicalIndex == COLUMN_SIZE) {
+        if (clickedColumn == "Date" || clickedColumn == "Size") {
             sortOrder = Qt::DescendingOrder;
         } else {
             sortOrder = Qt::AscendingOrder;
         }
     }
-    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    horizontalHeader()->setSortIndicator(logicalIndex, sortOrder);
     sortEntriesApplyModel();
 
     // Restore selection (force it even without focus)
@@ -940,7 +958,7 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex) {
 }
 
 void FilePanel::startDrag(Qt::DropActions supportedActions) {
-    QModelIndexList selectedRows = selectionModel()->selectedRows(COLUMN_NAME);
+    QModelIndexList selectedRows = selectionModel()->selectedRows(0);
     if (selectedRows.isEmpty())
         return;
 
@@ -1104,7 +1122,7 @@ void FilePanel::updateSearch(const QString &text) {
 
         QString name = getRowName(row);
         if (normalize(name).contains(needle)) {
-            QModelIndex idx = model->index(row, COLUMN_NAME);
+            QModelIndex idx = model->index(row, 0);
             setCurrentIndex(idx);
             scrollTo(idx);
             m_lastSearchRow = row;
@@ -1137,7 +1155,7 @@ void FilePanel::nextMatch() {
 
         QString name = getRowName(row);
         if (normalize(name).contains(needle)) {
-            QModelIndex idx = model->index(row, COLUMN_NAME);
+            QModelIndex idx = model->index(row, 0);
             setCurrentIndex(idx);
             scrollTo(idx);
             m_lastSearchRow = row;
@@ -1168,7 +1186,7 @@ void FilePanel::prevMatch() {
 
         QString name = getRowName(row);
         if (normalize(name).contains(needle)) {
-            QModelIndex idx = model->index(row, COLUMN_NAME);
+            QModelIndex idx = model->index(row, 0);
             setCurrentIndex(idx);
             scrollTo(idx);
             m_lastSearchRow = row;
@@ -1189,10 +1207,20 @@ void FilePanel::jumpWithControl(int direction) {
     int lastDirRow = -1;
     int firstFileRow = rowCount;
 
+    int sizeCol = columnIndex("Size");
     for (int r = 0; r < rowCount; ++r) {
-        QModelIndex idx = model->index(r, COLUMN_SIZE);
-        QString size = model->data(idx, Qt::DisplayRole).toString();
-        bool isDir = (size == "<DIR>");
+        bool isDir = false;
+        if (sizeCol >= 0) {
+            QModelIndex idx = model->index(r, sizeCol);
+            QString size = model->data(idx, Qt::DisplayRole).toString();
+            isDir = (size == "<DIR>");
+        } else {
+            // Fallback: check entry directly if Size column not present
+            int entryIdx = model->rowToEntryIndex(r);
+            if (entryIdx >= 0 && entryIdx < entries.size()) {
+                isDir = entries[entryIdx].info.isDir();
+            }
+        }
         if (isDir)
             lastDirRow = r;
         else if (firstFileRow == rowCount)
@@ -1236,7 +1264,7 @@ void FilePanel::jumpWithControl(int direction) {
             row = 0;
         }
     }
-    QModelIndex idx = model->index(row, COLUMN_NAME);
+    QModelIndex idx = model->index(row, 0);
 
     QItemSelectionModel *sm = selectionModel();
     if (sm) {
@@ -1417,7 +1445,7 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow) {
     if (advanceRow) {
         int nextRow = p.second + 1;
         if (nextRow < model->rowCount()) {
-            QModelIndex nextIdx = model->index(nextRow, COLUMN_NAME);
+            QModelIndex nextIdx = model->index(nextRow, 0);
             setCurrentIndex(nextIdx);
             scrollTo(nextIdx);
         }
@@ -1481,7 +1509,7 @@ void FilePanel::restoreSelectionFromMemory() {
     if (m_lastSelectedRow < 0 || m_lastSelectedRow >= model->rowCount())
         return;
 
-    QModelIndex idx = model->index(m_lastSelectedRow, COLUMN_NAME);
+    QModelIndex idx = model->index(m_lastSelectedRow, 0);
     if (!idx.isValid())
         return;
 
@@ -1771,15 +1799,14 @@ void FilePanel::resizeEvent(QResizeEvent* event) {
 
     // Apply proportional column widths
     int total = viewport()->width();
-    if (total > 0 && m_columnProportions.size() == 4) {
+    if (total > 0 && m_columnProportions.size() == m_columns.size()) {
         // Block signals to avoid sectionResized feedback loop
         QHeaderView* header = horizontalHeader();
         bool blocked = header->blockSignals(true);
 
-        setColumnWidth(COLUMN_NAME, int(total * m_columnProportions[0]));
-        setColumnWidth(COLUMN_EXT,  int(total * m_columnProportions[1]));
-        setColumnWidth(COLUMN_SIZE, int(total * m_columnProportions[2]));
-        setColumnWidth(COLUMN_DATE, int(total * m_columnProportions[3]));
+        for (int i = 0; i < m_columns.size(); ++i) {
+            setColumnWidth(i, static_cast<int>(total * m_columnProportions[i]));
+        }
 
         header->blockSignals(blocked);
     }
@@ -1799,7 +1826,7 @@ QStringList FilePanel::getVisibleFilePaths() const {
     QRect visibleRect = viewport()->rect();
 
     for (int row = 0; row < rowCount; ++row) {
-        QModelIndex idx = model->index(row, COLUMN_NAME);
+        QModelIndex idx = model->index(row, 0);
         QRect rowRect = visualRect(idx);
 
         // Check if row is visible

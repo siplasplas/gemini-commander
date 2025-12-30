@@ -411,7 +411,10 @@ void MainWindow::setupUi() {
         connect(&dlg, &ConfigDialog::sortingChanged, this, [this](int side, int column, int order) {
             FilePanel* panel = filePanelForSide(side == 0 ? Side::Left : Side::Right);
             if (panel) {
-                panel->sortColumn = column;
+                // Convert column index to column name
+                if (column >= 0 && column < panel->columns().size()) {
+                    panel->sortColumn = panel->columns()[column];
+                }
                 panel->sortOrder = static_cast<Qt::SortOrder>(order);
                 panel->sortEntriesApplyModel();
             }

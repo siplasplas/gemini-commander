@@ -395,7 +395,7 @@ bool FilePanel::doGoToFirstRow(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     int rows = model->rowCount();
     if (rows > 0) {
-        QModelIndex idx = model->index(0, COLUMN_NAME);
+        QModelIndex idx = model->index(0, 0);
         setCurrentIndex(idx);
         scrollTo(idx, QAbstractItemView::PositionAtTop);
     }
@@ -407,7 +407,7 @@ bool FilePanel::doGoToLastRow(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     int rows = model->rowCount();
     if (rows > 0) {
-        QModelIndex idx = model->index(rows - 1, COLUMN_NAME);
+        QModelIndex idx = model->index(rows - 1, 0);
         setCurrentIndex(idx);
         scrollTo(idx, QAbstractItemView::PositionAtBottom);
     }
@@ -538,15 +538,15 @@ bool FilePanel::doSortByDate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     QString currentRelPath = getRowRelPath(currentIndex().row());
-    if (sortColumn == COLUMN_DATE) {
+    if (sortColumn == "Date") {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
                 : Qt::AscendingOrder;
     } else {
-        sortColumn = COLUMN_DATE;
+        sortColumn = "Date";
         sortOrder = Qt::DescendingOrder;  // newest first by default
     }
-    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    horizontalHeader()->setSortIndicator(columnIndex(sortColumn), sortOrder);
     sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
@@ -556,15 +556,15 @@ bool FilePanel::doSortByExt(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     QString currentRelPath = getRowRelPath(currentIndex().row());
-    if (sortColumn == COLUMN_EXT) {
+    if (sortColumn == "Ext") {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
                 : Qt::AscendingOrder;
     } else {
-        sortColumn = COLUMN_EXT;
+        sortColumn = "Ext";
         sortOrder = Qt::AscendingOrder;
     }
-    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    horizontalHeader()->setSortIndicator(columnIndex(sortColumn), sortOrder);
     sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
@@ -574,15 +574,15 @@ bool FilePanel::doSortByName(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     QString currentRelPath = getRowRelPath(currentIndex().row());
-    if (sortColumn == COLUMN_NAME) {
+    if (sortColumn == "Name") {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
                 : Qt::AscendingOrder;
     } else {
-        sortColumn = COLUMN_NAME;
+        sortColumn = "Name";
         sortOrder = Qt::AscendingOrder;
     }
-    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    horizontalHeader()->setSortIndicator(columnIndex(sortColumn), sortOrder);
     sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
@@ -592,15 +592,15 @@ bool FilePanel::doSortBySize(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     QString currentRelPath = getRowRelPath(currentIndex().row());
-    if (sortColumn == COLUMN_SIZE) {
+    if (sortColumn == "Size") {
         sortOrder = (sortOrder == Qt::AscendingOrder)
                 ? Qt::DescendingOrder
                 : Qt::AscendingOrder;
     } else {
-        sortColumn = COLUMN_SIZE;
+        sortColumn = "Size";
         sortOrder = Qt::DescendingOrder;  // largest first by default
     }
-    horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
+    horizontalHeader()->setSortIndicator(columnIndex(sortColumn), sortOrder);
     sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
