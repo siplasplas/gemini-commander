@@ -175,13 +175,15 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         return;
     }
 
-    // Save panel sorting settings (always save, regardless of geometry changes)
+    // Save panel settings (sorting and column proportions)
     auto& cfg = Config::instance();
     if (auto* leftPanel = filePanelForSide(Side::Left)) {
         cfg.setLeftSort(leftPanel->sortColumn, static_cast<int>(leftPanel->sortOrder));
+        cfg.setLeftPanelColumns(leftPanel->columns(), leftPanel->columnProportions());
     }
     if (auto* rightPanel = filePanelForSide(Side::Right)) {
         cfg.setRightSort(rightPanel->sortColumn, static_cast<int>(rightPanel->sortOrder));
+        cfg.setRightPanelColumns(rightPanel->columns(), rightPanel->columnProportions());
     }
 
     // Only save window geometry if user interactively resized the window

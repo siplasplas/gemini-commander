@@ -130,6 +130,7 @@ public:
 
     // Column configuration - loaded from Config
     QStringList columns() const { return m_columns; }
+    QVector<double> columnProportions() const { return m_columnProportions; }
     int columnIndex(const QString& name) const { return m_columns.indexOf(name); }
 
     FilePanel(Side side, QWidget* parent = nullptr);
