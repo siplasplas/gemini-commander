@@ -18,6 +18,10 @@ QString qFormatSize(std::size_t value, SizeFormat::SizeKind format) {
     return QString::fromStdString(SizeFormat::formatSize(value, format));
 }
 
+QString formatWithSeparators(std::size_t value) {
+    return QString::fromStdString(SizeFormat::formatWithSeparators(value));
+}
+
 bool isDarkTheme() {
     return qApp->palette().color(QPalette::Window).lightness() < 128;
 }

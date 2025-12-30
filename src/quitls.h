@@ -8,6 +8,8 @@ class QString;
 class QFileInfo;
 
 QString qFormatSize(std::size_t value, SizeFormat::SizeKind format);
+QString formatWithSeparators(std::size_t value);
+
 bool isDarkTheme();
 
 QString qEscapePathForShell(const QString& path);

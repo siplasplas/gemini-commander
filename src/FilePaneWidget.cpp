@@ -221,18 +221,24 @@ void FilePaneWidget::updateStatusLabel()
         }
     }
 
-    // Format sizes using SizeFormat
+    // Format sizes using SizeFormat (configurable)
     QString selectedSizeStr = qFormatSize(selectedBytes, Config::instance().sizeFormat());
     QString totalSizeStr = qFormatSize(totalBytes, Config::instance().sizeFormat());
+
+    // Format counts always as precise (with thousand separators)
+    QString selectedFileStr = formatWithSeparators(selectedFileCount);
+    QString totalFileStr = formatWithSeparators(totalFileCount);
+    QString selectedDirStr = formatWithSeparators(selectedDirCount);
+    QString totalDirStr = formatWithSeparators(totalDirCount);
 
     // Format: "59 k / 1.31 M in 1 / 2 file(s), 0 / 1 dir(s)"
     QString text = QString("%1 / %2 in %3 / %4 file(s), %5 / %6 dir(s)")
             .arg(selectedSizeStr)
             .arg(totalSizeStr)
-            .arg(selectedFileCount)
-            .arg(totalFileCount)
-            .arg(selectedDirCount)
-            .arg(totalDirCount);
+            .arg(selectedFileStr)
+            .arg(totalFileStr)
+            .arg(selectedDirStr)
+            .arg(totalDirStr);
     m_statusLabel->setText(text);
 }
 

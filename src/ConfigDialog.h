@@ -122,4 +122,5 @@ private:
     QCheckBox* m_showFunctionBar;
     QLineEdit* m_externalToolPath;
     QComboBox* m_sizeFormat;
+    QComboBox* m_storageSizeFormat;
 };

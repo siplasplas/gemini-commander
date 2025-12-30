@@ -125,9 +125,13 @@ public:
   int maxUnpinnedTabs() const { return m_maxUnpinnedTabs; }
   void setMaxUnpinnedTabs(int max) { m_maxUnpinnedTabs = max; }
 
-  // Size display format
+  // Size display format (for file sizes, status bar bytes)
   SizeFormat::SizeKind sizeFormat() const { return m_sizeFormat; }
   void setSizeFormat(SizeFormat::SizeKind format) { m_sizeFormat = format; }
+
+  // Storage size format (for mount toolbars, free/total space)
+  SizeFormat::SizeKind storageSizeFormat() const { return m_storageSizeFormat; }
+  void setStorageSizeFormat(SizeFormat::SizeKind format) { m_storageSizeFormat = format; }
 
 private:
   Config()
@@ -181,8 +185,10 @@ private:
   // MRU tabs
   int m_maxUnpinnedTabs = 10;
 
-  // Size display format
-  SizeFormat::SizeKind m_sizeFormat = SizeFormat::Decimal;
+  // Size display format (file sizes, status bar bytes) - default: Precise
+  SizeFormat::SizeKind m_sizeFormat = SizeFormat::Precise;
+  // Storage size format (mount toolbars, free/total) - default: Decimal
+  SizeFormat::SizeKind m_storageSizeFormat = SizeFormat::Decimal;
 };
 
 #endif

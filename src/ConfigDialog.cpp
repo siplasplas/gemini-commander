@@ -587,16 +587,29 @@ void ConfigDialog::createGeneralPage()
     m_showFunctionBar = new QCheckBox(tr("Show function key bar (F1-F10)"), behaviorGroup);
     behaviorLayout->addWidget(m_showFunctionBar);
 
+    // File size format (file sizes, status bar bytes)
     auto* sizeFormatLayout = new QHBoxLayout();
-    auto* sizeFormatLabel = new QLabel(tr("Size display format:"), behaviorGroup);
+    auto* sizeFormatLabel = new QLabel(tr("File size format:"), behaviorGroup);
     m_sizeFormat = new QComboBox(behaviorGroup);
+    m_sizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
     m_sizeFormat->addItem(tr("Decimal (1.5 M)"), 1);     // SizeFormat::Decimal
     m_sizeFormat->addItem(tr("Binary (1.5 Mi)"), 2);     // SizeFormat::Binary
-    m_sizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
     sizeFormatLayout->addWidget(sizeFormatLabel);
     sizeFormatLayout->addWidget(m_sizeFormat);
     sizeFormatLayout->addStretch();
     behaviorLayout->addLayout(sizeFormatLayout);
+
+    // Storage size format (mount toolbars, free/total space)
+    auto* storageSizeFormatLayout = new QHBoxLayout();
+    auto* storageSizeFormatLabel = new QLabel(tr("Storage size format:"), behaviorGroup);
+    m_storageSizeFormat = new QComboBox(behaviorGroup);
+    m_storageSizeFormat->addItem(tr("Decimal (1.5 G)"), 1);     // SizeFormat::Decimal
+    m_storageSizeFormat->addItem(tr("Binary (1.5 Gi)"), 2);     // SizeFormat::Binary
+    m_storageSizeFormat->addItem(tr("Precise (1'500'000'000)"), 0); // SizeFormat::Precise
+    storageSizeFormatLayout->addWidget(storageSizeFormatLabel);
+    storageSizeFormatLayout->addWidget(m_storageSizeFormat);
+    storageSizeFormatLayout->addStretch();
+    behaviorLayout->addLayout(storageSizeFormatLayout);
 
     layout->addWidget(behaviorGroup);
 
@@ -695,6 +708,11 @@ void ConfigDialog::loadSettings()
     int sizeFormatIdx = m_sizeFormat->findData(static_cast<int>(cfg.sizeFormat()));
     if (sizeFormatIdx >= 0)
         m_sizeFormat->setCurrentIndex(sizeFormatIdx);
+
+    // Storage size format
+    int storageSizeFormatIdx = m_storageSizeFormat->findData(static_cast<int>(cfg.storageSizeFormat()));
+    if (storageSizeFormatIdx >= 0)
+        m_storageSizeFormat->setCurrentIndex(storageSizeFormatIdx);
 }
 
 void ConfigDialog::saveSettings()
@@ -756,6 +774,10 @@ void ConfigDialog::saveSettings()
     // Size format
     int sizeFormatValue = m_sizeFormat->currentData().toInt();
     cfg.setSizeFormat(static_cast<SizeFormat::SizeKind>(sizeFormatValue));
+
+    // Storage size format
+    int storageSizeFormatValue = m_storageSizeFormat->currentData().toInt();
+    cfg.setStorageSizeFormat(static_cast<SizeFormat::SizeKind>(storageSizeFormatValue));
 
     // Save to file
     cfg.save();

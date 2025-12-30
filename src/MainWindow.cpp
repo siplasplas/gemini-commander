@@ -2094,8 +2094,8 @@ void MainWindow::refreshMountsToolbar()
         QString tooltip = QString("%1\n%2\nFree: %3 / %4")
             .arg(vol.rootPath())
             .arg(QString::fromUtf8(vol.fileSystemType()))
-            .arg(qFormatSize(vol.bytesFree(), Config::instance().sizeFormat()))
-            .arg(qFormatSize(vol.bytesTotal(), Config::instance().sizeFormat()));
+            .arg(qFormatSize(vol.bytesFree(), Config::instance().storageSizeFormat()))
+            .arg(qFormatSize(vol.bytesTotal(), Config::instance().storageSizeFormat()));
 
         QAction* act = new QAction(displayLabel, m_mountsToolBar);
         act->setToolTip(tooltip);
@@ -2137,8 +2137,8 @@ void MainWindow::refreshMountsToolbar()
                 .arg(dev.device)
                 .arg(dev.mountPoint)
                 .arg(dev.fsType)
-                .arg(qFormatSize(storage.bytesFree(), Config::instance().sizeFormat()))
-                .arg(qFormatSize(storage.bytesTotal(), Config::instance().sizeFormat()));
+                .arg(qFormatSize(storage.bytesFree(), Config::instance().storageSizeFormat()))
+                .arg(qFormatSize(storage.bytesTotal(), Config::instance().storageSizeFormat()));
         } else {
             tooltip = QString("%1\n%2\n%3")
                 .arg(dev.device)
@@ -2245,8 +2245,8 @@ void MainWindow::refreshProcMountsToolbar()
         QString tooltip = QString("%1\n%2\nFree: %3 / %4")
             .arg(mi.mountPoint)
             .arg(mi.fsType)
-            .arg(qFormatSize(storage.bytesFree(), Config::instance().sizeFormat()))
-            .arg(qFormatSize(storage.bytesTotal(), Config::instance().sizeFormat()));
+            .arg(qFormatSize(storage.bytesFree(), Config::instance().storageSizeFormat()))
+            .arg(qFormatSize(storage.bytesTotal(), Config::instance().storageSizeFormat()));
 
         auto* act = new QAction(label, m_procMountsToolBar);
         act->setToolTip(tooltip);
@@ -2325,8 +2325,8 @@ void MainWindow::updateStorageInfoToolbar()
         return;
 
     QString text = QString("Free: %1 / %2")
-        .arg(qFormatSize(storage.bytesFree(), Config::instance().sizeFormat()))
-        .arg(qFormatSize(storage.bytesTotal(), Config::instance().sizeFormat()));
+        .arg(qFormatSize(storage.bytesFree(), Config::instance().storageSizeFormat()))
+        .arg(qFormatSize(storage.bytesTotal(), Config::instance().storageSizeFormat()));
 
     auto* label = new QLabel(text, m_storageInfoToolBar);
     label->setContentsMargins(6, 0, 6, 0);
