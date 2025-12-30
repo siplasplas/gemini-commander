@@ -2110,11 +2110,22 @@ void MainWindow::refreshMountsToolbar()
         // Use displayId() - returns label if available, otherwise UUID
         QString label = dev.displayId();
 
-        // Show mount status in tooltip
-        QString tooltip = QString("%1: %2 (%3)")
-            .arg(dev.device)
-            .arg(dev.isMounted ? dev.mountPoint : tr("Not mounted"))
-            .arg(dev.fsType);
+        // Show mount status in tooltip with free/total space
+        QString tooltip;
+        if (dev.isMounted) {
+            QStorageInfo storage(dev.mountPoint);
+            tooltip = QString("%1\n%2\n%3\nFree: %4 / %5")
+                .arg(dev.device)
+                .arg(dev.mountPoint)
+                .arg(dev.fsType)
+                .arg(qFormatSize(storage.bytesFree(), Config::instance().sizeFormat()))
+                .arg(qFormatSize(storage.bytesTotal(), Config::instance().sizeFormat()));
+        } else {
+            tooltip = QString("%1\n%2\n%3")
+                .arg(dev.device)
+                .arg(tr("Not mounted"))
+                .arg(dev.fsType);
+        }
 
         QAction* act = new QAction(label, m_mountsToolBar);
         act->setToolTip(tooltip);
@@ -2211,11 +2222,14 @@ void MainWindow::refreshProcMountsToolbar()
 
         QString label = mi.displayLabel();
 
-        QString tooltip = QString("%1 (%2)")
+        QStorageInfo storage(mi.mountPoint);
+        QString tooltip = QString("%1\n%2\nFree: %3 / %4")
             .arg(mi.mountPoint)
-            .arg(mi.fsType);
+            .arg(mi.fsType)
+            .arg(qFormatSize(storage.bytesFree(), Config::instance().sizeFormat()))
+            .arg(qFormatSize(storage.bytesTotal(), Config::instance().sizeFormat()));
 
-        QAction* act = new QAction(label, m_procMountsToolBar);
+        auto* act = new QAction(label, m_procMountsToolBar);
         act->setToolTip(tooltip);
         act->setData(mi.mountPoint);  // Store mount point for context menu
 
