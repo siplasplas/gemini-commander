@@ -113,10 +113,21 @@ MainWindow::MainWindow(QWidget *parent)
         // Connect directoryChanged to update the label
         connect(panel, &FilePanel::directoryChanged,
                 this, &MainWindow::updateCurrentPathLabel);
+        // Connect directoryChanged to update storage info toolbar
+        connect(panel, &FilePanel::directoryChanged,
+                this, &MainWindow::updateStorageInfoToolbar);
     }
+
+    // Update storage info toolbar on tab changes
+    connect(m_leftTabs, &QTabWidget::currentChanged,
+            this, &MainWindow::updateStorageInfoToolbar);
+    connect(m_rightTabs, &QTabWidget::currentChanged,
+            this, &MainWindow::updateStorageInfoToolbar);
+
     filePanelForSide(Side::Left)->setFocus();
 
     updateCurrentPathLabel();  // initial update
+    updateStorageInfoToolbar();  // initial update
 
     this->setStyleSheet(
         "QMainWindow {"
@@ -681,16 +692,23 @@ void MainWindow::setupUi() {
     addToolBarBreak(Qt::TopToolBarArea);
     createMountsToolbar();
     createProcMountsToolbar();
+
+    // Storage info toolbar (shows free/total space for active panel)
+    m_storageInfoToolBar = addToolBar(tr("Storage Info"));
+    m_storageInfoToolBar->setMovable(true);
+
     QSize icon16(16,16);
     m_mainToolBar->setIconSize(icon16);
     m_mountsToolBar->setIconSize(icon16);
     m_procMountsToolBar->setIconSize(icon16);
+    m_storageInfoToolBar->setIconSize(icon16);
 
     QFontMetrics fm(m_mainToolBar->font());
     int h = fm.height() + 8;
     m_mainToolBar->setFixedHeight(h);
     m_mountsToolBar->setFixedHeight(h);
     m_procMountsToolBar->setFixedHeight(h);
+    m_storageInfoToolBar->setFixedHeight(h);
 
     QString tbStyle =
         "QToolBar QToolButton { "
@@ -768,6 +786,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 if (auto* oldPanel = filePanelForSide(m_activeSide))
                     oldPanel->clearSelection();
                 m_activeSide = newSide;
+                updateStorageInfoToolbar();
             }
             // Restore selection (whether changing side or returning from the editor)
             panel->restoreSelectionFromMemory();
@@ -2289,6 +2308,30 @@ void MainWindow::refreshProcMountsToolbar()
 {
 }
 #endif
+
+void MainWindow::updateStorageInfoToolbar()
+{
+    if (!m_storageInfoToolBar)
+        return;
+
+    m_storageInfoToolBar->clear();
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return;
+
+    QStorageInfo storage(panel->currentPath);
+    if (!storage.isValid())
+        return;
+
+    QString text = QString("Free: %1 / %2")
+        .arg(qFormatSize(storage.bytesFree(), Config::instance().sizeFormat()))
+        .arg(qFormatSize(storage.bytesTotal(), Config::instance().sizeFormat()));
+
+    auto* label = new QLabel(text, m_storageInfoToolBar);
+    label->setContentsMargins(6, 0, 6, 0);
+    m_storageInfoToolBar->addWidget(label);
+}
 
 void MainWindow::applyStartupPaths(const QStringList& paths)
 {

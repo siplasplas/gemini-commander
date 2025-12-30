@@ -73,6 +73,7 @@ private:
     QToolBar* m_mainToolBar = nullptr;
     QToolBar* m_mountsToolBar = nullptr;
     QToolBar* m_procMountsToolBar = nullptr;
+    QToolBar* m_storageInfoToolBar = nullptr;
     QAction* m_openTerminalAction = nullptr;
     QAction* m_searchAction = nullptr;
     QAction* m_externalToolAction = nullptr;
@@ -121,6 +122,7 @@ private:
 #endif
     void createProcMountsToolbar();
     void refreshProcMountsToolbar();
+    void updateStorageInfoToolbar();
 
     // Function bar
     FunctionBar* m_functionBar = nullptr;
