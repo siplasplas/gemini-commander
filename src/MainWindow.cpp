@@ -421,6 +421,12 @@ void MainWindow::setupUi() {
                 panel->sortEntriesApplyModel();
             }
         });
+        connect(&dlg, &ConfigDialog::columnsChanged, this, [this](int side, const QStringList& columns, const QVector<double>& proportions) {
+            FilePanel* panel = filePanelForSide(side == 0 ? Side::Left : Side::Right);
+            if (panel) {
+                panel->setColumns(columns, proportions);
+            }
+        });
         dlg.exec();
     });
     configMenu->addAction(settingsAction);

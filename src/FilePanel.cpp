@@ -1812,6 +1812,40 @@ void FilePanel::resizeEvent(QResizeEvent* event) {
     }
 }
 
+void FilePanel::setColumns(const QStringList& columns, const QVector<double>& proportions)
+{
+    m_columns = columns;
+    m_columnProportions = proportions;
+
+    // Ensure proportions match columns count
+    while (m_columnProportions.size() < m_columns.size())
+        m_columnProportions.append(0.25);
+    while (m_columnProportions.size() > m_columns.size())
+        m_columnProportions.removeLast();
+
+    // Refresh model to update column count
+    if (model) {
+        model->refresh();
+    }
+
+    // Update sort indicator
+    int sortColIdx = columnIndex(sortColumn);
+    if (sortColIdx >= 0) {
+        horizontalHeader()->setSortIndicator(sortColIdx, sortOrder);
+    }
+
+    // Apply proportional column widths
+    int total = viewport()->width();
+    if (total > 0) {
+        QHeaderView* header = horizontalHeader();
+        bool blocked = header->blockSignals(true);
+        for (int i = 0; i < m_columns.size(); ++i) {
+            setColumnWidth(i, static_cast<int>(total * m_columnProportions[i]));
+        }
+        header->blockSignals(blocked);
+    }
+}
+
 QStringList FilePanel::getVisibleFilePaths() const {
     QStringList paths;
 

@@ -8,6 +8,230 @@
 #include <QGuiApplication>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QHeaderView>
+#include <QMenu>
+
+// ============================================================================
+// ColumnListWidget implementation
+// ============================================================================
+
+int ColumnListWidget::defaultWidth(const QString& column)
+{
+    static const QMap<QString, int> defaults = {
+        {"Name", 40}, {"Ext", 14}, {"Size", 20}, {"Date", 26}, {"Attr", 24}
+    };
+    return defaults.value(column, 20);
+}
+
+ColumnListWidget::ColumnListWidget(QWidget* parent)
+    : QWidget(parent)
+{
+    auto* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    // Table widget
+    m_table = new QTableWidget(this);
+    m_table->setColumnCount(2);
+    m_table->setHorizontalHeaderLabels({tr("Column"), tr("Width %")});
+    m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_table->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_table->horizontalHeader()->setStretchLastSection(true);
+    m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+    m_table->horizontalHeader()->resizeSection(1, 70);
+    m_table->verticalHeader()->setVisible(false);
+    m_table->setMaximumHeight(150);
+
+    layout->addWidget(m_table, 1);
+
+    // Buttons on the right
+    auto* btnLayout = new QVBoxLayout();
+    btnLayout->setSpacing(2);
+
+    m_upBtn = new QToolButton(this);
+    m_upBtn->setArrowType(Qt::UpArrow);
+    m_upBtn->setToolTip(tr("Move up"));
+    btnLayout->addWidget(m_upBtn);
+
+    m_downBtn = new QToolButton(this);
+    m_downBtn->setArrowType(Qt::DownArrow);
+    m_downBtn->setToolTip(tr("Move down"));
+    btnLayout->addWidget(m_downBtn);
+
+    btnLayout->addSpacing(10);
+
+    m_addBtn = new QToolButton(this);
+    m_addBtn->setText("+");
+    m_addBtn->setStyleSheet("QToolButton { color: green; font-weight: bold; }");
+    m_addBtn->setToolTip(tr("Add column"));
+    btnLayout->addWidget(m_addBtn);
+
+    m_removeBtn = new QToolButton(this);
+    m_removeBtn->setText("-");
+    m_removeBtn->setStyleSheet("QToolButton { color: red; font-weight: bold; }");
+    m_removeBtn->setToolTip(tr("Remove column"));
+    btnLayout->addWidget(m_removeBtn);
+
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
+    // Connections
+    connect(m_upBtn, &QToolButton::clicked, this, &ColumnListWidget::onMoveUp);
+    connect(m_downBtn, &QToolButton::clicked, this, &ColumnListWidget::onMoveDown);
+    connect(m_addBtn, &QToolButton::clicked, this, &ColumnListWidget::onAdd);
+    connect(m_removeBtn, &QToolButton::clicked, this, &ColumnListWidget::onRemove);
+    connect(m_table, &QTableWidget::itemSelectionChanged, this, &ColumnListWidget::onSelectionChanged);
+
+    updateButtonStates();
+}
+
+void ColumnListWidget::setColumns(const QStringList& columns, const QVector<double>& proportions)
+{
+    m_table->setRowCount(columns.size());
+    for (int i = 0; i < columns.size(); ++i) {
+        auto* nameItem = new QTableWidgetItem(columns[i]);
+        nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 0, nameItem);
+
+        int width = (i < proportions.size()) ? qRound(proportions[i] * 100) : defaultWidth(columns[i]);
+        auto* widthItem = new QTableWidgetItem(QString::number(width));
+        m_table->setItem(i, 1, widthItem);
+    }
+    updateButtonStates();
+}
+
+QStringList ColumnListWidget::columns() const
+{
+    QStringList result;
+    for (int i = 0; i < m_table->rowCount(); ++i) {
+        if (auto* item = m_table->item(i, 0))
+            result.append(item->text());
+    }
+    return result;
+}
+
+QVector<double> ColumnListWidget::proportions() const
+{
+    QVector<double> result;
+    for (int i = 0; i < m_table->rowCount(); ++i) {
+        if (auto* item = m_table->item(i, 1)) {
+            bool ok;
+            int val = item->text().toInt(&ok);
+            result.append(ok ? val / 100.0 : 0.25);
+        } else {
+            result.append(0.25);
+        }
+    }
+    return result;
+}
+
+void ColumnListWidget::onMoveUp()
+{
+    int row = m_table->currentRow();
+    if (row <= 0)
+        return;
+
+    // Swap with row above
+    for (int col = 0; col < m_table->columnCount(); ++col) {
+        QTableWidgetItem* current = m_table->takeItem(row, col);
+        QTableWidgetItem* above = m_table->takeItem(row - 1, col);
+        m_table->setItem(row - 1, col, current);
+        m_table->setItem(row, col, above);
+    }
+    m_table->setCurrentCell(row - 1, 0);
+    updateButtonStates();
+}
+
+void ColumnListWidget::onMoveDown()
+{
+    int row = m_table->currentRow();
+    if (row < 0 || row >= m_table->rowCount() - 1)
+        return;
+
+    // Swap with row below
+    for (int col = 0; col < m_table->columnCount(); ++col) {
+        QTableWidgetItem* current = m_table->takeItem(row, col);
+        QTableWidgetItem* below = m_table->takeItem(row + 1, col);
+        m_table->setItem(row + 1, col, current);
+        m_table->setItem(row, col, below);
+    }
+    m_table->setCurrentCell(row + 1, 0);
+    updateButtonStates();
+}
+
+void ColumnListWidget::onRemove()
+{
+    if (m_table->rowCount() <= 1) {
+        QMessageBox::warning(this, tr("Cannot Remove"),
+            tr("At least one column must remain."));
+        return;
+    }
+
+    int row = m_table->currentRow();
+    if (row >= 0) {
+        m_table->removeRow(row);
+        updateButtonStates();
+    }
+}
+
+void ColumnListWidget::onAdd()
+{
+    // Get currently used columns
+    QStringList used = columns();
+
+    // Get available columns
+    QStringList available = Config::availableColumns();
+
+    // Build menu with available columns
+    QMenu menu(this);
+    for (const QString& col : available) {
+        QAction* act = menu.addAction(col);
+        // Mark already used columns (but still allow adding - user requested no duplicate check for now)
+        if (used.contains(col)) {
+            act->setText(col + " (*)");
+        }
+    }
+
+    QAction* chosen = menu.exec(m_addBtn->mapToGlobal(QPoint(0, m_addBtn->height())));
+    if (!chosen)
+        return;
+
+    QString colName = chosen->text().remove(" (*)");
+    int defWidth = defaultWidth(colName);
+
+    int newRow = m_table->rowCount();
+    m_table->insertRow(newRow);
+
+    auto* nameItem = new QTableWidgetItem(colName);
+    nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
+    m_table->setItem(newRow, 0, nameItem);
+
+    auto* widthItem = new QTableWidgetItem(QString::number(defWidth));
+    m_table->setItem(newRow, 1, widthItem);
+
+    m_table->setCurrentCell(newRow, 0);
+    updateButtonStates();
+}
+
+void ColumnListWidget::onSelectionChanged()
+{
+    updateButtonStates();
+}
+
+void ColumnListWidget::updateButtonStates()
+{
+    int row = m_table->currentRow();
+    int count = m_table->rowCount();
+
+    m_upBtn->setEnabled(row > 0);
+    m_downBtn->setEnabled(row >= 0 && row < count - 1);
+    m_removeBtn->setEnabled(count > 1 && row >= 0);
+    m_addBtn->setEnabled(true);
+}
+
+// ============================================================================
+// ConfigDialog implementation
+// ============================================================================
 
 ConfigDialog::ConfigDialog(QWidget* parent)
     : QDialog(parent)
@@ -244,6 +468,18 @@ void ConfigDialog::createPanelsPage()
 
     layout->addWidget(startDirGroup);
 
+    // Panel columns configuration
+    auto* columnsGroup = new QGroupBox(tr("Panel Columns"), page);
+    auto* columnsLayout = new QFormLayout(columnsGroup);
+
+    m_leftColumns = new ColumnListWidget(columnsGroup);
+    columnsLayout->addRow(tr("Left panel:"), m_leftColumns);
+
+    m_rightColumns = new ColumnListWidget(columnsGroup);
+    columnsLayout->addRow(tr("Right panel:"), m_rightColumns);
+
+    layout->addWidget(columnsGroup);
+
     // Default sorting
     auto* sortGroup = new QGroupBox(tr("Default Sorting"), page);
     auto* sortLayout = new QFormLayout(sortGroup);
@@ -403,6 +639,10 @@ void ConfigDialog::loadSettings()
     m_leftPanelStartDir->clear();
     m_rightPanelStartDir->clear();
 
+    // Load columns from config
+    m_leftColumns->setColumns(cfg.leftPanelColumns(), cfg.leftPanelProportions());
+    m_rightColumns->setColumns(cfg.rightPanelColumns(), cfg.rightPanelProportions());
+
     // Load sorting from config (column name -> find in combo)
     int leftColIdx = m_leftSortColumn->findText(cfg.leftSortColumn());
     if (leftColIdx >= 0)
@@ -452,6 +692,17 @@ void ConfigDialog::saveSettings()
 
     cfg.setLeftSort(newLeftCol, newLeftOrd);
     cfg.setRightSort(newRightCol, newRightOrd);
+
+    // Save panel columns
+    QStringList leftCols = m_leftColumns->columns();
+    QVector<double> leftProps = m_leftColumns->proportions();
+    cfg.setLeftPanelColumns(leftCols, leftProps);
+    emit columnsChanged(0, leftCols, leftProps);  // 0 = Left
+
+    QStringList rightCols = m_rightColumns->columns();
+    QVector<double> rightProps = m_rightColumns->proportions();
+    cfg.setRightPanelColumns(rightCols, rightProps);
+    emit columnsChanged(1, rightCols, rightProps);  // 1 = Right
 
     // Emit signals if sorting changed (column index for signal)
     if (newLeftCol != m_initialLeftSortColumn || newLeftOrd != m_initialLeftSortOrder) {

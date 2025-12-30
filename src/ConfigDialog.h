@@ -9,6 +9,38 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QTableWidget>
+#include <QToolButton>
+
+// Widget for editing column list with proportions
+class ColumnListWidget : public QWidget {
+    Q_OBJECT
+public:
+    explicit ColumnListWidget(QWidget* parent = nullptr);
+
+    void setColumns(const QStringList& columns, const QVector<double>& proportions);
+    QStringList columns() const;
+    QVector<double> proportions() const;
+
+    // Default widths for each column type
+    static int defaultWidth(const QString& column);
+
+private slots:
+    void onMoveUp();
+    void onMoveDown();
+    void onRemove();
+    void onAdd();
+    void onSelectionChanged();
+
+private:
+    QTableWidget* m_table;
+    QToolButton* m_upBtn;
+    QToolButton* m_downBtn;
+    QToolButton* m_removeBtn;
+    QToolButton* m_addBtn;
+
+    void updateButtonStates();
+};
 
 class ConfigDialog : public QDialog {
     Q_OBJECT
@@ -19,6 +51,7 @@ public:
 signals:
     void settingsApplied();
     void sortingChanged(int side, int column, int order);  // side: 0=Left, 1=Right
+    void columnsChanged(int side, const QStringList& columns, const QVector<double>& proportions);
 
 private slots:
     void onCategoryChanged(int index);
@@ -75,6 +108,8 @@ private:
     // Panels page
     QLineEdit* m_leftPanelStartDir;
     QLineEdit* m_rightPanelStartDir;
+    ColumnListWidget* m_leftColumns;
+    ColumnListWidget* m_rightColumns;
     QComboBox* m_leftSortColumn;
     QComboBox* m_leftSortOrder;
     QComboBox* m_rightSortColumn;

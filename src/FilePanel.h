@@ -132,6 +132,7 @@ public:
     QStringList columns() const { return m_columns; }
     QVector<double> columnProportions() const { return m_columnProportions; }
     int columnIndex(const QString& name) const { return m_columns.indexOf(name); }
+    void setColumns(const QStringList& columns, const QVector<double>& proportions);
 
     FilePanel(Side side, QWidget* parent = nullptr);
     ~FilePanel() override;
