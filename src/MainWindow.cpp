@@ -311,6 +311,11 @@ void MainWindow::onConfigSaved()
         m_functionBar->hide();
     }
     m_showFunctionBarAction->setChecked(showFunctionBar);
+
+    // Update MRU tab limit
+    int maxUnpinned = Config::instance().maxUnpinnedTabs();
+    m_leftTabs->setTabLimit(maxUnpinned);
+    m_rightTabs->setTabLimit(maxUnpinned);
 }
 
 void MainWindow::setupUi() {
