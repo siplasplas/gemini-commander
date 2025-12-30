@@ -22,9 +22,6 @@ public:
     QStringList columns() const;
     QVector<double> proportions() const;
 
-    // Default widths for each column type
-    static int defaultWidth(const QString& column);
-
 private slots:
     void onMoveUp();
     void onMoveDown();

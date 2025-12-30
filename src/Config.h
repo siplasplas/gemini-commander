@@ -4,6 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <QMap>
 #include "SizeFormat.h"
 
 struct FavoriteDir {
@@ -95,10 +96,21 @@ public:
       m_rightColumns = cols; m_rightProportions = props;
   }
 
-  // Available column names (static)
+  // Column configuration (single source of truth)
   static QStringList availableColumns() { return {"Name", "Ext", "Size", "Date", "Attr"}; }
   static QStringList defaultColumns() { return {"Name", "Ext", "Size", "Date"}; }
-  static QVector<double> defaultProportions() { return {0.40, 0.10, 0.24, 0.26}; }
+  static int defaultColumnWidth(const QString& column) {
+      static const QMap<QString, int> widths = {
+          {"Name", 40}, {"Ext", 10}, {"Size", 24}, {"Date", 26}, {"Attr", 16}
+      };
+      return widths.value(column, 20);
+  }
+  static QVector<double> defaultProportions() {
+      QVector<double> props;
+      for (const QString& col : defaultColumns())
+          props.append(defaultColumnWidth(col) / 100.0);
+      return props;
+  }
 
   // Tab directories configuration
   QStringList leftTabDirs() const { return m_leftTabDirs; }
@@ -118,7 +130,12 @@ public:
   void setSizeFormat(SizeFormat::SizeKind format) { m_sizeFormat = format; }
 
 private:
-  Config() = default;
+  Config()
+      : m_leftColumns(defaultColumns())
+      , m_leftProportions(defaultProportions())
+      , m_rightColumns(defaultColumns())
+      , m_rightProportions(defaultProportions())
+  {}
 
   QString m_configPath;
   QVector<FavoriteDir> m_favorites;
@@ -149,11 +166,11 @@ private:
   QString m_rightSortColumn = "Date";
   int m_rightSortOrder = 1;
 
-  // Panel columns (defaults: Name, Ext, Size, Date)
-  QStringList m_leftColumns = {"Name", "Ext", "Size", "Date"};
-  QVector<double> m_leftProportions = {0.40, 0.10, 0.24, 0.26};
-  QStringList m_rightColumns = {"Name", "Ext", "Size", "Date"};
-  QVector<double> m_rightProportions = {0.40, 0.10, 0.24, 0.26};
+  // Panel columns (initialized from defaultColumns()/defaultProportions())
+  QStringList m_leftColumns;
+  QVector<double> m_leftProportions;
+  QStringList m_rightColumns;
+  QVector<double> m_rightProportions;
 
   // Tab directories (empty means use default/cwd)
   QStringList m_leftTabDirs;

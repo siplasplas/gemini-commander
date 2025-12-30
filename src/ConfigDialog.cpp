@@ -16,14 +16,6 @@
 // ColumnListWidget implementation
 // ============================================================================
 
-int ColumnListWidget::defaultWidth(const QString& column)
-{
-    static const QMap<QString, int> defaults = {
-        {"Name", 40}, {"Ext", 10}, {"Size", 24}, {"Date", 26}, {"Attr", 16}
-    };
-    return defaults.value(column, 20);
-}
-
 ColumnListWidget::ColumnListWidget(QWidget* parent)
     : QWidget(parent)
 {
@@ -94,7 +86,7 @@ void ColumnListWidget::setColumns(const QStringList& columns, const QVector<doub
         nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
         m_table->setItem(i, 0, nameItem);
 
-        int width = (i < proportions.size()) ? qRound(proportions[i] * 100) : defaultWidth(columns[i]);
+        int width = (i < proportions.size()) ? qRound(proportions[i] * 100) : Config::defaultColumnWidth(columns[i]);
         auto* widthItem = new QTableWidgetItem(QString::number(width));
         m_table->setItem(i, 1, widthItem);
     }
@@ -198,7 +190,7 @@ void ColumnListWidget::onAdd()
         return;
 
     QString colName = chosen->text().remove(" (*)");
-    int defWidth = defaultWidth(colName);
+    int defWidth = Config::defaultColumnWidth(colName);
 
     int newRow = m_table->rowCount();
     m_table->insertRow(newRow);
