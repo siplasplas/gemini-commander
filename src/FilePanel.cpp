@@ -309,15 +309,15 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
             // In archive mode, use stored size for all entries
             if (m_panel->insideArchive) {
                 if (entry.contentState == EntryContentState::NotDirectory) {
-                    return QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
+                    return qFormatSize(entry.totalSizeBytes, false);
                 }
                 return QStringLiteral("<DIR>");
             }
             // Normal mode
             if (!entry.info.isDir()) {
-                return QString::fromStdString(SizeFormat::formatSize(entry.info.size(), false));
+                return qFormatSize(entry.info.size(), false);
             } else if (entry.hasTotalSize == TotalSizeStatus::Has) {
-                return QString::fromStdString(SizeFormat::formatSize(entry.totalSizeBytes, false));
+                return qFormatSize(entry.totalSizeBytes, false);
             } else if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
                 return QStringLiteral("....");
             }

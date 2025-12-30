@@ -14,6 +14,7 @@
 #include <QTabWidget>
 
 #include "keys/ObjectRegistry.h"
+#include "quitls.h"
 
 FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     : m_side(side), QWidget(parent)
@@ -221,8 +222,8 @@ void FilePaneWidget::updateStatusLabel()
     }
 
     // Format sizes using SizeFormat
-    QString selectedSizeStr = QString::fromStdString(SizeFormat::formatSize(selectedBytes, false));
-    QString totalSizeStr = QString::fromStdString(SizeFormat::formatSize(totalBytes, false));
+    QString selectedSizeStr = qFormatSize(selectedBytes, false);
+    QString totalSizeStr = qFormatSize(totalBytes, false);
 
     // Format: "59 k / 1.31 M in 1 / 2 file(s), 0 / 1 dir(s)"
     QString text = QString("%1 / %2 in %3 / %4 file(s), %5 / %6 dir(s)")

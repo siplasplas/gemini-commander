@@ -6,6 +6,8 @@
 #include <QApplication>
 #include <QPalette>
 
+#include "SizeFormat.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -13,6 +15,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #endif
+
+QString qFormatSize(std::size_t value, bool binaryPrefix) {
+    return QString::fromStdString(SizeFormat::formatSize(value, binaryPrefix));
+}
 
 bool isDarkTheme() {
     return qApp->palette().color(QPalette::Window).lightness() < 128;

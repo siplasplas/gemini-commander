@@ -5,6 +5,7 @@
 class QString;
 class QFileInfo;
 
+QString qFormatSize(std::size_t value, bool binaryPrefix);
 bool isDarkTheme();
 
 QString qEscapePathForShell(const QString& path);
