@@ -828,14 +828,23 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
 
     // Allow user-resizing for all columns
     header->setSectionResizeMode(QHeaderView::Interactive);
-    // Make the last visible column stretch to fill remaining space
-    header->setStretchLastSection(true);
+    header->setStretchLastSection(false);  // We handle proportional sizing
 
-    // Optional: initial sizes
-    setColumnWidth(COLUMN_NAME, 200);
-    setColumnWidth(COLUMN_EXT, 70);
-    setColumnWidth(COLUMN_SIZE, 100);
-    setColumnWidth(COLUMN_DATE, 125);
+    // Initial proportions: NAME=40%, EXT=14%, SIZE=20%, DATE=26%
+    m_columnProportions = {0.40, 0.14, 0.20, 0.26};
+
+    // Update proportions when user resizes columns
+    connect(header, &QHeaderView::sectionResized, this, [this](int logicalIndex, int, int newSize) {
+        if (logicalIndex < COLUMN_NAME || logicalIndex > COLUMN_DATE)
+            return;
+        int total = viewport()->width();
+        if (total > 0) {
+            int propIndex = logicalIndex - COLUMN_NAME;  // COLUMN_ID is hidden
+            if (propIndex >= 0 && propIndex < m_columnProportions.size()) {
+                m_columnProportions[propIndex] = double(newSize) / total;
+            }
+        }
+    });
 
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);
@@ -1751,6 +1760,25 @@ void FilePanel::scrollContentsBy(int dx, int dy) {
     QTableView::scrollContentsBy(dx, dy);
     // Schedule update when scrolling changes visible files
     scheduleVisibleFilesUpdate();
+}
+
+void FilePanel::resizeEvent(QResizeEvent* event) {
+    QTableView::resizeEvent(event);
+
+    // Apply proportional column widths
+    int total = viewport()->width();
+    if (total > 0 && m_columnProportions.size() == 4) {
+        // Block signals to avoid sectionResized feedback loop
+        QHeaderView* header = horizontalHeader();
+        bool blocked = header->blockSignals(true);
+
+        setColumnWidth(COLUMN_NAME, int(total * m_columnProportions[0]));
+        setColumnWidth(COLUMN_EXT,  int(total * m_columnProportions[1]));
+        setColumnWidth(COLUMN_SIZE, int(total * m_columnProportions[2]));
+        setColumnWidth(COLUMN_DATE, int(total * m_columnProportions[3]));
+
+        header->blockSignals(blocked);
+    }
 }
 
 QStringList FilePanel::getVisibleFilePaths() const {

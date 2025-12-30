@@ -235,11 +235,16 @@ private:
     void emitVisibleFiles();
     QStringList getVisibleFilePaths() const;
 
+    // Proportional column widths
+    QVector<double> m_columnProportions;
+    void updateColumnProportions();
+
     // FilePanelModel needs access to private members
     friend class FilePanelModel;
 
 protected:
     void scrollContentsBy(int dx, int dy) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 public:
     // Update single entry info (for file watcher)
