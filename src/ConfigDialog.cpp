@@ -157,6 +157,12 @@ void ConfigDialog::createWindowPage()
     m_editorY->setSuffix(" px");
     editorLayout->addRow(tr("Y offset:"), m_editorY);
 
+    // Wayland: position offsets don't work
+    if (isWayland()) {
+        m_editorX->setEnabled(false);
+        m_editorY->setEnabled(false);
+    }
+
     layout->addWidget(editorGroup);
 
     // Viewer window geometry
@@ -182,6 +188,12 @@ void ConfigDialog::createWindowPage()
     m_viewerY->setRange(-10000, 10000);
     m_viewerY->setSuffix(" px");
     viewerLayout->addRow(tr("Y offset:"), m_viewerY);
+
+    // Wayland: position offsets don't work
+    if (isWayland()) {
+        m_viewerX->setEnabled(false);
+        m_viewerY->setEnabled(false);
+    }
 
     layout->addWidget(viewerGroup);
 
