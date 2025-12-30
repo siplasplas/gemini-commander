@@ -78,7 +78,6 @@ bool Config::load(const QString& path)
 {
     m_configPath = path;
     m_favorites.clear();
-    m_externalToolPath.clear();
     m_confirmExit = true;
     m_windowWidth = 1024;
     m_windowHeight = 768;
@@ -106,13 +105,6 @@ bool Config::load(const QString& path)
 
     try {
         auto tbl = toml::parse_file(path.toStdString());
-
-        // [external_tool] section
-        if (tbl.contains("external_tool")) {
-            auto& tool = *tbl["external_tool"].as_table();
-            if (auto path = tool["path"].value<std::string>())
-                m_externalToolPath = QString::fromStdString(*path);
-        }
 
         // [general] section
         if (tbl.contains("general")) {
@@ -457,13 +449,6 @@ bool Config::save() const
     tabsTbl.insert("right_dirs", rightDirsArr);
     tabsTbl.insert("right_index", static_cast<int64_t>(m_rightTabIndex));
     tbl.insert("tabs", tabsTbl);
-
-    // [external_tool] section
-    if (!m_externalToolPath.isEmpty()) {
-        toml::table toolTbl;
-        toolTbl.insert("path", m_externalToolPath.toStdString());
-        tbl.insert("external_tool", toolTbl);
-    }
 
     // [[favorites]] array
     toml::array arr;

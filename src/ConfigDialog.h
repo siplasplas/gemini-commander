@@ -120,7 +120,6 @@ private:
     // General page
     QCheckBox* m_confirmExit;
     QCheckBox* m_showFunctionBar;
-    QLineEdit* m_externalToolPath;
     QComboBox* m_sizeFormat;
     QComboBox* m_storageSizeFormat;
 };

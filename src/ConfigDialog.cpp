@@ -587,56 +587,28 @@ void ConfigDialog::createGeneralPage()
     m_showFunctionBar = new QCheckBox(tr("Show function key bar (F1-F10)"), behaviorGroup);
     behaviorLayout->addWidget(m_showFunctionBar);
 
+    // Size format combos in a form layout for proper alignment
+    auto* formatFormLayout = new QFormLayout();
+    formatFormLayout->setFieldGrowthPolicy(QFormLayout::FieldsStayAtSizeHint);
+
     // File size format (file sizes, status bar bytes)
-    auto* sizeFormatLayout = new QHBoxLayout();
-    auto* sizeFormatLabel = new QLabel(tr("File size format:"), behaviorGroup);
     m_sizeFormat = new QComboBox(behaviorGroup);
     m_sizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
     m_sizeFormat->addItem(tr("Decimal (1.5 M)"), 1);     // SizeFormat::Decimal
     m_sizeFormat->addItem(tr("Binary (1.5 Mi)"), 2);     // SizeFormat::Binary
-    sizeFormatLayout->addWidget(sizeFormatLabel);
-    sizeFormatLayout->addWidget(m_sizeFormat);
-    sizeFormatLayout->addStretch();
-    behaviorLayout->addLayout(sizeFormatLayout);
+    formatFormLayout->addRow(tr("File size format:"), m_sizeFormat);
 
     // Storage size format (mount toolbars, free/total space)
-    auto* storageSizeFormatLayout = new QHBoxLayout();
-    auto* storageSizeFormatLabel = new QLabel(tr("Storage size format:"), behaviorGroup);
     m_storageSizeFormat = new QComboBox(behaviorGroup);
     m_storageSizeFormat->addItem(tr("Decimal (1.5 G)"), 1);     // SizeFormat::Decimal
     m_storageSizeFormat->addItem(tr("Binary (1.5 Gi)"), 2);     // SizeFormat::Binary
-    m_storageSizeFormat->addItem(tr("Precise (1'500'000'000)"), 0); // SizeFormat::Precise
-    storageSizeFormatLayout->addWidget(storageSizeFormatLabel);
-    storageSizeFormatLayout->addWidget(m_storageSizeFormat);
-    storageSizeFormatLayout->addStretch();
-    behaviorLayout->addLayout(storageSizeFormatLayout);
+    m_storageSizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
+    formatFormLayout->addRow(tr("Storage size format:"), m_storageSizeFormat);
+
+    behaviorLayout->addLayout(formatFormLayout);
 
     layout->addWidget(behaviorGroup);
-
-    auto* toolsGroup = new QGroupBox(tr("External Tools"), page);
-    auto* toolsLayout = new QFormLayout(toolsGroup);
-
-    auto* toolPathLayout = new QHBoxLayout();
-    m_externalToolPath = new QLineEdit(toolsGroup);
-    m_externalToolPath->setPlaceholderText(tr("Path to external tool"));
-    auto* toolBrowseBtn = new QPushButton(tr("..."), toolsGroup);
-    toolBrowseBtn->setMaximumWidth(30);
-    toolPathLayout->addWidget(m_externalToolPath);
-    toolPathLayout->addWidget(toolBrowseBtn);
-    toolsLayout->addRow(tr("External tool:"), toolPathLayout);
-
-    layout->addWidget(toolsGroup);
-
     layout->addStretch();
-
-    // Browse button connection
-    connect(toolBrowseBtn, &QPushButton::clicked, this, [this]() {
-        QString file = QFileDialog::getOpenFileName(
-            this, tr("Select External Tool"),
-            m_externalToolPath->text());
-        if (!file.isEmpty())
-            m_externalToolPath->setText(file);
-    });
 
     m_pagesStack->addWidget(page);
 }
@@ -702,7 +674,6 @@ void ConfigDialog::loadSettings()
     // General page
     m_confirmExit->setChecked(cfg.confirmExit());
     m_showFunctionBar->setChecked(cfg.showFunctionBar());
-    m_externalToolPath->setText(cfg.externalToolPath());
 
     // Size format: find index by data value
     int sizeFormatIdx = m_sizeFormat->findData(static_cast<int>(cfg.sizeFormat()));
@@ -769,7 +740,6 @@ void ConfigDialog::saveSettings()
     // General
     cfg.setConfirmExit(m_confirmExit->isChecked());
     cfg.setShowFunctionBar(m_showFunctionBar->isChecked());
-    cfg.setExternalToolPath(m_externalToolPath->text());
 
     // Size format
     int sizeFormatValue = m_sizeFormat->currentData().toInt();

@@ -33,9 +33,6 @@ public:
   void setConfigPath(const QString& p) { m_configPath = p; }
   QString configPath() const { return m_configPath; }
 
-  QString externalToolPath() const { return m_externalToolPath; }
-  void setExternalToolPath(const QString& path) { m_externalToolPath = path; }
-
   bool confirmExit() const { return m_confirmExit; }
   void setConfirmExit(bool confirm) { m_confirmExit = confirm; }
 
@@ -143,7 +140,6 @@ private:
 
   QString m_configPath;
   QVector<FavoriteDir> m_favorites;
-  QString m_externalToolPath;
   bool m_confirmExit = true;
   int m_windowWidth = 1024;
   int m_windowHeight = 768;
