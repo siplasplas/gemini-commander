@@ -2,10 +2,12 @@
 
 #include <QPair>
 
+#include "SizeFormat.h"
+
 class QString;
 class QFileInfo;
 
-QString qFormatSize(std::size_t value, bool binaryPrefix);
+QString qFormatSize(std::size_t value, SizeFormat::SizeKind format);
 bool isDarkTheme();
 
 QString qEscapePathForShell(const QString& path);

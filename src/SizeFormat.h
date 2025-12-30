@@ -24,6 +24,10 @@ constexpr std::size_t Ei = Pi * Ki;
 }
 
 namespace SizeFormat {
+enum SizeKind {Precise, Decimal, Binary};
+
+std::string formatSize(std::size_t value, SizeKind format);
+
 // Samples:
 //   formatSize( std::numeric_limits<size_t>::max(), true )
 //      -> "16.0 Ei" (zaokrąglanie)
@@ -31,7 +35,7 @@ namespace SizeFormat {
 //      -> "18.4 E"
 //   formatSize(1020, false) -> "1.02 k"
 //   formatSize(1020, true)  -> "1020"
-std::string formatSize(std::size_t value, bool binaryPrefix);
+std::string formatWithPrefix(std::size_t value, bool binaryPrefix);
 
 // Sample
 //   3123456789 -> "3'123'456'789"

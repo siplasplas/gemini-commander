@@ -5,7 +5,16 @@
 #include <ios>
 
 namespace SizeFormat {
-std::string formatSize(std::size_t value, bool binaryPrefix) {
+
+std::string formatSize(std::size_t value, SizeKind format) {
+    switch (format) {
+        case SizeFormat::Decimal: return formatWithPrefix(value, false);
+        case SizeFormat::Binary: return formatWithPrefix(value, true);
+        default: return formatWithSeparators(value);
+    }
+}
+
+std::string formatWithPrefix(std::size_t value, bool binaryPrefix) {
   if (value == 0) {
     return "0";
   }
