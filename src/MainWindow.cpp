@@ -413,7 +413,7 @@ void MainWindow::setupUi() {
             if (panel) {
                 panel->sortColumn = column;
                 panel->sortOrder = static_cast<Qt::SortOrder>(order);
-                panel->addAllEntries();
+                panel->sortEntriesApplyModel();
             }
         });
         dlg.exec();

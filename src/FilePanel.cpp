@@ -490,7 +490,7 @@ void FilePanel::sortEntries() {
     });
 }
 
-void FilePanel::addAllEntries() {
+void FilePanel::sortEntriesApplyModel() {
     sortEntries();
     model->refresh();
     scheduleVisibleFilesUpdate();
@@ -521,7 +521,7 @@ void FilePanel::loadDirectory() {
         PanelEntry entry(info);
         entries.append(entry);
     }
-    addAllEntries();
+    sortEntriesApplyModel();
     emit directoryChanged(currentPath);
     emit selectionChanged();
 }
@@ -939,7 +939,7 @@ void FilePanel::onHeaderSectionClicked(int logicalIndex) {
         }
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
-    addAllEntries();
+    sortEntriesApplyModel();
 
     // Restore selection (force it even without focus)
     selectEntryByRelPath(currentRelPath);

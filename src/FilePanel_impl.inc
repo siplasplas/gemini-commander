@@ -547,7 +547,7 @@ bool FilePanel::doSortByDate(QObject *obj, QKeyEvent *keyEvent) {
         sortOrder = Qt::DescendingOrder;  // newest first by default
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
-    addAllEntries();
+    sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
 }
@@ -565,7 +565,7 @@ bool FilePanel::doSortByExt(QObject *obj, QKeyEvent *keyEvent) {
         sortOrder = Qt::AscendingOrder;
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
-    addAllEntries();
+    sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
 }
@@ -583,7 +583,7 @@ bool FilePanel::doSortByName(QObject *obj, QKeyEvent *keyEvent) {
         sortOrder = Qt::AscendingOrder;
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
-    addAllEntries();
+    sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
 }
@@ -601,7 +601,7 @@ bool FilePanel::doSortBySize(QObject *obj, QKeyEvent *keyEvent) {
         sortOrder = Qt::DescendingOrder;  // largest first by default
     }
     horizontalHeader()->setSortIndicator(sortColumn, sortOrder);
-    addAllEntries();
+    sortEntriesApplyModel();
     selectEntryByRelPath(currentRelPath);
     return true;
 }

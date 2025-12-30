@@ -146,7 +146,7 @@ public:
     void navigateToPath(const QString& path);
     void trigger(const QString &name);
     void run(const QString &name);
-    void addAllEntries();
+    void sortEntriesApplyModel();
     void trigger(const QModelIndex &index);
     void triggerCurrentEntry();
     void createNewDirectory(QWidget*dialogParent);
