@@ -424,6 +424,7 @@ bool FilePanel::doInvertSelection(QObject *obj, QKeyEvent *keyEvent) {
         entries[i].isMarked = !entries[i].isMarked;
         updateRowMarking(i + offset, entries[i].isMarked);
     }
+    emit selectionChanged();
     return true;
 }
 
@@ -495,6 +496,7 @@ bool FilePanel::doSelectAll(QObject *obj, QKeyEvent *keyEvent) {
         entries[i].isMarked = true;
         updateRowMarking(i + offset, true);
     }
+    emit selectionChanged();
     return true;
 }
 
@@ -524,6 +526,7 @@ bool FilePanel::doSelectGroup(QObject *obj, QKeyEvent *keyEvent) {
             updateRowMarking(i + offset, true);
         }
     }
+    emit selectionChanged();
     return true;
 }
 
@@ -736,6 +739,7 @@ bool FilePanel::doUnselectAll(QObject *obj, QKeyEvent *keyEvent) {
         entries[i].isMarked = false;
         updateRowMarking(i + offset, false);
     }
+    emit selectionChanged();
     return true;
 }
 
@@ -765,5 +769,6 @@ bool FilePanel::doUnselectGroup(QObject *obj, QKeyEvent *keyEvent) {
             updateRowMarking(i + offset, false);
         }
     }
+    emit selectionChanged();
     return true;
 }
