@@ -51,8 +51,27 @@ public:
     /**
      * @brief Sets maximum number of allowed tabs
      * @param limit Maximum tab count (0 = unlimited)
+     * @note limit is clamped to at least minimalTabCount
      */
     void setTabLimit(int limit);
+
+    /**
+     * @brief Sets minimum number of tabs that must remain open
+     * @param minCount Minimum tab count (0 = no minimum, can close all)
+     *
+     * When minCount > 0:
+     * - Close actions are disabled/hidden when count <= minCount
+     * - Ctrl+W is blocked when count <= minCount
+     * - "Close All Tabs" menu item is hidden
+     */
+    void setMinimalTabCount(int minCount);
+    int minimalTabCount() const { return m_minimalTabCount; }
+
+    /**
+     * @brief Checks if closing tabs is currently allowed
+     * @return true if count() > minimalTabCount
+     */
+    bool canCloseTabs() const;
 
     /**
      * @brief Enforces currently set tab limit
@@ -139,6 +158,7 @@ private:
 
     QVector<bool> m_pinnedTabs;
     int m_tabLimit = 0;
+    int m_minimalTabCount = 0;
 };
 
 #endif // MRUTABWIDGET_H

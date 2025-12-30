@@ -39,6 +39,7 @@
 #include <QTextStream>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QClipboard>
 
 #include "SortedDirIterator.h"
 #include "SearchDialog.h"
@@ -334,6 +335,10 @@ void MainWindow::setupUi() {
     m_leftTabs->setTabLimit(maxUnpinned);
     m_rightTabs->setTabLimit(maxUnpinned);
 
+    // File panels must always have at least one tab
+    m_leftTabs->setMinimalTabCount(1);
+    m_rightTabs->setMinimalTabCount(1);
+
     auto tuneTabBar = [](MruTabWidget* tabs) {
         QTabBar* bar = tabs->tabBar();
         QFontMetrics fm(bar->font());
@@ -415,6 +420,24 @@ void MainWindow::setupUi() {
     auto& cfg = Config::instance();
     createTabsForSide(m_leftTabs, Side::Left, cfg.leftTabDirs(), cfg.leftTabIndex());
     createTabsForSide(m_rightTabs, Side::Right, cfg.rightTabDirs(), cfg.rightTabIndex());
+
+    // Extend tab context menu with "Copy Dir" action
+    auto extendTabMenu = [this](MruTabWidget* tabs, Side side) {
+        connect(tabs, &MruTabWidget::tabContextMenuRequested, this, [this, tabs, side](int tabIndex, QMenu* menu) {
+            Q_UNUSED(side)
+            menu->addSeparator();
+            QAction* copyDirAction = menu->addAction(tr("Copy Dir"));
+            connect(copyDirAction, &QAction::triggered, [tabs, tabIndex]() {
+                if (auto* pane = qobject_cast<FilePaneWidget*>(tabs->widget(tabIndex))) {
+                    QString path = pane->filePanel()->currentPath;
+                    QClipboard* clipboard = QGuiApplication::clipboard();
+                    clipboard->setText(qEscapePathForShell(path));
+                }
+            });
+        });
+    };
+    extendTabMenu(m_leftTabs, Side::Left);
+    extendTabMenu(m_rightTabs, Side::Right);
 
     // Bottom line: currentPath label (3/4 of left panel) + command line (rest)
     auto* bottomLayout = new QHBoxLayout();

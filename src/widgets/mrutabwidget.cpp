@@ -48,6 +48,11 @@ bool MruTabWidget::requestCloseTab(int index, bool askPin)
 {
     assert(index >= 0 && index < count());
 
+    // Check if we're at minimal tab count
+    if (!canCloseTabs()) {
+        return false;
+    }
+
     QWidget* tab = widget(index);
     assert(tab);
 
@@ -72,8 +77,23 @@ MruTabWidget::~MruTabWidget()
 
 void MruTabWidget::setTabLimit(int limit)
 {
-    m_tabLimit = limit;
+    // Ensure tab limit is at least minimalTabCount
+    m_tabLimit = (m_minimalTabCount > 0) ? qMax(limit, m_minimalTabCount) : limit;
     enforceTabLimit();
+}
+
+void MruTabWidget::setMinimalTabCount(int minCount)
+{
+    m_minimalTabCount = qMax(0, minCount);
+    // Update tab limit if it's now below minimal
+    if (m_tabLimit > 0 && m_tabLimit < m_minimalTabCount) {
+        m_tabLimit = m_minimalTabCount;
+    }
+}
+
+bool MruTabWidget::canCloseTabs() const
+{
+    return count() > m_minimalTabCount;
 }
 
 
@@ -781,30 +801,39 @@ void MruTabWidget::onTabContextMenuRequested(const QPoint& pos)
 
     QMenu menu(this);
 
+    bool canClose = canCloseTabs();
+
     QAction* closeAction = menu.addAction(tr("Close"));
     closeAction->setShortcut(QKeySequence::Close); // Ctrl+F4
+    closeAction->setEnabled(canClose);
     connect(closeAction, &QAction::triggered, this, [this, tabIndex]() {
         requestCloseTab(tabIndex);
     });
 
     QAction* closeOthersAction = menu.addAction(tr("Close Other Tabs"));
+    closeOthersAction->setEnabled(canClose && count() > 1);
     connect(closeOthersAction, &QAction::triggered, this, [this, tabIndex]() {
         closeOtherTabs(tabIndex);
     });
 
-    QAction* closeAllAction = menu.addAction(tr("Close All Tabs"));
-    connect(closeAllAction, &QAction::triggered, this, [this]() {
-        requestCloseAllTabs();
-    });
+    // Only show "Close All Tabs" when minimalTabCount is 0
+    if (m_minimalTabCount == 0) {
+        QAction* closeAllAction = menu.addAction(tr("Close All Tabs"));
+        connect(closeAllAction, &QAction::triggered, this, [this]() {
+            requestCloseAllTabs();
+        });
+    }
 
     menu.addSeparator();
 
     QAction* closeLeftAction = menu.addAction(tr("Close Tabs to the Left"));
+    closeLeftAction->setEnabled(canClose && tabIndex > 0);
     connect(closeLeftAction, &QAction::triggered, this, [this, tabIndex]() {
         closeTabsToLeft(tabIndex);
     });
 
     QAction* closeRightAction = menu.addAction(tr("Close Tabs to the Right"));
+    closeRightAction->setEnabled(canClose && tabIndex < count() - 1);
     connect(closeRightAction, &QAction::triggered, this, [this, tabIndex]() {
         closeTabsToRight(tabIndex);
     });
