@@ -19,7 +19,7 @@
 int ColumnListWidget::defaultWidth(const QString& column)
 {
     static const QMap<QString, int> defaults = {
-        {"Name", 40}, {"Ext", 14}, {"Size", 20}, {"Date", 26}, {"Attr", 16}
+        {"Name", 40}, {"Ext", 10}, {"Size", 24}, {"Date", 26}, {"Attr", 16}
     };
     return defaults.value(column, 20);
 }

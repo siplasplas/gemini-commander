@@ -98,7 +98,7 @@ public:
   // Available column names (static)
   static QStringList availableColumns() { return {"Name", "Ext", "Size", "Date", "Attr"}; }
   static QStringList defaultColumns() { return {"Name", "Ext", "Size", "Date"}; }
-  static QVector<double> defaultProportions() { return {0.40, 0.14, 0.20, 0.26}; }
+  static QVector<double> defaultProportions() { return {0.40, 0.10, 0.24, 0.26}; }
 
   // Tab directories configuration
   QStringList leftTabDirs() const { return m_leftTabDirs; }
@@ -151,9 +151,9 @@ private:
 
   // Panel columns (defaults: Name, Ext, Size, Date)
   QStringList m_leftColumns = {"Name", "Ext", "Size", "Date"};
-  QVector<double> m_leftProportions = {0.40, 0.14, 0.20, 0.26};
+  QVector<double> m_leftProportions = {0.40, 0.10, 0.24, 0.26};
   QStringList m_rightColumns = {"Name", "Ext", "Size", "Date"};
-  QVector<double> m_rightProportions = {0.40, 0.14, 0.20, 0.26};
+  QVector<double> m_rightProportions = {0.40, 0.10, 0.24, 0.26};
 
   // Tab directories (empty means use default/cwd)
   QStringList m_leftTabDirs;
