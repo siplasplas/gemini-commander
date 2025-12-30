@@ -169,6 +169,19 @@ bool Config::load(const QString& path)
                 m_viewerY = static_cast<int>(*y);
         }
 
+        // [panels] section - sorting settings
+        if (tbl.contains("panels")) {
+            auto& panels = *tbl["panels"].as_table();
+            if (auto col = panels["left_sort_column"].value<int64_t>())
+                m_leftSortColumn = static_cast<int>(*col);
+            if (auto ord = panels["left_sort_order"].value<int64_t>())
+                m_leftSortOrder = static_cast<int>(*ord);
+            if (auto col = panels["right_sort_column"].value<int64_t>())
+                m_rightSortColumn = static_cast<int>(*col);
+            if (auto ord = panels["right_sort_order"].value<int64_t>())
+                m_rightSortOrder = static_cast<int>(*ord);
+        }
+
         if (tbl.contains("favorites")) {
             auto favs = *tbl["favorites"].as_array();
 
@@ -275,6 +288,14 @@ bool Config::save() const
     viewerTbl.insert("x", static_cast<int64_t>(m_viewerX));
     viewerTbl.insert("y", static_cast<int64_t>(m_viewerY));
     tbl.insert("viewer", viewerTbl);
+
+    // [panels] section - sorting settings
+    toml::table panelsTbl;
+    panelsTbl.insert("left_sort_column", static_cast<int64_t>(m_leftSortColumn));
+    panelsTbl.insert("left_sort_order", static_cast<int64_t>(m_leftSortOrder));
+    panelsTbl.insert("right_sort_column", static_cast<int64_t>(m_rightSortColumn));
+    panelsTbl.insert("right_sort_order", static_cast<int64_t>(m_rightSortOrder));
+    tbl.insert("panels", panelsTbl);
 
     // [external_tool] section
     if (!m_externalToolPath.isEmpty()) {

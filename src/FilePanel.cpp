@@ -28,6 +28,7 @@
 
 #include "FilePanel.h"
 #include "FileIconResolver.h"
+#include "Config.h"
 #include "quitls.h"
 #include "SearchDialog.h"
 #include "SizeFormat.h"
@@ -787,6 +788,16 @@ FilePanel::FilePanel(Side side, QWidget *parent) : QTableView(parent), m_side(si
     currentPath = QDir::currentPath();
     setModel(model);
     setItemDelegate(new MarkedItemDelegate(this));
+
+    // Load sorting from config
+    const auto& cfg = Config::instance();
+    if (side == Side::Left) {
+        sortColumn = cfg.leftSortColumn();
+        sortOrder = static_cast<Qt::SortOrder>(cfg.leftSortOrder());
+    } else {
+        sortColumn = cfg.rightSortColumn();
+        sortOrder = static_cast<Qt::SortOrder>(cfg.rightSortOrder());
+    }
 
     // Debounce timer for visible files tracking (file watcher)
     m_visibilityDebounceTimer = new QTimer(this);

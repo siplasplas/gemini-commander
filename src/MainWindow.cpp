@@ -175,6 +175,15 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         return;
     }
 
+    // Save panel sorting settings (always save, regardless of geometry changes)
+    auto& cfg = Config::instance();
+    if (auto* leftPanel = filePanelForSide(Side::Left)) {
+        cfg.setLeftSort(leftPanel->sortColumn, static_cast<int>(leftPanel->sortOrder));
+    }
+    if (auto* rightPanel = filePanelForSide(Side::Right)) {
+        cfg.setRightSort(rightPanel->sortColumn, static_cast<int>(rightPanel->sortOrder));
+    }
+
     // Only save window geometry if user interactively resized the window
     // This prevents overwriting config values that couldn't be applied (e.g., on Wayland)
     if (m_geometryDirty) {
@@ -189,9 +198,11 @@ void MainWindow::closeEvent(QCloseEvent *event) {
             winX = -1;  // Mark as "not set" - Wayland doesn't support positioning
             winY = -1;
         }
-        Config::instance().setWindowGeometry(winX, winY, width(), height());
-        Config::instance().save();
+        cfg.setWindowGeometry(winX, winY, width(), height());
     }
+
+    // Always save config (at least sorting settings)
+    cfg.save();
 
     if (!Config::instance().confirmExit()) {
         event->accept();

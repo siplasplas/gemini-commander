@@ -72,6 +72,15 @@ public:
   int maxHistorySize() const { return m_maxHistorySize; }
   void setMaxHistorySize(int size) { m_maxHistorySize = size; }
 
+  // Panel sorting (column: 1=Name, 2=Ext, 3=Size, 4=Date; order: 0=Asc, 1=Desc)
+  int leftSortColumn() const { return m_leftSortColumn; }
+  int leftSortOrder() const { return m_leftSortOrder; }
+  void setLeftSort(int column, int order) { m_leftSortColumn = column; m_leftSortOrder = order; }
+
+  int rightSortColumn() const { return m_rightSortColumn; }
+  int rightSortOrder() const { return m_rightSortOrder; }
+  void setRightSort(int column, int order) { m_rightSortColumn = column; m_rightSortOrder = order; }
+
 private:
   Config() = default;
 
@@ -97,6 +106,12 @@ private:
   int m_viewerHeight = 600;
   int m_viewerX = 0;
   int m_viewerY = 0;
+
+  // Panel sorting (defaults: Date, Descending)
+  int m_leftSortColumn = 4;   // COLUMN_DATE
+  int m_leftSortOrder = 1;    // Qt::DescendingOrder
+  int m_rightSortColumn = 4;
+  int m_rightSortOrder = 1;
 };
 
 #endif
