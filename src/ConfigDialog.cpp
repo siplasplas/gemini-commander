@@ -1,5 +1,6 @@
 #include "ConfigDialog.h"
 #include "Config.h"
+#include "SizeFormat.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -594,6 +595,17 @@ void ConfigDialog::createGeneralPage()
     m_showFunctionBar = new QCheckBox(tr("Show function key bar (F1-F10)"), behaviorGroup);
     behaviorLayout->addWidget(m_showFunctionBar);
 
+    auto* sizeFormatLayout = new QHBoxLayout();
+    auto* sizeFormatLabel = new QLabel(tr("Size display format:"), behaviorGroup);
+    m_sizeFormat = new QComboBox(behaviorGroup);
+    m_sizeFormat->addItem(tr("Decimal (1.5 M)"), 1);     // SizeFormat::Decimal
+    m_sizeFormat->addItem(tr("Binary (1.5 Mi)"), 2);     // SizeFormat::Binary
+    m_sizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
+    sizeFormatLayout->addWidget(sizeFormatLabel);
+    sizeFormatLayout->addWidget(m_sizeFormat);
+    sizeFormatLayout->addStretch();
+    behaviorLayout->addLayout(sizeFormatLayout);
+
     layout->addWidget(behaviorGroup);
 
     auto* toolsGroup = new QGroupBox(tr("External Tools"), page);
@@ -686,6 +698,11 @@ void ConfigDialog::loadSettings()
     m_confirmExit->setChecked(cfg.confirmExit());
     m_showFunctionBar->setChecked(cfg.showFunctionBar());
     m_externalToolPath->setText(cfg.externalToolPath());
+
+    // Size format: find index by data value
+    int sizeFormatIdx = m_sizeFormat->findData(static_cast<int>(cfg.sizeFormat()));
+    if (sizeFormatIdx >= 0)
+        m_sizeFormat->setCurrentIndex(sizeFormatIdx);
 }
 
 void ConfigDialog::saveSettings()
@@ -743,6 +760,10 @@ void ConfigDialog::saveSettings()
     cfg.setConfirmExit(m_confirmExit->isChecked());
     cfg.setShowFunctionBar(m_showFunctionBar->isChecked());
     cfg.setExternalToolPath(m_externalToolPath->text());
+
+    // Size format
+    int sizeFormatValue = m_sizeFormat->currentData().toInt();
+    cfg.setSizeFormat(static_cast<SizeFormat::SizeKind>(sizeFormatValue));
 
     // Save to file
     cfg.save();

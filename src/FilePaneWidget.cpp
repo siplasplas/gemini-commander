@@ -222,8 +222,8 @@ void FilePaneWidget::updateStatusLabel()
     }
 
     // Format sizes using SizeFormat
-    QString selectedSizeStr = qFormatSize(selectedBytes, SizeFormat::Decimal);
-    QString totalSizeStr = qFormatSize(totalBytes, SizeFormat::Decimal);
+    QString selectedSizeStr = qFormatSize(selectedBytes, Config::instance().sizeFormat());
+    QString totalSizeStr = qFormatSize(totalBytes, Config::instance().sizeFormat());
 
     // Format: "59 k / 1.31 M in 1 / 2 file(s), 0 / 1 dir(s)"
     QString text = QString("%1 / %2 in %3 / %4 file(s), %5 / %6 dir(s)")

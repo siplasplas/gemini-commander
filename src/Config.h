@@ -4,6 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include "SizeFormat.h"
 
 struct FavoriteDir {
   QString path;
@@ -112,6 +113,10 @@ public:
   int maxUnpinnedTabs() const { return m_maxUnpinnedTabs; }
   void setMaxUnpinnedTabs(int max) { m_maxUnpinnedTabs = max; }
 
+  // Size display format
+  SizeFormat::SizeKind sizeFormat() const { return m_sizeFormat; }
+  void setSizeFormat(SizeFormat::SizeKind format) { m_sizeFormat = format; }
+
 private:
   Config() = default;
 
@@ -158,6 +163,9 @@ private:
 
   // MRU tabs
   int m_maxUnpinnedTabs = 10;
+
+  // Size display format
+  SizeFormat::SizeKind m_sizeFormat = SizeFormat::Decimal;
 };
 
 #endif

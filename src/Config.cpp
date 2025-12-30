@@ -139,6 +139,14 @@ bool Config::load(const QString& path)
             auto& ui = *tbl["ui"].as_table();
             if (auto show = ui["showFunctionBar"].value<bool>())
                 m_showFunctionBar = *show;
+            if (auto fmt = ui["size_format"].value<std::string>()) {
+                if (*fmt == "precise")
+                    m_sizeFormat = SizeFormat::Precise;
+                else if (*fmt == "binary")
+                    m_sizeFormat = SizeFormat::Binary;
+                else
+                    m_sizeFormat = SizeFormat::Decimal;
+            }
         }
 
         // [history] section
@@ -365,6 +373,12 @@ bool Config::save() const
     // [ui] section
     toml::table uiTbl;
     uiTbl.insert("showFunctionBar", m_showFunctionBar);
+    const char* sizeFormatStr = "decimal";
+    if (m_sizeFormat == SizeFormat::Precise)
+        sizeFormatStr = "precise";
+    else if (m_sizeFormat == SizeFormat::Binary)
+        sizeFormatStr = "binary";
+    uiTbl.insert("size_format", sizeFormatStr);
     tbl.insert("ui", uiTbl);
 
     // [history] section
