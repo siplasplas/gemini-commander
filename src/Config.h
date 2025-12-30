@@ -101,7 +101,7 @@ public:
   static QStringList defaultColumns() { return {"Name", "Ext", "Size", "Date"}; }
   static int defaultColumnWidth(const QString& column) {
       static const QMap<QString, int> widths = {
-          {"Name", 40}, {"Ext", 10}, {"Size", 24}, {"Date", 26}, {"Attr", 16}
+          {"Name", 40}, {"Ext", 10}, {"Size", 23}, {"Date", 27}, {"Attr", 16}
       };
       return widths.value(column, 20);
   }
