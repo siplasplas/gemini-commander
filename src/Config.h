@@ -108,6 +108,10 @@ public:
   int rightTabIndex() const { return m_rightTabIndex; }
   void setRightTabs(const QStringList& dirs, int index) { m_rightTabDirs = dirs; m_rightTabIndex = index; }
 
+  // MRU tabs configuration
+  int maxUnpinnedTabs() const { return m_maxUnpinnedTabs; }
+  void setMaxUnpinnedTabs(int max) { m_maxUnpinnedTabs = max; }
+
 private:
   Config() = default;
 
@@ -151,6 +155,9 @@ private:
   int m_leftTabIndex = 0;
   QStringList m_rightTabDirs;
   int m_rightTabIndex = 0;
+
+  // MRU tabs
+  int m_maxUnpinnedTabs = 10;
 };
 
 #endif

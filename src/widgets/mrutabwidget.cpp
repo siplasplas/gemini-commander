@@ -317,6 +317,8 @@ void MruTabWidget::tabInserted(int index) {
     QTimer::singleShot(0, this, [this]() {
         mapCloseButtonsToTabs();
         updateCloseButtonVisibility();
+        // Enforce tab limit after tab is added
+        enforceTabLimit();
     });
     // No need to call QTabWidget::tabInserted(index)
 }

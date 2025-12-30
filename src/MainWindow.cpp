@@ -4,6 +4,7 @@
 #include "ConfigDialog.h"
 #include "FilePaneWidget.h"
 #include "FilePanel.h"
+#include "widgets/mrutabwidget.h"
 
 #include "editor/EditorFrame.h"
 #include "editor/editor.h"
@@ -318,9 +319,17 @@ void MainWindow::setupUi() {
 
     auto* splitter = new QSplitter(Qt::Horizontal, centralWidget);
 
-    m_leftTabs = new QTabWidget(splitter);
-    m_rightTabs = new QTabWidget(splitter);
-    auto tuneTabBar = [](QTabWidget* tabs) {
+    m_leftTabs = new MruTabWidget(splitter);
+    m_leftTabs->setTabLimit(Config::instance().maxUnpinnedTabs());
+    m_rightTabs = new MruTabWidget(splitter);
+    m_rightTabs->setTabLimit(Config::instance().maxUnpinnedTabs());
+
+    // Set MRU tab limit from config
+    int maxUnpinned = Config::instance().maxUnpinnedTabs();
+    m_leftTabs->setTabLimit(maxUnpinned);
+    m_rightTabs->setTabLimit(maxUnpinned);
+
+    auto tuneTabBar = [](MruTabWidget* tabs) {
         QTabBar* bar = tabs->tabBar();
         QFontMetrics fm(bar->font());
         int h = fm.height() + 4; // smaller than default
@@ -964,7 +973,7 @@ FilePanel* MainWindow::panelForObject(QObject* obj) const
     return nullptr;
 }
 
-QTabWidget* MainWindow::tabsForSide(Side side) const
+MruTabWidget* MainWindow::tabsForSide(Side side) const
 {
     if (side == Side::Left)
         return m_leftTabs;
@@ -973,7 +982,7 @@ QTabWidget* MainWindow::tabsForSide(Side side) const
     return nullptr;
 }
 
-void MainWindow::goToNextTab(QTabWidget* tabWidget) {
+void MainWindow::goToNextTab(MruTabWidget* tabWidget) {
     int current = tabWidget->currentIndex();
     int count = tabWidget->count();
 
@@ -984,7 +993,7 @@ void MainWindow::goToNextTab(QTabWidget* tabWidget) {
     }
 }
 
-void MainWindow::goToPreviousTab(QTabWidget* tabWidget) {
+void MainWindow::goToPreviousTab(MruTabWidget* tabWidget) {
     int current = tabWidget->currentIndex(); // Bieżący indeks
 
     if (current > 0) {

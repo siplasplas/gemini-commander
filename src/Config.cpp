@@ -146,6 +146,35 @@ bool Config::load(const QString& path)
             auto& history = *tbl["history"].as_table();
             if (auto size = history["max_size"].value<int64_t>())
                 m_maxHistorySize = static_cast<int>(*size);
+
+            // MRU tab limit
+            if (auto max = history["max_unpinned_tabs"].value<int64_t>())
+                m_maxUnpinnedTabs = static_cast<int>(*max);
+        }
+
+        // [tabs] section - tab directories
+        if (tbl.contains("tabs")) {
+            auto& tabs = *tbl["tabs"].as_table();
+
+            // Left tabs
+            if (tabs.contains("left_dirs") && tabs["left_dirs"].is_array()) {
+                for (const auto& node : *tabs["left_dirs"].as_array()) {
+                    if (auto s = node.value<std::string>())
+                        m_leftTabDirs.append(QString::fromStdString(*s));
+                }
+            }
+            if (auto idx = tabs["left_index"].value<int64_t>())
+                m_leftTabIndex = static_cast<int>(*idx);
+
+            // Right tabs
+            if (tabs.contains("right_dirs") && tabs["right_dirs"].is_array()) {
+                for (const auto& node : *tabs["right_dirs"].as_array()) {
+                    if (auto s = node.value<std::string>())
+                        m_rightTabDirs.append(QString::fromStdString(*s));
+                }
+            }
+            if (auto idx = tabs["right_index"].value<int64_t>())
+                m_rightTabIndex = static_cast<int>(*idx);
         }
 
         // [editor] section (position relative to main window)
@@ -341,6 +370,7 @@ bool Config::save() const
     // [history] section
     toml::table historyTbl;
     historyTbl.insert("max_size", static_cast<int64_t>(m_maxHistorySize));
+    historyTbl.insert("max_unpinned_tabs", static_cast<int64_t>(m_maxUnpinnedTabs));
     tbl.insert("history", historyTbl);
 
     // [editor] section (position relative to main window)

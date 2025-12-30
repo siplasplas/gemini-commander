@@ -21,6 +21,7 @@ class FunctionBar;
 class ViewerFrame;
 class FilePanel;
 class SearchDialog;
+class MruTabWidget;
 QT_BEGIN_NAMESPACE
 class QSplitter;
 class QLineEdit;
@@ -42,12 +43,12 @@ private:
     void setupUi();
     static Side opposite(Side side);
     bool eventFilter(QObject *obj, QEvent *event) override;
-    QTabWidget* m_leftTabs;
-    QTabWidget* m_rightTabs;
+    MruTabWidget* m_leftTabs;
+    MruTabWidget* m_rightTabs;
     Side m_activeSide = Side::Left;
-    QTabWidget* tabsForSide(Side side) const;
-    void goToNextTab(QTabWidget *tabWidget);
-    void goToPreviousTab(QTabWidget *tabWidget);
+    MruTabWidget* tabsForSide(Side side) const;
+    void goToNextTab(MruTabWidget *tabWidget);
+    void goToPreviousTab(MruTabWidget *tabWidget);
     QLabel *currentPathLabel;
     QLineEdit *commandLineEdit;
     EditorFrame *editorFrame = nullptr;
