@@ -117,6 +117,7 @@ private:
 
     // History page
     QSpinBox* m_maxHistorySize;
+    QSpinBox* m_maxUnpinnedTabs;
     QLabel* m_historyDescription;
 
     // General page

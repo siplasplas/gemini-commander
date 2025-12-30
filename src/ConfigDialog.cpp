@@ -557,6 +557,24 @@ void ConfigDialog::createHistoryPage()
     historyLayout->addRow(tr("Maximum history size:"), m_maxHistorySize);
 
     layout->addWidget(historyGroup);
+
+    // Tab limit settings
+    auto* tabsGroup = new QGroupBox(tr("Tab Management"), page);
+    auto* tabsLayout = new QFormLayout(tabsGroup);
+
+    auto* tabsDescription = new QLabel(
+        tr("Limit the number of unpinned tabs. When the limit is exceeded, "
+           "the least recently used unpinned tabs are automatically closed."),
+        tabsGroup);
+    tabsDescription->setWordWrap(true);
+    tabsLayout->addRow(tabsDescription);
+
+    m_maxUnpinnedTabs = new QSpinBox(tabsGroup);
+    m_maxUnpinnedTabs->setRange(1, 100);
+    m_maxUnpinnedTabs->setSuffix(tr(" tabs"));
+    tabsLayout->addRow(tr("Maximum unpinned tabs:"), m_maxUnpinnedTabs);
+
+    layout->addWidget(tabsGroup);
     layout->addStretch();
 
     m_pagesStack->addWidget(page);
@@ -662,6 +680,7 @@ void ConfigDialog::loadSettings()
 
     // History page
     m_maxHistorySize->setValue(cfg.maxHistorySize());
+    m_maxUnpinnedTabs->setValue(cfg.maxUnpinnedTabs());
 
     // General page
     m_confirmExit->setChecked(cfg.confirmExit());
@@ -718,6 +737,7 @@ void ConfigDialog::saveSettings()
 
     // History
     cfg.setMaxHistorySize(m_maxHistorySize->value());
+    cfg.setMaxUnpinnedTabs(m_maxUnpinnedTabs->value());
 
     // General
     cfg.setConfirmExit(m_confirmExit->isChecked());
