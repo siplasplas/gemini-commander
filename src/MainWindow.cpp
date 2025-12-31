@@ -737,6 +737,85 @@ void MainWindow::setupUi() {
     m_mainToolBar->setStyleSheet(tbStyle);
     m_mountsToolBar->setStyleSheet(tbStyle);
 
+    // Shared context menu for toolbars and menu bar
+    auto showToolbarContextMenu = [this](const QPoint& globalPos) {
+        QMenu menu;
+
+        // Menu bar visibility toggle (with safeguard)
+        QAction* menuAction = menu.addAction(tr("Show Menu Bar"));
+        menuAction->setCheckable(true);
+        menuAction->setChecked(menuBar()->isVisible());
+        // Disable if hiding menu would leave no way to restore (main toolbar hidden)
+        if (menuBar()->isVisible() && !m_mainToolBar->isVisible()) {
+            menuAction->setEnabled(false);
+            menuAction->setToolTip(tr("Cannot hide - Main Toolbar must be visible first"));
+        }
+        connect(menuAction, &QAction::toggled, this, [this](bool checked) {
+            // Safeguard: can't hide menu if main toolbar is hidden
+            if (!checked && !m_mainToolBar->isVisible()) {
+                return;
+            }
+            Config::instance().setMenuVisible(checked);
+            menuBar()->setVisible(checked);
+            Config::instance().save();
+        });
+
+        menu.addSeparator();
+
+        // Toolbar visibility toggles
+        auto addToolbarToggle = [&menu, this](const QString& label, const QString& configName, QToolBar* tb, bool isMainToolbar = false) {
+            if (!tb) return;
+            QAction* action = menu.addAction(label);
+            action->setCheckable(true);
+            action->setChecked(tb->isVisible());
+            // Safeguard: can't hide main toolbar if menu is hidden
+            if (isMainToolbar && tb->isVisible() && !menuBar()->isVisible()) {
+                action->setEnabled(false);
+                action->setToolTip(tr("Cannot hide - Menu Bar must be visible first"));
+            }
+            connect(action, &QAction::toggled, this, [this, configName, tb, isMainToolbar](bool checked) {
+                // Safeguard for main toolbar
+                if (isMainToolbar && !checked && !menuBar()->isVisible()) {
+                    return;
+                }
+                auto cfg = Config::instance().toolbarConfig(configName);
+                cfg.visible = checked;
+                Config::instance().setToolbarConfig(configName, cfg);
+                tb->setVisible(checked);
+                Config::instance().save();
+            });
+        };
+
+        addToolbarToggle(tr("Main Toolbar"), "main", m_mainToolBar, true);
+        addToolbarToggle(tr("Mounts"), "mounts", m_mountsToolBar);
+        if (m_procMountsToolBar)
+            addToolbarToggle(tr("Other Mounts"), "other_mounts", m_procMountsToolBar);
+        addToolbarToggle(tr("Storage Info"), "storage_info", m_storageInfoToolBar);
+        addToolbarToggle(tr("Function Bar"), "function_bar", m_functionBarToolBar);
+
+        menu.exec(globalPos);
+    };
+
+    auto setupToolbarContextMenu = [this, showToolbarContextMenu](QToolBar* toolbar) {
+        if (!toolbar) return;
+        toolbar->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(toolbar, &QToolBar::customContextMenuRequested, this, [toolbar, showToolbarContextMenu](const QPoint& pos) {
+            showToolbarContextMenu(toolbar->mapToGlobal(pos));
+        });
+    };
+
+    setupToolbarContextMenu(m_mainToolBar);
+    setupToolbarContextMenu(m_mountsToolBar);
+    // Note: m_procMountsToolBar has its own context menu for umount - don't override
+    setupToolbarContextMenu(m_storageInfoToolBar);
+    setupToolbarContextMenu(m_functionBarToolBar);
+
+    // Context menu on menu bar itself (same as toolbar context menu)
+    menuBar()->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(menuBar(), &QMenuBar::customContextMenuRequested, this, [showToolbarContextMenu, this](const QPoint& pos) {
+        showToolbarContextMenu(menuBar()->mapToGlobal(pos));
+    });
+
     // View menu - Function Bar toggle
     m_showFunctionBarAction = new QAction(tr("Show Function Bar"), this);
     m_showFunctionBarAction->setCheckable(true);
@@ -2237,6 +2316,14 @@ void MainWindow::applyToolbarConfig()
         addToolBar(qtArea, entry.toolbar);
         entry.toolbar->setVisible(entry.config.visible);
         firstInArea = false;
+    }
+
+    // Emergency safeguard: ensure at least menu OR main toolbar is visible
+    // Without this, user would have no way to restore visibility
+    if (!menuBar()->isVisible() && m_mainToolBar && !m_mainToolBar->isVisible()) {
+        menuBar()->setVisible(true);
+        Config::instance().setMenuVisible(true);
+        qWarning() << "Emergency safeguard: Both menu and main toolbar were hidden. Restoring menu visibility.";
     }
 }
 
