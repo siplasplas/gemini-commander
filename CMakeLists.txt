@@ -112,6 +112,8 @@ add_executable(${PROJECT_NAME}
         src/MultiRenameDialog.h
         src/FileOperationProgressDialog.cpp
         src/FileOperationProgressDialog.h
+        src/FileOperations.cpp
+        src/FileOperations.h
         src/SearchWorker.h
         src/editor/editor.cpp
         src/editor/editor.h
