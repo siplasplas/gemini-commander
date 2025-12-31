@@ -313,14 +313,9 @@ void MainWindow::onConfigSaved()
     // for security reasons. The new size will be applied on next app start.
     applyConfigGeometry(false);
 
-    // Update function bar visibility
-    bool showFunctionBar = Config::instance().showFunctionBar();
-    if (showFunctionBar) {
-        m_functionBarToolBar->show();
-    } else {
-        m_functionBarToolBar->hide();
-    }
-    m_showFunctionBarAction->setChecked(showFunctionBar);
+    // Apply toolbar configuration (visibility, position, order)
+    applyToolbarConfig();
+    m_showFunctionBarAction->setChecked(Config::instance().showFunctionBar());
 
     // Update MRU tab limit
     int maxUnpinned = Config::instance().maxUnpinnedTabs();
