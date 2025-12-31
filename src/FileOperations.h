@@ -5,7 +5,6 @@
 #include <QStringList>
 
 class QWidget;
-class FilePanel;
 
 namespace FileOperations {
 
@@ -30,22 +29,20 @@ bool copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
                                const QString& displayName, bool deleteSourceAfter, QWidget* parent);
 
 // Execute copy operation after destination path is confirmed
-// srcPanel: source panel (for path and marked files)
-// dstPanel: destination panel (may be null for in-place copy)
-// dstPath: resolved absolute destination path
-// destInput: original user input (for directory detection)
-// currentName: name of single file (empty if multiple files marked)
-// markedNames: list of marked file names (empty if single file)
-void executeCopy(FilePanel* srcPanel, FilePanel* dstPanel,
-                 const QString& dstPath, const QString& destInput,
-                 const QString& currentName, const QStringList& markedNames,
-                 QWidget* parent);
+// currentPath: source directory path (will be prepended to names)
+// names: list of file/directory names to copy
+// destInput: user input for destination (may be relative or absolute)
+// baseDirForRelative: base directory for resolving relative destInput
+// Returns: name of copied file for selection (empty if multiple files)
+QString executeCopy(const QString& currentPath, const QStringList& names,
+                    const QString& destInput, const QString& baseDirForRelative,
+                    QWidget* parent);
 
 // Execute move operation after destination path is confirmed
-void executeMove(FilePanel* srcPanel, FilePanel* dstPanel,
-                 const QString& dstPath, const QString& destInput,
-                 const QString& currentName, const QStringList& markedNames,
-                 QWidget* parent);
+// Returns: name of moved file for selection (empty if multiple files)
+QString executeMove(const QString& currentPath, const QStringList& names,
+                    const QString& destInput, const QString& baseDirForRelative,
+                    QWidget* parent);
 
 } // namespace FileOperations
 

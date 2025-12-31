@@ -1319,11 +1319,12 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
     QStringList markedNames = srcPanel->getMarkedNames();
     bool hasMarked = !markedNames.isEmpty();
 
-    // Build suggested path
+    // Build suggested path and names list
     QString suggested;
-    QString currentName;
+    QStringList names;
 
     if (hasMarked) {
+        names = markedNames;
         // Multiple files: propose directory only (or empty for inPlace)
         if (inPlace) {
             suggested = QString();
@@ -1336,9 +1337,11 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
         if (!currentIndex.isValid())
             return;
 
-        currentName = srcPanel->getRowRelPath(currentIndex.row());
+        QString currentName = srcPanel->getRowRelPath(currentIndex.row());
         if (currentName.isEmpty())
             return; // [..]
+
+        names << currentName;
 
         if (inPlace) {
             suggested = currentName;
@@ -1362,21 +1365,17 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
     if (!ok || destInput.isEmpty())
         return;
 
-    // Resolve relative paths - always relative to source panel (where file currently is)
-    QString baseDirForRelative = srcPanel->currentPath;
-
-    QString dstPath;
-    if (QDir::isAbsolutePath(destInput)) {
-        dstPath = destInput;
-    } else {
-        QDir baseDir(baseDirForRelative);
-        dstPath = baseDir.absoluteFilePath(destInput);
-    }
-
-    QFileInfo dstInfo(dstPath);
-
     // Delegate to FileOperations module
-    FileOperations::executeCopy(srcPanel, dstPanel, dstPath, destInput, currentName, markedNames, this);
+    QString selectedName = FileOperations::executeCopy(
+        srcPanel->currentPath, names, destInput, srcPanel->currentPath, this);
+
+    // Refresh panels
+    srcPanel->loadDirectory();
+    if (dstPanel) {
+        dstPanel->loadDirectory();
+        if (!selectedName.isEmpty())
+            dstPanel->selectEntryByName(selectedName);
+    }
 }
 
 void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
@@ -1394,11 +1393,12 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
     QStringList markedNames = srcPanel->getMarkedNames();
     bool hasMarked = !markedNames.isEmpty();
 
-    // Build suggested path
+    // Build suggested path and names list
     QString suggested;
-    QString currentName;
+    QStringList names;
 
     if (hasMarked) {
+        names = markedNames;
         if (inPlace) {
             suggested = QString();
         } else {
@@ -1410,9 +1410,11 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
         if (!currentIndex.isValid())
             return;
 
-        currentName = srcPanel->getRowRelPath(currentIndex.row());
+        QString currentName = srcPanel->getRowRelPath(currentIndex.row());
         if (currentName.isEmpty())
             return;
+
+        names << currentName;
 
         if (inPlace) {
             suggested = currentName;
@@ -1436,19 +1438,17 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
     if (!ok || destInput.isEmpty())
         return;
 
-    // Resolve relative paths - always relative to source panel (where file currently is)
-    QString baseDirForRelative = srcPanel->currentPath;
-
-    QString dstPath;
-    if (QDir::isAbsolutePath(destInput)) {
-        dstPath = destInput;
-    } else {
-        QDir baseDir(baseDirForRelative);
-        dstPath = baseDir.absoluteFilePath(destInput);
-    }
-
     // Delegate to FileOperations module
-    FileOperations::executeMove(srcPanel, dstPanel, dstPath, destInput, currentName, markedNames, this);
+    QString selectedName = FileOperations::executeMove(
+        srcPanel->currentPath, names, destInput, srcPanel->currentPath, this);
+
+    // Refresh panels
+    srcPanel->loadDirectory();
+    if (dstPanel) {
+        dstPanel->loadDirectory();
+        if (!selectedName.isEmpty())
+            dstPanel->selectEntryByName(selectedName);
+    }
 }
 
 bool MainWindow::handle(const char* handler, QKeyEvent* ev) {
