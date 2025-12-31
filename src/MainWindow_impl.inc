@@ -13,6 +13,8 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 
+#include "FileOperations.h"
+
 bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -221,7 +223,7 @@ bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
-        auto selectedName = FileOperations::executeCopy(params.srcPath, params.names, params.destPath, this);
+        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
         selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;
@@ -233,7 +235,7 @@ bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
-        auto selectedName = FileOperations::executeCopy(params.srcPath, params.names, params.destPath, this);
+        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
         selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;
@@ -495,7 +497,7 @@ bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, false, true);  // inPlace=false, isMove=true
-        auto selectedName = FileOperations::executeMove(params.srcPath, params.names, params.destPath, this);
+        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
         selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;
@@ -507,7 +509,7 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, true, true);  // inPlace=true, isMove=true
-        auto selectedName = FileOperations::executeMove(params.srcPath, params.names, params.destPath, this);
+        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
         selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;

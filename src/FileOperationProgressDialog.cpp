@@ -42,7 +42,7 @@ void FileOperationProgressDialog::setupUi(const QString& title)
 
     m_cancelButton = new QPushButton(tr("Cancel"), this);
     connect(m_cancelButton, &QPushButton::clicked, this, [this]() {
-        m_cancelled = true;
+        m_canceled = true;
     });
     layout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
 
@@ -52,7 +52,7 @@ void FileOperationProgressDialog::setupUi(const QString& title)
 
 void FileOperationProgressDialog::updateProgress(int currentFile, const QString& fileName, qint64 fileSize)
 {
-    if (m_cancelled)
+    if (m_canceled)
         return;
 
     m_progressBar->setValue(currentFile);
@@ -77,7 +77,7 @@ void FileOperationProgressDialog::updateProgress(int currentFile, const QString&
 
 void FileOperationProgressDialog::updateMoveProgress(int currentFile, int showEveryN)
 {
-    if (m_cancelled)
+    if (m_canceled)
         return;
 
     m_progressBar->setValue(currentFile);
@@ -99,14 +99,14 @@ void FileOperationProgressDialog::processEvents()
 void FileOperationProgressDialog::closeEvent(QCloseEvent* event)
 {
     // Treat close as cancel
-    m_cancelled = true;
+    m_canceled = true;
     event->accept();
 }
 
 void FileOperationProgressDialog::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Escape) {
-        m_cancelled = true;
+        m_canceled = true;
         event->accept();
     } else {
         QDialog::keyPressEvent(event);

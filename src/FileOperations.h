@@ -1,6 +1,7 @@
 #ifndef FILEOPERATIONS_H
 #define FILEOPERATIONS_H
 
+#include <QMessageBox>
 #include <QString>
 #include <QStringList>
 
@@ -29,7 +30,7 @@ void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* 
 
 // Copy directory recursively with progress tracking
 // Returns true on success, false on failure or user abort
-bool copyDirectoryRecursive(const QString& srcRoot, const QString& dstRoot, const CopyStats& stats,
+QMessageBox::Button copyOrMoveDirectoryRecursive(const QString& srcRoot, const QString& dstRoot, const CopyStats& stats,
                             QProgressDialog& progress, quint64& bytesCopied, bool& userAbort);
 
 // Check if target is invalid (same path or subdirectory of source)
@@ -47,20 +48,8 @@ bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 bool copyOrMoveDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
                                const QString& displayName, bool deleteSourceAfter, QWidget* parent);
 
-// Execute copy operation after destination path is confirmed
-// currentPath: source directory path (will be prepended to names)
-// names: list of file/directory names to copy
-// destInput: user input for destination (may be relative or absolute)
-// baseDirForRelative: base directory for resolving relative destInput
-// Returns: name of copied file for selection (empty if multiple files)
-QString executeCopy(const QString& currentPath, const QStringList& names,
-                    const QString& destInput,
-                    QWidget* parent);
-
-// Execute move operation after destination path is confirmed
-// Returns: name of moved file for selection (empty if multiple files)
-QString executeMove(const QString& currentPath, const QStringList& names,
-                    const QString& destInput,
+QString executeCopyOrMove(const QString& currentPath, const QStringList& names,
+                    const QString& destInput, bool move,
                     QWidget* parent);
 
 } // namespace FileOperations

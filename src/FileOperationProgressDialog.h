@@ -23,8 +23,8 @@ public:
     // Update progress for fast move operations (shows only every Nth file, no filename)
     void updateMoveProgress(int currentFile, int showEveryN = 100);
 
-    // Check if user cancelled
-    bool wasCancelled() const { return m_cancelled; }
+    // Check if user canceled
+    bool wasCanceled() const { return m_canceled; }
 
     // Force event processing
     void processEvents();
@@ -41,7 +41,7 @@ private:
     QPushButton* m_cancelButton = nullptr;
 
     int m_totalFiles = 0;
-    bool m_cancelled = false;
+    bool m_canceled = false;
     bool m_operationWasInProgress = false;
 };
 
