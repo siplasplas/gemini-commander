@@ -1336,6 +1336,127 @@ static bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPa
     return false;
 }
 
+// ============================================================================
+// Copy/Move helper methods (DRY refactoring)
+// ============================================================================
+
+MainWindow::EnsureDirResult MainWindow::ensureDestDirExists(const QString& dstPath)
+{
+    QFileInfo dstInfo(dstPath);
+    if (!dstInfo.exists()) {
+        auto reply = QMessageBox::question(
+            this,
+            tr("Create Directory"),
+            tr("Directory '%1' does not exist.\nCreate it?").arg(dstPath),
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+            QMessageBox::Yes
+        );
+        if (reply == QMessageBox::Cancel)
+            return EnsureDirResult::Cancelled;
+        if (reply == QMessageBox::Yes) {
+            QDir().mkpath(dstPath);
+            return EnsureDirResult::Created;
+        }
+        return EnsureDirResult::Cancelled;
+    }
+    if (!dstInfo.isDir()) {
+        QMessageBox::warning(this, tr("Error"),
+            tr("'%1' exists but is not a directory.").arg(dstPath));
+        return EnsureDirResult::NotADir;
+    }
+    return EnsureDirResult::Exists;
+}
+
+bool MainWindow::isDestinationDirectory(const QString& destInput, const QFileInfo& dstInfo)
+{
+    return destInput.endsWith('/')
+           || destInput == "." || destInput == ".."
+           || destInput.endsWith("/.")  || destInput.endsWith("/..")
+           || (dstInfo.exists() && dstInfo.isDir());
+}
+
+bool MainWindow::copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
+                                           const QString& displayName, bool deleteSourceAfter)
+{
+    QFileInfo srcInfo(srcPath);
+    QFileInfo dstInfo(dstPath);
+
+    QString dstRoot = dstPath;
+    if (dstInfo.exists() && dstInfo.isDir()) {
+        QDir base(dstPath);
+        dstRoot = base.filePath(srcInfo.fileName());
+    }
+
+    QDir checkDir(dstRoot);
+    if (checkDir.exists()) {
+        const QStringList entries = checkDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+        if (!entries.isEmpty()) {
+            QMessageBox::warning(this, deleteSourceAfter ? tr("Move") : tr("Copy"),
+                tr("Destination directory '%1' already exists and is not empty.\n"
+                   "Recursive copy into non-empty directories is not supported yet.")
+                    .arg(dstRoot));
+            return false;
+        }
+    }
+
+    FilePanel::CopyStats stats;
+    bool statsOk = false;
+    FilePanel::collectCopyStats(srcPath, stats, statsOk);
+    if (!statsOk || stats.totalFiles == 0) {
+        QMessageBox::warning(this, deleteSourceAfter ? tr("Move") : tr("Copy"),
+            tr("No files to copy in '%1'.").arg(srcPath));
+        return false;
+    }
+
+    QString progressTitle = deleteSourceAfter
+        ? tr("Moving %1...").arg(displayName)
+        : tr("Copying %1 files (%2 bytes)...").arg(stats.totalFiles).arg(static_cast<qulonglong>(stats.totalBytes));
+
+    QProgressDialog progress(
+        progressTitle, tr("Cancel"), 0,
+        static_cast<int>(qMin<quint64>(stats.totalBytes, std::numeric_limits<int>::max())),
+        this
+    );
+    progress.setWindowModality(Qt::ApplicationModal);
+    progress.setMinimumDuration(0);
+    progress.show();
+
+    quint64 bytesCopied = 0;
+    bool userAbort = false;
+
+    bool okCopy = FilePanel::copyDirectoryRecursive(srcPath, dstRoot, stats, progress, bytesCopied, userAbort);
+
+    if (okCopy && deleteSourceAfter) {
+        QDir(srcPath).removeRecursively();
+    }
+
+    return okCopy && !userAbort;
+}
+
+bool MainWindow::copySingleFileWithProgress(const QString& srcPath, const QString& dstPath)
+{
+    QFileInfo srcInfo(srcPath);
+
+    // Ensure parent directory exists
+    QDir parentDir = QFileInfo(dstPath).absoluteDir();
+    if (!parentDir.exists()) {
+        parentDir.mkpath(".");
+    }
+
+    // Show progress dialog
+    FileOperationProgressDialog progressDlg(tr("Copy"), 1, this);
+    progressDlg.show();
+    progressDlg.updateProgress(1, srcInfo.fileName(), srcInfo.size());
+
+    if (!QFile::copy(srcPath, dstPath)) {
+        QMessageBox::warning(this, tr("Error"),
+            tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
+        return false;
+    }
+    finalizeCopiedFile(srcPath, dstPath);
+    return true;
+}
+
 void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
 {
     if (!srcPanel)
@@ -1409,27 +1530,9 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
 
     if (hasMarked) {
         // Multiple files: destination is ALWAYS treated as directory
-        // Check if exists
-        if (!dstInfo.exists()) {
-            auto reply = QMessageBox::question(
-                this,
-                tr("Create Directory"),
-                tr("Directory '%1' does not exist.\nCreate it?").arg(dstPath),
-                QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
-                QMessageBox::Yes
-            );
-            if (reply == QMessageBox::Cancel)
-                return;
-            if (reply == QMessageBox::Yes) {
-                QDir().mkpath(dstPath);
-            } else {
-                return;
-            }
-        } else if (!dstInfo.isDir()) {
-            QMessageBox::warning(this, tr("Error"),
-                tr("'%1' exists but is not a directory.").arg(dstPath));
+        auto ensureResult = ensureDestDirExists(dstPath);
+        if (ensureResult == EnsureDirResult::Cancelled || ensureResult == EnsureDirResult::NotADir)
             return;
-        }
 
         // Copy all marked files
         QDir srcDir(srcPanel->currentPath);
@@ -1575,59 +1678,17 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
     }
 
     if (srcInfo.isDir()) {
-        QString dstRoot = finalDstPath;
-        if (finalDstInfo.exists() && finalDstInfo.isDir()) {
-            QDir base(finalDstPath);
-            dstRoot = base.filePath(srcInfo.fileName());
-        }
-
-        QDir checkDir(dstRoot);
-        if (checkDir.exists()) {
-            const QStringList entries = checkDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
-            if (!entries.isEmpty()) {
-                QMessageBox::warning(this, tr("Copy"),
-                    tr("Destination directory '%1' already exists and is not empty.\n"
-                       "Recursive copy into non-empty directories is not supported yet.")
-                        .arg(dstRoot));
-                return;
-            }
-        }
-
-        FilePanel::CopyStats stats;
-        bool statsOk = false;
-        FilePanel::collectCopyStats(srcPath, stats, statsOk);
-        if (!statsOk || stats.totalFiles == 0) {
-            QMessageBox::warning(this, tr("Copy"),
-                tr("No files to copy in '%1'.").arg(srcPath));
+        if (!copyDirectoryWithProgress(srcPath, finalDstPath, currentName, false)) {
             return;
         }
-
-        QProgressDialog progress(
-            tr("Copying %1 files (%2 bytes)...")
-                .arg(stats.totalFiles)
-                .arg(static_cast<qulonglong>(stats.totalBytes)),
-            tr("Cancel"), 0,
-            static_cast<int>(qMin<quint64>(stats.totalBytes, std::numeric_limits<int>::max())),
-            this
-        );
-        progress.setWindowModality(Qt::ApplicationModal);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        quint64 bytesCopied = 0;
-        bool userAbort = false;
-
-        const bool okCopy =
-            FilePanel::copyDirectoryRecursive(srcPath, dstRoot, stats, progress, bytesCopied, userAbort);
-
-        if (!okCopy && userAbort)
-            return;
-        if (!okCopy)
-            return;
 
         if (dstPanel) {
             dstPanel->loadDirectory();
-            dstPanel->selectEntryByName(QFileInfo(dstRoot).fileName());
+            // Calculate final entry name for selection (matches helper's dstRoot calculation)
+            QString entryName = (finalDstInfo.exists() && finalDstInfo.isDir())
+                ? srcInfo.fileName()
+                : QFileInfo(finalDstPath).fileName();
+            dstPanel->selectEntryByName(entryName);
         }
     }
 }
@@ -1704,26 +1765,9 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
 
     if (hasMarked) {
         // Multiple files: destination is ALWAYS treated as directory
-        if (!dstInfo.exists()) {
-            auto reply = QMessageBox::question(
-                this,
-                tr("Create Directory"),
-                tr("Directory '%1' does not exist.\nCreate it?").arg(dstPath),
-                QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
-                QMessageBox::Yes
-            );
-            if (reply == QMessageBox::Cancel)
-                return;
-            if (reply == QMessageBox::Yes) {
-                QDir().mkpath(dstPath);
-            } else {
-                return;
-            }
-        } else if (!dstInfo.isDir()) {
-            QMessageBox::warning(this, tr("Error"),
-                tr("'%1' exists but is not a directory.").arg(dstPath));
+        auto ensureResult = ensureDestDirExists(dstPath);
+        if (ensureResult == EnsureDirResult::Cancelled || ensureResult == EnsureDirResult::NotADir)
             return;
-        }
 
         // Move all marked files
         QDir srcDir(srcPanel->currentPath);

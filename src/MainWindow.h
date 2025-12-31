@@ -81,6 +81,15 @@ private:
     void createMountsToolbar();
     void copyFromPanel(FilePanel* srcPanel, bool inPlace = false);
     void moveFromPanel(FilePanel* srcPanel, bool inPlace = false);
+
+    // Copy/Move helper methods (refactored for DRY)
+    enum class EnsureDirResult { Created, Exists, Cancelled, NotADir };
+    EnsureDirResult ensureDestDirExists(const QString& dstPath);
+    static bool isDestinationDirectory(const QString& destInput, const QFileInfo& dstInfo);
+    bool copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
+                                   const QString& displayName, bool deleteSourceAfter);
+    bool copySingleFileWithProgress(const QString& srcPath, const QString& dstPath);
+
     KeyMap keyMap;
 
     bool handle(const char* handler, QKeyEvent *ev);
