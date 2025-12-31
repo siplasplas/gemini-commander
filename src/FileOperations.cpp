@@ -14,6 +14,16 @@
 
 namespace FileOperations {
 
+bool copyFile(const QString &srcPath, const QString &dstPath) {
+    if (!QFile::copy(srcPath, dstPath)) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+            QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
+        return false;
+    }
+    finalizeCopiedFile(srcPath, dstPath);
+    return true;
+}
+
 void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag)
 {
     ok = true;
@@ -100,12 +110,8 @@ bool copyDirectoryRecursive(const QString& srcRoot, const QString& dstRoot, cons
             if (QFileInfo::exists(dstPath))
                 QFile::remove(dstPath);
 
-            if (!QFile::copy(srcPath, dstPath)) {
-                QMessageBox::warning(nullptr, QObject::tr("Error"),
-                    QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
+            if (!copyFile(srcPath, dstPath))
                 return false;
-            }
-            finalizeCopiedFile(srcPath, dstPath);
 
             bytesCopied += static_cast<quint64>(fi.size());
 
@@ -368,13 +374,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
                     if (answer == OverwriteAnswer::No) continue;
                     QFile::remove(dstFilePath);
                 }
-
-                if (!QFile::copy(srcPath, dstFilePath)) {
-                    QMessageBox::warning(parent, QObject::tr("Error"),
-                        QObject::tr("Failed to copy '%1'").arg(name));
-                } else {
-                    finalizeCopiedFile(srcPath, dstFilePath);
-                }
+                copyFile(srcPath, dstFilePath);
             } else if (srcInfo.isDir()) {
                 bool userAbort = false;
                 if (!copyDirInLoop(srcPath, dstFilePath, name, parent, userAbort))
@@ -410,12 +410,8 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
         progressDlg.show();
         progressDlg.updateProgress(1, srcInfo.fileName(), srcInfo.size());
 
-        if (!QFile::copy(srcPath, finalDstPath)) {
-            QMessageBox::warning(parent, QObject::tr("Error"),
-                QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, finalDstPath));
+        if (!copyFile(srcPath, finalDstPath))
             return {};
-        }
-        finalizeCopiedFile(srcPath, finalDstPath);
         return finalDstPath;
     }
 
@@ -484,12 +480,8 @@ QString executeMove(const QString& currentPath, const QStringList& names,
                     break;
 
                 if (srcFileInfo.isFile()) {
-                    if (!QFile::copy(srcPath, dstFilePath)) {
-                        QMessageBox::warning(parent, QObject::tr("Error"),
-                            QObject::tr("Failed to copy '%1'").arg(name));
+                    if (!copyFile(srcPath, dstFilePath))
                         continue;
-                    }
-                    finalizeCopiedFile(srcPath, dstFilePath);
                     QFile::remove(srcPath);
                 } else if (srcFileInfo.isDir()) {
                     if (!copyOrMoveDirectoryWithProgress(srcPath, dstFilePath, name, true, parent))
@@ -540,12 +532,8 @@ QString executeMove(const QString& currentPath, const QStringList& names,
             progressDlg.show();
             progressDlg.updateProgress(1, srcInfo.fileName(), srcInfo.size());
 
-            if (!QFile::copy(srcPath, finalDstPath)) {
-                QMessageBox::warning(parent, QObject::tr("Error"),
-                    QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, finalDstPath));
+            if (!copyFile(srcPath, finalDstPath))
                 return {};
-            }
-            finalizeCopiedFile(srcPath, finalDstPath);
             QFile::remove(srcPath);
         } else if (srcInfo.isDir()) {
             if (!copyOrMoveDirectoryWithProgress(srcPath, finalDstPath, currentName, true, parent))
