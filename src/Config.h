@@ -13,6 +13,22 @@ struct FavoriteDir {
   QString group;
 };
 
+// Toolbar dock area
+enum class ToolbarArea {
+    Top,
+    Bottom,
+    Left,
+    Right
+};
+
+// Configuration for a single toolbar
+struct ToolbarConfig {
+    bool visible = true;
+    ToolbarArea area = ToolbarArea::Top;
+    bool lineBreak = false;  // Start new line/row before this toolbar
+    int order = 0;           // Order within the area
+};
+
 class Config
 {
 public:
@@ -63,9 +79,17 @@ public:
   // Check if given path is the config file
   bool isConfigFile(const QString& path) const;
 
-  // UI visibility
-  bool showFunctionBar() const { return m_showFunctionBar; }
-  void setShowFunctionBar(bool show) { m_showFunctionBar = show; }
+  // Toolbar configuration
+  bool menuVisible() const { return m_menuVisible; }
+  void setMenuVisible(bool visible);  // Has safeguard logic
+
+  ToolbarConfig toolbarConfig(const QString& name) const;
+  void setToolbarConfig(const QString& name, const ToolbarConfig& config);
+  QStringList toolbarNames() const;  // Returns all toolbar names in order
+
+  // Legacy compatibility - maps to function_bar toolbar visibility
+  bool showFunctionBar() const;
+  void setShowFunctionBar(bool show);
 
   // Directory navigation history
   int maxHistorySize() const { return m_maxHistorySize; }
@@ -136,7 +160,9 @@ private:
       , m_leftProportions(defaultProportions())
       , m_rightColumns(defaultColumns())
       , m_rightProportions(defaultProportions())
-  {}
+  {
+      initDefaultToolbars();
+  }
 
   QString m_configPath;
   QVector<FavoriteDir> m_favorites;
@@ -145,8 +171,12 @@ private:
   int m_windowHeight = 768;
   int m_windowX = -1;  // -1 means not set (use system default)
   int m_windowY = -1;
-  bool m_showFunctionBar = true;
   int m_maxHistorySize = 20;
+
+  // Toolbar configuration
+  bool m_menuVisible = true;
+  QMap<QString, ToolbarConfig> m_toolbars;
+  void initDefaultToolbars();
 
   // Editor window geometry (relative to main window)
   int m_editorWidth = 800;

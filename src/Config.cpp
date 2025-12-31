@@ -7,6 +7,26 @@
 
 #include <toml++/toml.h>
 
+static QString toolbarAreaToString(ToolbarArea area)
+{
+    switch (area) {
+        case ToolbarArea::Top: return "top";
+        case ToolbarArea::Bottom: return "bottom";
+        case ToolbarArea::Left: return "left";
+        case ToolbarArea::Right: return "right";
+    }
+    return "top";
+}
+
+static ToolbarArea stringToToolbarArea(const std::string& str)
+{
+    if (str == "bottom") return ToolbarArea::Bottom;
+    if (str == "left") return ToolbarArea::Left;
+    if (str == "right") return ToolbarArea::Right;
+    return ToolbarArea::Top;
+}
+
+
 QString Config::defaultConfigPath() const
 {
     QString base = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
@@ -83,7 +103,8 @@ bool Config::load(const QString& path)
     m_windowHeight = 768;
     m_windowX = -1;
     m_windowY = -1;
-    m_showFunctionBar = true;
+    m_menuVisible = true;
+    initDefaultToolbars();
     m_editorWidth = 800;
     m_editorHeight = 600;
     m_editorX = 0;
@@ -129,8 +150,9 @@ bool Config::load(const QString& path)
         // [ui] section
         if (tbl.contains("ui")) {
             auto& ui = *tbl["ui"].as_table();
+            // Legacy: showFunctionBar (migrate to toolbars.function_bar.visible)
             if (auto show = ui["showFunctionBar"].value<bool>())
-                m_showFunctionBar = *show;
+                setShowFunctionBar(*show);
             if (auto fmt = ui["size_format"].value<std::string>()) {
                 if (*fmt == "precise")
                     m_sizeFormat = SizeFormat::Precise;
@@ -146,6 +168,35 @@ bool Config::load(const QString& path)
                     m_storageSizeFormat = SizeFormat::Binary;
                 else
                     m_storageSizeFormat = SizeFormat::Decimal;
+            }
+        }
+
+        // [toolbars] section
+        if (tbl.contains("toolbars")) {
+            auto& toolbars = *tbl["toolbars"].as_table();
+
+            if (auto menuVis = toolbars["menu_visible"].value<bool>())
+                m_menuVisible = *menuVis;
+
+            // Read individual toolbar configs
+            const QStringList tbNames = {"main", "mounts", "other_mounts", "storage_info", "function_bar"};
+            for (const QString& name : tbNames) {
+                std::string stdName = name.toStdString();
+                if (toolbars.contains(stdName) && toolbars[stdName].is_table()) {
+                    auto& tbConfig = *toolbars[stdName].as_table();
+                    ToolbarConfig cfg = m_toolbars.value(name);
+
+                    if (auto vis = tbConfig["visible"].value<bool>())
+                        cfg.visible = *vis;
+                    if (auto area = tbConfig["area"].value<std::string>())
+                        cfg.area = stringToToolbarArea(*area);
+                    if (auto lb = tbConfig["line_break"].value<bool>())
+                        cfg.lineBreak = *lb;
+                    if (auto ord = tbConfig["order"].value<int64_t>())
+                        cfg.order = static_cast<int>(*ord);
+
+                    m_toolbars[name] = cfg;
+                }
             }
         }
 
@@ -372,7 +423,6 @@ bool Config::save() const
 
     // [ui] section
     toml::table uiTbl;
-    uiTbl.insert("showFunctionBar", m_showFunctionBar);
     const char* sizeFormatStr = "precise";
     if (m_sizeFormat == SizeFormat::Decimal)
         sizeFormatStr = "decimal";
@@ -387,6 +437,20 @@ bool Config::save() const
         storageSizeFormatStr = "binary";
     uiTbl.insert("storage_size_format", storageSizeFormatStr);
     tbl.insert("ui", uiTbl);
+
+    // [toolbars] section
+    toml::table toolbarsTbl;
+    toolbarsTbl.insert("menu_visible", m_menuVisible);
+
+    for (auto it = m_toolbars.constBegin(); it != m_toolbars.constEnd(); ++it) {
+        toml::table tbCfg;
+        tbCfg.insert("visible", it.value().visible);
+        tbCfg.insert("area", toolbarAreaToString(it.value().area).toStdString());
+        tbCfg.insert("line_break", it.value().lineBreak);
+        tbCfg.insert("order", static_cast<int64_t>(it.value().order));
+        toolbarsTbl.insert(it.key().toStdString(), tbCfg);
+    }
+    tbl.insert("toolbars", toolbarsTbl);
 
     // [history] section
     toml::table historyTbl;
@@ -475,3 +539,76 @@ bool Config::save() const
 
     return true;
 }
+
+// Toolbar configuration methods
+
+void Config::initDefaultToolbars()
+{
+    m_toolbars.clear();
+
+    // Top toolbars (all in one line)
+    m_toolbars["main"] = {true, ToolbarArea::Top, false, 0};
+    m_toolbars["mounts"] = {true, ToolbarArea::Top, false, 1};
+#ifndef _WIN32
+    m_toolbars["other_mounts"] = {true, ToolbarArea::Top, false, 2};
+#endif
+    m_toolbars["storage_info"] = {true, ToolbarArea::Top, false, 3};
+
+    // Bottom toolbar
+    m_toolbars["function_bar"] = {true, ToolbarArea::Bottom, false, 0};
+}
+
+ToolbarConfig Config::toolbarConfig(const QString& name) const
+{
+    return m_toolbars.value(name, ToolbarConfig{});
+}
+
+void Config::setToolbarConfig(const QString& name, const ToolbarConfig& config)
+{
+    m_toolbars[name] = config;
+}
+
+QStringList Config::toolbarNames() const
+{
+    // Return toolbar names sorted by area and order
+    QList<QPair<QString, ToolbarConfig>> list;
+    for (auto it = m_toolbars.constBegin(); it != m_toolbars.constEnd(); ++it) {
+        list.append({it.key(), it.value()});
+    }
+
+    std::sort(list.begin(), list.end(), [](const auto& a, const auto& b) {
+        if (a.second.area != b.second.area)
+            return static_cast<int>(a.second.area) < static_cast<int>(b.second.area);
+        return a.second.order < b.second.order;
+    });
+
+    QStringList result;
+    for (const auto& pair : list)
+        result.append(pair.first);
+    return result;
+}
+
+void Config::setMenuVisible(bool visible)
+{
+    m_menuVisible = visible;
+
+    // Safeguard: if menu hidden, ensure main toolbar is visible
+    if (!m_menuVisible) {
+        auto mainCfg = m_toolbars.value("main");
+        mainCfg.visible = true;
+        m_toolbars["main"] = mainCfg;
+    }
+}
+
+bool Config::showFunctionBar() const
+{
+    return m_toolbars.value("function_bar").visible;
+}
+
+void Config::setShowFunctionBar(bool show)
+{
+    auto cfg = m_toolbars.value("function_bar");
+    cfg.visible = show;
+    m_toolbars["function_bar"] = cfg;
+}
+

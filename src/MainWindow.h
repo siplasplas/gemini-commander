@@ -106,6 +106,8 @@ private:
     void ensureFileWatcherActive(QFileSystemWatcher* watcher);
 
     void refreshMountsToolbar();
+    void applyToolbarConfig();
+    QToolBar* toolbarByName(const QString& name);
 
 #ifndef _WIN32
     // Mounts monitoring via UDisks2 (Linux only)

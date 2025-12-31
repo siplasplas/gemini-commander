@@ -693,11 +693,13 @@ void MainWindow::setupUi() {
     QSize icon16(16,16);
     m_mainToolBar->setIconSize(icon16);
     m_mountsToolBar->setIconSize(icon16);
-    m_procMountsToolBar->setIconSize(icon16);
+    if (m_procMountsToolBar)
+        m_procMountsToolBar->setIconSize(icon16);
     m_storageInfoToolBar->setIconSize(icon16);
 
     // Helper to set toolbar size constraints based on orientation
     auto setupToolbarOrientation = [](QToolBar* toolbar) {
+        if (!toolbar) return;
         auto updateConstraints = [toolbar]() {
             QFontMetrics fm(toolbar->font());
             int size = fm.height() + 8;
@@ -755,10 +757,8 @@ void MainWindow::setupUi() {
     });
     viewMenu->addAction(m_showFunctionBarAction);
 
-    // Apply initial function bar visibility from config
-    if (!Config::instance().showFunctionBar()) {
-        m_functionBarToolBar->hide();
-    }
+    // Apply toolbar configuration from config
+    applyToolbarConfig();
 }
 
 Side MainWindow::opposite(Side side){
@@ -2063,11 +2063,10 @@ void MainWindow::refreshProcMountsToolbar()
     });
 }
 #else
+// Windows: don't create procMountsToolBar (it would be empty)
 void MainWindow::createProcMountsToolbar()
 {
-    m_procMountsToolBar = addToolBar(tr("Other Mounts"));
-    m_procMountsToolBar->setMovable(true);
-    m_procMountsToolBar->setFloatable(false);
+    // m_procMountsToolBar remains nullptr on Windows
 }
 
 void MainWindow::refreshProcMountsToolbar()
@@ -2166,6 +2165,84 @@ void MainWindow::goToFile(const QString& dir, const QString& name) {
     panel->loadDirectory();
     panel->selectEntryByName(name);
     panel->setFocus();
+}
+
+QToolBar* MainWindow::toolbarByName(const QString& name)
+{
+    if (name == "main") return m_mainToolBar;
+    if (name == "mounts") return m_mountsToolBar;
+    if (name == "other_mounts") return m_procMountsToolBar;
+    if (name == "storage_info") return m_storageInfoToolBar;
+    if (name == "function_bar") return m_functionBarToolBar;
+    return nullptr;
+}
+
+void MainWindow::applyToolbarConfig()
+{
+    auto& config = Config::instance();
+
+    // Apply menu visibility
+    menuBar()->setVisible(config.menuVisible());
+
+    // Helper to convert ToolbarArea to Qt::ToolBarArea
+    auto toQtArea = [](ToolbarArea area) -> Qt::ToolBarArea {
+        switch (area) {
+            case ToolbarArea::Top: return Qt::TopToolBarArea;
+            case ToolbarArea::Bottom: return Qt::BottomToolBarArea;
+            case ToolbarArea::Left: return Qt::LeftToolBarArea;
+            case ToolbarArea::Right: return Qt::RightToolBarArea;
+        }
+        return Qt::TopToolBarArea;
+    };
+
+    // Collect toolbars with their configs, sorted by area and order
+    struct ToolbarEntry {
+        QString name;
+        QToolBar* toolbar;
+        ToolbarConfig config;
+    };
+    QVector<ToolbarEntry> entries;
+
+    for (const QString& name : config.toolbarNames()) {
+        QToolBar* tb = toolbarByName(name);
+        if (!tb) continue;
+        entries.append({name, tb, config.toolbarConfig(name)});
+    }
+
+    // Sort by area then order
+    std::sort(entries.begin(), entries.end(), [](const ToolbarEntry& a, const ToolbarEntry& b) {
+        if (a.config.area != b.config.area)
+            return static_cast<int>(a.config.area) < static_cast<int>(b.config.area);
+        return a.config.order < b.config.order;
+    });
+
+    // Remove all toolbars first
+    for (const auto& entry : entries) {
+        removeToolBar(entry.toolbar);
+    }
+
+    // Add toolbars in correct order with line breaks
+    ToolbarArea currentArea = ToolbarArea::Top;
+    bool firstInArea = true;
+
+    for (const auto& entry : entries) {
+        Qt::ToolBarArea qtArea = toQtArea(entry.config.area);
+
+        // Check if we're in a new area
+        if (entry.config.area != currentArea) {
+            currentArea = entry.config.area;
+            firstInArea = true;
+        }
+
+        // Add line break if needed (but not before the first toolbar in an area)
+        if (entry.config.lineBreak && !firstInArea) {
+            addToolBarBreak(qtArea);
+        }
+
+        addToolBar(qtArea, entry.toolbar);
+        entry.toolbar->setVisible(entry.config.visible);
+        firstInArea = false;
+    }
 }
 
 #include "MainWindow_impl.inc"
