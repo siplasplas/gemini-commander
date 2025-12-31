@@ -220,7 +220,7 @@ bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        copyFromPanel(panel);
+        askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
     }
     return true;
 }
@@ -230,7 +230,7 @@ bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        copyFromPanel(panel, true);  // inPlace = true
+        askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
     }
     return true;
 }
@@ -490,7 +490,7 @@ bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        moveFromPanel(panel, false);  // inPlace = false
+        askForFileOperation(panel, false, true);  // inPlace=false, isMove=true
     }
     return true;
 }
@@ -500,7 +500,7 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        moveFromPanel(panel, true);  // inPlace = true (rename)
+        askForFileOperation(panel, true, true);  // inPlace=true, isMove=true
     }
     return true;
 }

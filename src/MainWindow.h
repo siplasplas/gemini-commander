@@ -80,8 +80,7 @@ private:
 
     void createMountsToolbar();
     void selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath);
-    void copyFromPanel(FilePanel* srcPanel, bool inPlace = false);
-    void moveFromPanel(FilePanel* srcPanel, bool inPlace = false);
+    void askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove);
 
     KeyMap keyMap;
 

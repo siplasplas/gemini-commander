@@ -1329,7 +1329,7 @@ void MainWindow::selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPan
     }
 }
 
-void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
+void MainWindow::askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove)
 {
     if (!srcPanel)
         return;
@@ -1351,11 +1351,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
     if (hasMarked) {
         names = markedNames;
         // Multiple files: propose directory only (or empty for inPlace)
-        if (inPlace) {
-            suggested = QString();
-        } else {
-            suggested = targetDir;
-        }
+        suggested = inPlace ? QString() : targetDir;
     } else {
         // Single file: get current item (use getRowRelPath for Branch mode compatibility)
         QModelIndex currentIndex = srcPanel->currentIndex();
@@ -1377,88 +1373,21 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
     }
 
     // Show dialog
+    QString title = isMove ? tr("Move/Rename") : tr("Copy");
+    QString label = isMove
+        ? (hasMarked ? tr("Move %1 items to:").arg(markedNames.size()) : tr("Move to:"))
+        : (hasMarked ? tr("Copy %1 items to:").arg(markedNames.size()) : tr("Copy to:"));
+
     bool ok = false;
-    QString destInput = QInputDialog::getText(
-        this,
-        tr("Copy"),
-        hasMarked ? tr("Copy %1 items to:").arg(markedNames.size()) : tr("Copy to:"),
-        QLineEdit::Normal,
-        suggested,
-        &ok
-    );
+    QString destInput = QInputDialog::getText(this, title, label, QLineEdit::Normal, suggested, &ok);
 
     if (!ok || destInput.isEmpty())
         return;
 
     // Delegate to FileOperations module
-    QString selectedName = FileOperations::executeCopy(
-        srcPanel->currentPath, names, destInput, this);
-    selectAfterFileOperation(srcPanel, dstPanel, selectedName);
-}
-
-void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
-{
-    if (!srcPanel)
-        return;
-
-    // Get destination panel info
-    Side srcSide = srcPanel->side();
-    Side dstSide = opposite(srcSide);
-    FilePanel* dstPanel = filePanelForSide(dstSide);
-    QString targetDir = dstPanel ? dstPanel->currentPath : srcPanel->currentPath;
-
-    // Check for marked files
-    QStringList markedNames = srcPanel->getMarkedNames();
-    bool hasMarked = !markedNames.isEmpty();
-
-    // Build suggested path and names list
-    QString suggested;
-    QStringList names;
-
-    if (hasMarked) {
-        names = markedNames;
-        if (inPlace) {
-            suggested = QString();
-        } else {
-            suggested = targetDir;
-        }
-    } else {
-        // Single file: get current item (use getRowRelPath for Branch mode compatibility)
-        QModelIndex currentIndex = srcPanel->currentIndex();
-        if (!currentIndex.isValid())
-            return;
-
-        QString currentName = srcPanel->getRowRelPath(currentIndex.row());
-        if (currentName.isEmpty())
-            return;
-
-        names << currentName;
-
-        if (inPlace) {
-            suggested = currentName;
-        } else {
-            QDir dstDir(targetDir);
-            suggested = dstDir.filePath(currentName);
-        }
-    }
-
-    // Show dialog
-    bool ok = false;
-    QString destInput = QInputDialog::getText(
-        this,
-        tr("Move/Rename"),
-        hasMarked ? tr("Move %1 items to:").arg(markedNames.size()) : tr("Move to:"),
-        QLineEdit::Normal,
-        suggested,
-        &ok
-    );
-
-    if (!ok || destInput.isEmpty())
-        return;
-
-    // Delegate to FileOperations module
-    QString selectedName = FileOperations::executeMove(
-        srcPanel->currentPath, names, destInput, this);
+    QString selectedName = isMove
+        ? FileOperations::executeMove(srcPanel->currentPath, names, destInput, this)
+        : FileOperations::executeCopy(srcPanel->currentPath, names, destInput, this);
 
     selectAfterFileOperation(srcPanel, dstPanel, selectedName);
 }
