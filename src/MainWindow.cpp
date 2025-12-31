@@ -275,19 +275,66 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         }
     };
 
-    auto saveToolbarState = [&](const QString& name, QToolBar* tb) {
+    // Collect all toolbars with their current state
+    struct ToolbarInfo {
+        QString name;
+        QToolBar* tb;
+        ToolbarArea area;
+        bool lineBreak;
+        QPoint pos;
+    };
+    QVector<ToolbarInfo> toolbars;
+
+    auto collectToolbar = [&](const QString& name, QToolBar* tb) {
         if (!tb) return;
-        auto tcfg = cfg.toolbarConfig(name);
-        tcfg.area = qtAreaToToolbarArea(toolBarArea(tb));
-        tcfg.visible = tb->isVisible();
-        cfg.setToolbarConfig(name, tcfg);
+        ToolbarInfo info;
+        info.name = name;
+        info.tb = tb;
+        info.area = qtAreaToToolbarArea(toolBarArea(tb));
+        info.lineBreak = toolBarBreak(tb);
+        info.pos = tb->pos();
+        toolbars.append(info);
     };
 
-    saveToolbarState("main", m_mainToolBar);
-    saveToolbarState("mounts", m_mountsToolBar);
-    saveToolbarState("other_mounts", m_procMountsToolBar);
-    saveToolbarState("storage_info", m_storageInfoToolBar);
-    saveToolbarState("function_bar", m_functionBarToolBar);
+    collectToolbar("main", m_mainToolBar);
+    collectToolbar("mounts", m_mountsToolBar);
+    collectToolbar("other_mounts", m_procMountsToolBar);
+    collectToolbar("storage_info", m_storageInfoToolBar);
+    collectToolbar("function_bar", m_functionBarToolBar);
+
+    // Sort by area, then by row (y for horizontal, x for vertical), then by position in row
+    std::sort(toolbars.begin(), toolbars.end(), [](const ToolbarInfo& a, const ToolbarInfo& b) {
+        if (a.area != b.area)
+            return static_cast<int>(a.area) < static_cast<int>(b.area);
+        // For top/bottom areas: sort by y (row), then x (position)
+        // For left/right areas: sort by x (column), then y (position)
+        bool horizontal = (a.area == ToolbarArea::Top || a.area == ToolbarArea::Bottom);
+        if (horizontal) {
+            if (a.pos.y() != b.pos.y())
+                return a.pos.y() < b.pos.y();
+            return a.pos.x() < b.pos.x();
+        } else {
+            if (a.pos.x() != b.pos.x())
+                return a.pos.x() < b.pos.x();
+            return a.pos.y() < b.pos.y();
+        }
+    });
+
+    // Assign order numbers and save
+    int order = 0;
+    ToolbarArea lastArea = ToolbarArea::Top;
+    for (const auto& info : toolbars) {
+        if (info.area != lastArea) {
+            order = 0;
+            lastArea = info.area;
+        }
+        auto tcfg = cfg.toolbarConfig(info.name);
+        tcfg.area = info.area;
+        tcfg.visible = info.tb->isVisible();
+        tcfg.lineBreak = info.lineBreak;
+        tcfg.order = order++;
+        cfg.setToolbarConfig(info.name, tcfg);
+    }
 
     // Save menu visibility
     cfg.setMenuVisible(menuBar()->isVisible());
