@@ -74,6 +74,7 @@ private:
     QToolBar* m_mountsToolBar = nullptr;
     QToolBar* m_procMountsToolBar = nullptr;
     QToolBar* m_storageInfoToolBar = nullptr;
+    QToolBar* m_functionBarToolBar = nullptr;
     QAction* m_openTerminalAction = nullptr;
     QAction* m_searchAction = nullptr;
 

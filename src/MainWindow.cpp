@@ -316,9 +316,9 @@ void MainWindow::onConfigSaved()
     // Update function bar visibility
     bool showFunctionBar = Config::instance().showFunctionBar();
     if (showFunctionBar) {
-        m_functionBar->show();
+        m_functionBarToolBar->show();
     } else {
-        m_functionBar->hide();
+        m_functionBarToolBar->hide();
     }
     m_showFunctionBarAction->setChecked(showFunctionBar);
 
@@ -471,8 +471,8 @@ void MainWindow::setupUi() {
     bottomLayout->addWidget(currentPathLabel, 3);
     bottomLayout->addWidget(commandLineEdit, 5);
 
-    // Function bar
-    m_functionBar = new FunctionBar(centralWidget);
+    // Function bar (wrapped in toolbar for docking support)
+    m_functionBar = new FunctionBar(this);
     connect(m_functionBar, &FunctionBar::viewClicked, this, [this]() {
         doView(nullptr, nullptr);
     });
@@ -496,7 +496,6 @@ void MainWindow::setupUi() {
 
     mainLayout->addWidget(splitter);
     mainLayout->addLayout(bottomLayout);
-    mainLayout->addWidget(m_functionBar);
     mainLayout->setStretchFactor(splitter, 1);
 
     setCentralWidget(centralWidget);
@@ -719,6 +718,14 @@ void MainWindow::setupUi() {
     setupToolbarOrientation(m_procMountsToolBar);
     setupToolbarOrientation(m_storageInfoToolBar);
 
+    // Function bar toolbar (at bottom)
+    m_functionBarToolBar = new QToolBar(tr("Function Bar"), this);
+    m_functionBarToolBar->setMovable(true);
+    m_functionBarToolBar->setFloatable(false);
+    m_functionBarToolBar->setObjectName("FunctionBarToolBar");
+    m_functionBarToolBar->addWidget(m_functionBar);
+    addToolBar(Qt::BottomToolBarArea, m_functionBarToolBar);
+
     QString tbStyle =
         "QToolBar QToolButton { "
         "  padding: 0px; "
@@ -735,9 +742,9 @@ void MainWindow::setupUi() {
     m_showFunctionBarAction->setChecked(Config::instance().showFunctionBar());
     connect(m_showFunctionBarAction, &QAction::toggled, this, [this](bool checked) {
         if (checked) {
-            m_functionBar->show();
+            m_functionBarToolBar->show();
         } else {
-            m_functionBar->hide();
+            m_functionBarToolBar->hide();
         }
         Config::instance().setShowFunctionBar(checked);
         Config::instance().save();
@@ -746,7 +753,7 @@ void MainWindow::setupUi() {
 
     // Apply initial function bar visibility from config
     if (!Config::instance().showFunctionBar()) {
-        m_functionBar->hide();
+        m_functionBarToolBar->hide();
     }
 }
 
