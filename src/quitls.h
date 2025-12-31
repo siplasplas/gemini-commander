@@ -36,3 +36,7 @@ bool isTextFile(const QString& filePath);
 // Finalize copied file: preserve modification time and sync to disk
 void finalizeCopiedFile(const QString& srcPath, const QString& dstPath);
 
+// Check if two paths are on the same filesystem/partition
+// Used to determine if rename() will work or if copy+delete is needed
+bool areOnSameFilesystem(const QString& path1, const QString& path2);
+

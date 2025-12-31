@@ -194,3 +194,34 @@ void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
     }
 #endif
 }
+
+bool areOnSameFilesystem(const QString& path1, const QString& path2)
+{
+#ifdef _WIN32
+    // Windows: compare drive letters or UNC paths
+    // Get volume path for both files
+    wchar_t vol1[MAX_PATH] = {0};
+    wchar_t vol2[MAX_PATH] = {0};
+
+    if (!GetVolumePathNameW(reinterpret_cast<LPCWSTR>(path1.utf16()), vol1, MAX_PATH))
+        return false;
+    if (!GetVolumePathNameW(reinterpret_cast<LPCWSTR>(path2.utf16()), vol2, MAX_PATH))
+        return false;
+
+    return wcscmp(vol1, vol2) == 0;
+#else
+    // Linux/Unix: compare device IDs using stat()
+    struct stat stat1, stat2;
+
+    // For path2, we need to check the parent directory (as the file may not exist yet)
+    QFileInfo info2(path2);
+    QString parent2 = info2.absolutePath();
+
+    if (stat(path1.toLocal8Bit().constData(), &stat1) != 0)
+        return false;
+    if (stat(parent2.toLocal8Bit().constData(), &stat2) != 0)
+        return false;
+
+    return stat1.st_dev == stat2.st_dev;
+#endif
+}

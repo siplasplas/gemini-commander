@@ -51,6 +51,7 @@
 #include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"
 #include "quitls.h"
+#include "FileOperationProgressDialog.h"
 #ifndef _WIN32
 #include "udisks/UDisksDeviceManager.h"
 #endif
@@ -1432,6 +1433,13 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
 
         // Copy all marked files
         QDir srcDir(srcPanel->currentPath);
+
+        // Create progress dialog
+        FileOperationProgressDialog progressDlg(tr("Copy"), static_cast<int>(markedNames.size()), this);
+        progressDlg.show();
+        progressDlg.processEvents();  // Ensure dialog is painted before starting
+
+        int currentFile = 0;
         for (const QString& name : markedNames) {
             QString srcPath = srcDir.absoluteFilePath(name);
             QString dstFilePath = QDir(dstPath).filePath(name);
@@ -1440,6 +1448,11 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
             // Skip if copying to same location or subdirectory of source
             if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
                 continue;
+
+            ++currentFile;
+            progressDlg.updateProgress(currentFile, name, srcInfo.size());
+            if (progressDlg.wasCancelled())
+                break;
 
             if (srcInfo.isFile()) {
                 if (QFileInfo::exists(dstFilePath)) {
@@ -1456,6 +1469,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                         continue;
                     QFile::remove(dstFilePath);
                 }
+
                 if (!QFile::copy(srcPath, dstFilePath)) {
                     QMessageBox::warning(this, tr("Error"),
                         tr("Failed to copy '%1'").arg(name));
@@ -1482,6 +1496,9 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
                 if (userAbort)
                     break;
             }
+
+            if (progressDlg.wasCancelled())
+                break;
         }
 
         // Refresh panels
@@ -1537,6 +1554,11 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
         if (!parentDir.exists()) {
             parentDir.mkpath(".");
         }
+
+        // Show progress dialog for single file copy
+        FileOperationProgressDialog progressDlg(tr("Copy"), 1, this);
+        progressDlg.show();
+        progressDlg.updateProgress(1, srcInfo.fileName(), srcInfo.size());
 
         if (!QFile::copy(srcPath, finalDstPath)) {
             QMessageBox::warning(this, tr("Error"),
@@ -1705,6 +1727,13 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
 
         // Move all marked files
         QDir srcDir(srcPanel->currentPath);
+
+        // Create progress dialog
+        FileOperationProgressDialog progressDlg(tr("Move"), static_cast<int>(markedNames.size()), this);
+        progressDlg.show();
+        progressDlg.processEvents();  // Ensure dialog is painted before starting
+
+        int currentFile = 0;
         for (const QString& name : markedNames) {
             QString srcPath = srcDir.absoluteFilePath(name);
             QString dstFilePath = QDir(dstPath).filePath(name);
@@ -1733,11 +1762,64 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
                 }
             }
 
-            QFile file(srcPath);
-            if (!file.rename(dstFilePath)) {
-                QMessageBox::warning(this, tr("Error"),
-                    tr("Failed to move '%1'").arg(name));
+            ++currentFile;
+
+            // Check if same filesystem (true move) or different (copy+delete)
+            QFileInfo srcFileInfo(srcPath);
+            if (areOnSameFilesystem(srcPath, dstFilePath)) {
+                // Same filesystem - use rename (fast move)
+                // Update progress every 100th file (fast operation)
+                progressDlg.updateMoveProgress(currentFile, 100);
+                if (progressDlg.wasCancelled())
+                    break;
+
+                QFile file(srcPath);
+                if (!file.rename(dstFilePath)) {
+                    QMessageBox::warning(this, tr("Error"),
+                        tr("Failed to move '%1'").arg(name));
+                }
+            } else {
+                // Different filesystem - copy then delete
+                // Update progress with filename (slower operation)
+                progressDlg.updateProgress(currentFile, name, srcFileInfo.size());
+                if (progressDlg.wasCancelled())
+                    break;
+
+                if (srcFileInfo.isFile()) {
+                    if (!QFile::copy(srcPath, dstFilePath)) {
+                        QMessageBox::warning(this, tr("Error"),
+                            tr("Failed to copy '%1'").arg(name));
+                        continue;
+                    }
+                    finalizeCopiedFile(srcPath, dstFilePath);
+                    QFile::remove(srcPath);
+                } else if (srcFileInfo.isDir()) {
+                    FilePanel::CopyStats stats;
+                    bool statsOk = false;
+                    FilePanel::collectCopyStats(srcPath, stats, statsOk);
+
+                    QProgressDialog progress(
+                        tr("Moving %1...").arg(name), tr("Cancel"), 0,
+                        static_cast<int>(qMin<quint64>(stats.totalBytes, std::numeric_limits<int>::max())),
+                        this
+                    );
+                    progress.setWindowModality(Qt::ApplicationModal);
+                    progress.setMinimumDuration(0);
+                    progress.show();
+
+                    quint64 bytesCopied = 0;
+                    bool userAbort = false;
+                    if (FilePanel::copyDirectoryRecursive(srcPath, dstFilePath, stats, progress, bytesCopied, userAbort)) {
+                        // Copy succeeded, remove source
+                        QDir(srcPath).removeRecursively();
+                    }
+                    if (userAbort)
+                        break;
+                }
             }
+
+            if (progressDlg.wasCancelled())
+                break;
         }
 
         // Refresh panels
@@ -1794,11 +1876,59 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
         parentDir.mkpath(".");
     }
 
-    QFile file(srcPath);
-    if (!file.rename(finalDstPath)) {
-        QMessageBox::warning(this, tr("Error"),
-            tr("Failed to move:\n%1\nto\n%2").arg(srcPath, finalDstPath));
-        return;
+    // Check if same filesystem (true move) or different (copy+delete)
+    if (areOnSameFilesystem(srcPath, finalDstPath)) {
+        // Same filesystem - use rename (fast move)
+        // Show progress dialog for single file move
+        FileOperationProgressDialog progressDlg(tr("Move"), 1, this);
+        progressDlg.show();
+        progressDlg.updateMoveProgress(1, 1);  // Single file, show immediately
+
+        QFile file(srcPath);
+        if (!file.rename(finalDstPath)) {
+            QMessageBox::warning(this, tr("Error"),
+                tr("Failed to move:\n%1\nto\n%2").arg(srcPath, finalDstPath));
+            return;
+        }
+    } else {
+        // Different filesystem - copy then delete
+        if (srcInfo.isFile()) {
+            // Show progress dialog for single file move (cross-partition)
+            FileOperationProgressDialog progressDlg(tr("Move"), 1, this);
+            progressDlg.show();
+            progressDlg.updateProgress(1, srcInfo.fileName(), srcInfo.size());
+
+            if (!QFile::copy(srcPath, finalDstPath)) {
+                QMessageBox::warning(this, tr("Error"),
+                    tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, finalDstPath));
+                return;
+            }
+            finalizeCopiedFile(srcPath, finalDstPath);
+            QFile::remove(srcPath);
+        } else if (srcInfo.isDir()) {
+            // Directory: recursive copy then delete
+            FilePanel::CopyStats stats;
+            bool statsOk = false;
+            FilePanel::collectCopyStats(srcPath, stats, statsOk);
+
+            QProgressDialog progress(
+                tr("Moving %1...").arg(currentName), tr("Cancel"), 0,
+                static_cast<int>(qMin<quint64>(stats.totalBytes, std::numeric_limits<int>::max())),
+                this
+            );
+            progress.setWindowModality(Qt::ApplicationModal);
+            progress.setMinimumDuration(0);
+            progress.show();
+
+            quint64 bytesCopied = 0;
+            bool userAbort = false;
+            if (FilePanel::copyDirectoryRecursive(srcPath, finalDstPath, stats, progress, bytesCopied, userAbort)) {
+                // Copy succeeded, remove source
+                QDir(srcPath).removeRecursively();
+            }
+            if (userAbort)
+                return;
+        }
     }
 
     // Refresh panels
