@@ -726,6 +726,10 @@ void MainWindow::setupUi() {
     m_functionBarToolBar->addWidget(m_functionBar);
     addToolBar(Qt::BottomToolBarArea, m_functionBarToolBar);
 
+    // Connect orientation changes to FunctionBar
+    connect(m_functionBarToolBar, &QToolBar::orientationChanged,
+            m_functionBar, &FunctionBar::setOrientation);
+
     QString tbStyle =
         "QToolBar QToolButton { "
         "  padding: 0px; "
