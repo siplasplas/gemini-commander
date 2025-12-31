@@ -162,7 +162,7 @@ bool copyDirInLoop(const QString& srcPath, const QString& dstPath, const QString
     return !userAbort;
 }
 
-bool copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
+bool copyOrMoveDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
                                const QString& displayName, bool deleteSourceAfter, QWidget* parent)
 {
     QFileInfo srcInfo(srcPath);
@@ -313,7 +313,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
     }
 
     if (srcInfo.isDir()) {
-        if (!copyDirectoryWithProgress(srcPath, finalDstPath, currentName, false, parent))
+        if (!copyOrMoveDirectoryWithProgress(srcPath, finalDstPath, currentName, false, parent))
             return {};
         return finalDstPath;
     }
@@ -385,7 +385,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
                     finalizeCopiedFile(srcPath, dstFilePath);
                     QFile::remove(srcPath);
                 } else if (srcFileInfo.isDir()) {
-                    if (!copyDirectoryWithProgress(srcPath, dstFilePath, name, true, parent))
+                    if (!copyOrMoveDirectoryWithProgress(srcPath, dstFilePath, name, true, parent))
                         break;
                 }
             }
@@ -441,7 +441,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
             finalizeCopiedFile(srcPath, finalDstPath);
             QFile::remove(srcPath);
         } else if (srcInfo.isDir()) {
-            if (!copyDirectoryWithProgress(srcPath, finalDstPath, currentName, true, parent))
+            if (!copyOrMoveDirectoryWithProgress(srcPath, finalDstPath, currentName, true, parent))
                 return {};
         }
     }

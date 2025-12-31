@@ -29,7 +29,7 @@ bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 // Copy a directory recursively with progress dialog
 // Returns true on success, false on failure or user abort
 // If deleteSourceAfter is true, removes source after successful copy
-bool copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
+bool copyOrMoveDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
                                const QString& displayName, bool deleteSourceAfter, QWidget* parent);
 
 // Execute copy operation after destination path is confirmed
