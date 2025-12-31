@@ -36,6 +36,7 @@
 #include "keys/KeyRouter.h"
 #include <QDateTime>
 #include <QMimeDatabase>
+#include "FileOperations.h"
 
 #ifdef _WIN32
 #include <windows.h>

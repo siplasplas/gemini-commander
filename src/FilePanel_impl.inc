@@ -632,7 +632,7 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
     // only directories are counted; file -> behavior as before
     if (entry->info.isDir()) {
         if (entry->hasTotalSize != TotalSizeStatus::Has) {
-            CopyStats stats;
+            FileOperations::CopyStats stats;
             bool ok = false;
             m_cancelOperation = false;  // Reset cancel flag
 
@@ -641,7 +641,7 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
 
             entry->hasTotalSize = TotalSizeStatus::InPogress;
             model->refreshRow(row);
-            collectCopyStats(entry->info.absoluteFilePath(), stats, ok, &m_cancelOperation);
+            FileOperations::collectCopyStats(entry->info.absoluteFilePath(), stats, ok, &m_cancelOperation);
             if (ok) {
                 entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
                 entry->hasTotalSize = TotalSizeStatus::Has;
@@ -693,7 +693,7 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
             continue;
 
         // Calculate size
-        CopyStats stats;
+        FileOperations::CopyStats stats;
         bool ok = false;
 
         entry.hasTotalSize = TotalSizeStatus::InPogress;
