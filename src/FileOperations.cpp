@@ -1,8 +1,9 @@
 #include "FileOperations.h"
-#include "FilePanel.h"
 #include "FileOperationProgressDialog.h"
+#include "SortedDirIterator.h"
 #include "quitls.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -12,6 +13,112 @@
 #include <limits>
 
 namespace FileOperations {
+
+void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag)
+{
+    ok = true;
+
+    QFileInfo rootInfo(srcPath);
+    if (!rootInfo.exists() || !rootInfo.isDir()) {
+        ok = false;
+        return;
+    }
+
+    // Count root directory too
+    stats.totalDirs += 1;
+
+    SortedDirIterator it(srcPath, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+
+    int counter = 0;
+    while (it.hasNext()) {
+        // Check for cancellation every 100 iterations
+        if (cancelFlag && *cancelFlag) {
+            ok = false;
+            return;
+        }
+
+        // Process events every 100 iterations to allow UI to respond
+        if (++counter % 100 == 0) {
+            QCoreApplication::processEvents();
+        }
+
+        it.next();
+        const QFileInfo fi = it.fileInfo();
+
+        if (fi.isDir()) {
+            stats.totalDirs += 1;
+        } else if (fi.isFile()) {
+            stats.totalFiles += 1;
+            stats.totalBytes += static_cast<quint64>(fi.size());
+        }
+    }
+}
+
+bool copyDirectoryRecursive(const QString& srcRoot, const QString& dstRoot, const CopyStats& stats,
+                            QProgressDialog& progress, quint64& bytesCopied, bool& userAbort)
+{
+    if (userAbort)
+        return false;
+
+    QFileInfo srcInfo(srcRoot);
+    if (!srcInfo.exists() || !srcInfo.isDir())
+        return false;
+
+    QDir dstDir;
+    if (!dstDir.mkpath(dstRoot)) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+            QObject::tr("Failed to create directory:\n%1").arg(dstRoot));
+        return false;
+    }
+
+    QDir dir(srcRoot);
+    const QFileInfoList entries = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::NoSort);
+
+    for (const QFileInfo& fi : entries) {
+        if (userAbort)
+            return false;
+
+        // Handle Cancel
+        if (progress.wasCanceled()) {
+            auto reply = QMessageBox::question(nullptr, QObject::tr("Cancel copy"),
+                QObject::tr("Do you really want to cancel the copy operation?"),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            if (reply == QMessageBox::Yes) {
+                userAbort = true;
+                return false;
+            }
+        }
+
+        const QString srcPath = fi.absoluteFilePath();
+        const QString dstPath = QDir(dstRoot).filePath(fi.fileName());
+
+        if (fi.isDir()) {
+            if (!copyDirectoryRecursive(srcPath, dstPath, stats, progress, bytesCopied, userAbort))
+                return false;
+        } else if (fi.isFile()) {
+            // Overwrite if exists
+            if (QFileInfo::exists(dstPath))
+                QFile::remove(dstPath);
+
+            if (!QFile::copy(srcPath, dstPath)) {
+                QMessageBox::warning(nullptr, QObject::tr("Error"),
+                    QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
+                return false;
+            }
+            finalizeCopiedFile(srcPath, dstPath);
+
+            bytesCopied += static_cast<quint64>(fi.size());
+
+            if (stats.totalBytes > 0) {
+                const int value = static_cast<int>(qMin<quint64>(bytesCopied, stats.totalBytes));
+                progress.setValue(value);
+            }
+
+            qApp->processEvents();
+        }
+    }
+    return true;
+}
 
 bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPath)
 {
@@ -144,9 +251,9 @@ bool askOverwriteSingle(QWidget* parent, const QString& name)
 // Returns: true to continue, false to break loop
 bool copyDirInLoop(const QString& srcPath, const QString& dstPath, const QString& name, QWidget* parent, bool& userAbort)
 {
-    FilePanel::CopyStats stats;
+    CopyStats stats;
     bool statsOk = false;
-    FilePanel::collectCopyStats(srcPath, stats, statsOk);
+    collectCopyStats(srcPath, stats, statsOk);
 
     QProgressDialog progress(
         QObject::tr("Copying %1...").arg(name), QObject::tr("Cancel"), 0,
@@ -158,7 +265,7 @@ bool copyDirInLoop(const QString& srcPath, const QString& dstPath, const QString
     progress.show();
 
     quint64 bytesCopied = 0;
-    FilePanel::copyDirectoryRecursive(srcPath, dstPath, stats, progress, bytesCopied, userAbort);
+    copyDirectoryRecursive(srcPath, dstPath, stats, progress, bytesCopied, userAbort);
     return !userAbort;
 }
 
@@ -186,9 +293,9 @@ bool copyOrMoveDirectoryWithProgress(const QString& srcPath, const QString& dstP
         }
     }
 
-    FilePanel::CopyStats stats;
+    CopyStats stats;
     bool statsOk = false;
-    FilePanel::collectCopyStats(srcPath, stats, statsOk);
+    collectCopyStats(srcPath, stats, statsOk);
     if (!statsOk || stats.totalFiles == 0) {
         QMessageBox::warning(parent, deleteSourceAfter ? QObject::tr("Move") : QObject::tr("Copy"),
             QObject::tr("No files to copy in '%1'.").arg(srcPath));
@@ -211,7 +318,7 @@ bool copyOrMoveDirectoryWithProgress(const QString& srcPath, const QString& dstP
     quint64 bytesCopied = 0;
     bool userAbort = false;
 
-    bool okCopy = FilePanel::copyDirectoryRecursive(srcPath, dstRoot, stats, progress, bytesCopied, userAbort);
+    bool okCopy = copyDirectoryRecursive(srcPath, dstRoot, stats, progress, bytesCopied, userAbort);
 
     if (okCopy && deleteSourceAfter) {
         QDir(srcPath).removeRecursively();

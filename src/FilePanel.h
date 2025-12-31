@@ -163,15 +163,6 @@ public:
     void styleActive();
     void styleInactive();
 
-    struct CopyStats {
-        quint64 totalBytes = 0;
-        quint64 totalFiles = 0;
-        quint64 totalDirs  = 0;
-    };
-
-    static void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool* cancelFlag = nullptr);
-    static bool copyDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, const CopyStats &stats,
-                                QProgressDialog &progress, quint64 &bytesCopied, bool &userAbort);
     std::pair<PanelEntry*, int> currentEntryRow();
     Side side() {return m_side;}
     void feedSearchResults(const QVector<SearchResult>& results, const QString& searchPath);

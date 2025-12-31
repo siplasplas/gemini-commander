@@ -5,6 +5,7 @@
 #include <QStringList>
 
 class QWidget;
+class QProgressDialog;
 
 namespace FileOperations {
 
@@ -15,7 +16,21 @@ struct Params {
     QString destPath;
 };
 
+struct CopyStats {
+    quint64 totalBytes = 0;
+    quint64 totalFiles = 0;
+    quint64 totalDirs  = 0;
+};
+
 enum class EnsureDirResult { Created, Exists, Cancelled, NotADir };
+
+// Collect statistics about directory to copy (file count, total size)
+void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag = nullptr);
+
+// Copy directory recursively with progress tracking
+// Returns true on success, false on failure or user abort
+bool copyDirectoryRecursive(const QString& srcRoot, const QString& dstRoot, const CopyStats& stats,
+                            QProgressDialog& progress, quint64& bytesCopied, bool& userAbort);
 
 // Check if target is invalid (same path or subdirectory of source)
 bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPath);
