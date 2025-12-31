@@ -296,7 +296,6 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     collectCopyStats(currentPath, stats, statsOk);
     QString dstPath = resolveDstPath(currentPath, destInput);
 
-
     // Multiple files: destination is ALWAYS treated as directory
     auto ensureResult = ensureDestDirExists(dstPath, parent);
     if (ensureResult == EnsureDirResult::Cancelled || ensureResult == EnsureDirResult::NotADir)

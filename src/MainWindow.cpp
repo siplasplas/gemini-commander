@@ -1348,9 +1348,21 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
     QString suggested;
     QStringList names;
 
-    if (hasMarked) {
+    if (hasMarked)
         names = markedNames;
-        // Multiple files: propose directory only (or empty for inPlace)
+    else {
+        QModelIndex currentIndex = srcPanel->currentIndex();
+        if (!currentIndex.isValid())
+            return {};
+
+        QString currentName = srcPanel->getRowRelPath(currentIndex.row());
+        if (currentName.isEmpty())
+            return {}; // [..]
+        names << currentName;
+    }
+
+
+    if (hasMarked && markedNames.size()>1) {
         suggested = inPlace ? QString() : targetDir;
     } else {
         // Single file: get current item (use getRowRelPath for Branch mode compatibility)
@@ -1362,13 +1374,21 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
         if (currentName.isEmpty())
             return {}; // [..]
 
-        names << currentName;
-
-        if (inPlace) {
-            suggested = currentName;
-        } else {
-            QDir dstDir(targetDir);
-            suggested = dstDir.filePath(currentName);
+        if (hasMarked) {
+            if (inPlace) {
+                suggested = markedNames[0];
+            } else {
+                QDir dstDir(targetDir);
+                suggested = dstDir.filePath(markedNames[0]);
+            }
+        }
+        else {
+            if (inPlace) {
+                suggested = currentName;
+            } else {
+                QDir dstDir(targetDir);
+                suggested = dstDir.filePath(currentName);
+            }
         }
     }
 
