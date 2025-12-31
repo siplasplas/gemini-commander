@@ -1303,6 +1303,31 @@ void MainWindow::createMountsToolbar()
     refreshMountsToolbar();
 }
 
+void MainWindow::selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath)
+{
+    srcPanel->loadDirectory();
+    if (!selectedPath.isEmpty()) {
+        QDir srcDir(srcPanel->currentPath);
+        QString srcCanonical = QDir::cleanPath(srcPanel->currentPath);
+        QString selCanonical = QDir::cleanPath(selectedPath);
+        if (selCanonical.startsWith(srcCanonical + "/") || selCanonical == srcCanonical) {
+            QString relPath = srcDir.relativeFilePath(selectedPath);
+            srcPanel->selectEntryByRelPath(relPath);
+        }
+    }
+    if (dstPanel) {
+        dstPanel->loadDirectory();
+        if (!selectedPath.isEmpty()) {
+            QDir dstDir(dstPanel->currentPath);
+            QString dstCanonical = QDir::cleanPath(dstPanel->currentPath);
+            QString selCanonical = QDir::cleanPath(selectedPath);
+            if (selCanonical.startsWith(dstCanonical + "/") || selCanonical == dstCanonical) {
+                QString relPath = dstDir.relativeFilePath(selectedPath);
+                dstPanel->selectEntryByRelPath(relPath);
+            }
+        }
+    }
+}
 
 void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
 {
@@ -1368,14 +1393,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
     // Delegate to FileOperations module
     QString selectedName = FileOperations::executeCopy(
         srcPanel->currentPath, names, destInput, srcPanel->currentPath, this);
-
-    // Refresh panels
-    srcPanel->loadDirectory();
-    if (dstPanel) {
-        dstPanel->loadDirectory();
-        if (!selectedName.isEmpty())
-            dstPanel->selectEntryByName(selectedName);
-    }
+    selectAfterFileOperation(srcPanel, dstPanel, selectedName);
 }
 
 void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
@@ -1442,13 +1460,7 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
     QString selectedName = FileOperations::executeMove(
         srcPanel->currentPath, names, destInput, srcPanel->currentPath, this);
 
-    // Refresh panels
-    srcPanel->loadDirectory();
-    if (dstPanel) {
-        dstPanel->loadDirectory();
-        if (!selectedName.isEmpty())
-            dstPanel->selectEntryByName(selectedName);
-    }
+    selectAfterFileOperation(srcPanel, dstPanel, selectedName);
 }
 
 bool MainWindow::handle(const char* handler, QKeyEvent* ev) {

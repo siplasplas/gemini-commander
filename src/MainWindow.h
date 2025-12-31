@@ -79,6 +79,7 @@ private:
     QAction* m_searchAction = nullptr;
 
     void createMountsToolbar();
+    void selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath);
     void copyFromPanel(FilePanel* srcPanel, bool inPlace = false);
     void moveFromPanel(FilePanel* srcPanel, bool inPlace = false);
 

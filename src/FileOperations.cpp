@@ -166,7 +166,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
                     QWidget* parent)
 {
     if (names.isEmpty())
-        return QString();
+        return {};
 
     // Calculate dstPath from destInput
     QString dstPath;
@@ -184,7 +184,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
         // Multiple files: destination is ALWAYS treated as directory
         auto ensureResult = ensureDestDirExists(dstPath, parent);
         if (ensureResult == EnsureDirResult::Cancelled || ensureResult == EnsureDirResult::NotADir)
-            return QString();
+            return {};
 
         // Copy all files
         QDir srcDir(currentPath);
@@ -255,7 +255,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
                 break;
         }
 
-        return QString();  // Multiple files - no selection
+        return {};  // Multiple files - no selection
     }
 
     // Single file copy
@@ -281,7 +281,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
 
     // Check if copying to same location or subdirectory of source
     if (isInvalidCopyMoveTarget(srcPath, finalDstPath))
-        return QString();
+        return {};
 
     if (srcInfo.isFile()) {
         if (finalDstInfo.exists()) {
@@ -292,7 +292,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
                 QMessageBox::Yes
             );
             if (reply != QMessageBox::Yes)
-                return QString();
+                return {};
             QFile::remove(finalDstPath);
         }
 
@@ -310,26 +310,25 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
         if (!QFile::copy(srcPath, finalDstPath)) {
             QMessageBox::warning(parent, QObject::tr("Error"),
                 QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, finalDstPath));
-            return QString();
+            return {};
         }
         finalizeCopiedFile(srcPath, finalDstPath);
-
-        return QFileInfo(finalDstPath).fileName();
+        return finalDstPath;
     }
 
     if (srcInfo.isDir()) {
         if (!copyDirectoryWithProgress(srcPath, finalDstPath, currentName, false, parent)) {
-            return QString();
+            return {};
         }
 
         // Calculate final entry name for selection (matches helper's dstRoot calculation)
         QString entryName = (finalDstInfo.exists() && finalDstInfo.isDir())
             ? srcInfo.fileName()
             : QFileInfo(finalDstPath).fileName();
-        return entryName;
+        return finalDstPath;
     }
 
-    return QString();
+    return {};
 }
 
 QString executeMove(const QString& currentPath, const QStringList& names,
@@ -337,7 +336,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
                     QWidget* parent)
 {
     if (names.isEmpty())
-        return QString();
+        return {};
 
     // Calculate dstPath from destInput
     QString dstPath;
@@ -355,7 +354,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
         // Multiple files: destination is ALWAYS treated as directory
         auto ensureResult = ensureDestDirExists(dstPath, parent);
         if (ensureResult == EnsureDirResult::Cancelled || ensureResult == EnsureDirResult::NotADir)
-            return QString();
+            return {};
 
         // Move all files
         QDir srcDir(currentPath);
@@ -454,7 +453,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
                 break;
         }
 
-        return QString();  // Multiple files - no selection
+        return {};  // Multiple files - no selection
     }
 
     // Single file move
@@ -478,7 +477,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
 
     // Check if moving to same location or subdirectory of source
     if (isInvalidCopyMoveTarget(srcPath, finalDstPath))
-        return QString();
+        return {};
 
     if (finalDstInfo.exists()) {
         auto reply = QMessageBox::question(
@@ -488,7 +487,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
             QMessageBox::Yes
         );
         if (reply != QMessageBox::Yes)
-            return QString();
+            return {};
         if (finalDstInfo.isDir()) {
             QDir(finalDstPath).removeRecursively();
         } else {
@@ -514,7 +513,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
         if (!file.rename(finalDstPath)) {
             QMessageBox::warning(parent, QObject::tr("Error"),
                 QObject::tr("Failed to move:\n%1\nto\n%2").arg(srcPath, finalDstPath));
-            return QString();
+            return {};
         }
     } else {
         // Different filesystem - copy then delete
@@ -527,7 +526,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
             if (!QFile::copy(srcPath, finalDstPath)) {
                 QMessageBox::warning(parent, QObject::tr("Error"),
                     QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, finalDstPath));
-                return QString();
+                return {};
             }
             finalizeCopiedFile(srcPath, finalDstPath);
             QFile::remove(srcPath);
@@ -553,11 +552,11 @@ QString executeMove(const QString& currentPath, const QStringList& names,
                 QDir(srcPath).removeRecursively();
             }
             if (userAbort)
-                return QString();
+                return {};
         }
     }
 
-    return QFileInfo(finalDstPath).fileName();
+    return finalDstPath;
 }
 
 } // namespace FileOperations
