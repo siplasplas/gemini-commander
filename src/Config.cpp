@@ -132,6 +132,8 @@ bool Config::load(const QString& path)
             auto& general = *tbl["general"].as_table();
             if (auto confirm = general["confirm_exit"].value<bool>())
                 m_confirmExit = *confirm;
+            if (auto ignoreTime = general["compare_ignore_time"].value<bool>())
+                m_compareIgnoreTime = *ignoreTime;
         }
 
         // [window] section
@@ -411,6 +413,7 @@ bool Config::save() const
     // [general] section
     toml::table generalTbl;
     generalTbl.insert("confirm_exit", m_confirmExit);
+    generalTbl.insert("compare_ignore_time", m_compareIgnoreTime);
     tbl.insert("general", generalTbl);
 
     // [window] section

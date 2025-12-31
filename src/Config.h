@@ -155,6 +155,10 @@ public:
   SizeFormat::SizeKind storageSizeFormat() const { return m_storageSizeFormat; }
   void setStorageSizeFormat(SizeFormat::SizeKind format) { m_storageSizeFormat = format; }
 
+  // Compare directories settings
+  bool compareIgnoreTime() const { return m_compareIgnoreTime; }
+  void setCompareIgnoreTime(bool ignore) { m_compareIgnoreTime = ignore; }
+
 private:
   Config()
       : m_leftColumns(defaultColumns())
@@ -215,6 +219,9 @@ private:
   SizeFormat::SizeKind m_sizeFormat = SizeFormat::Precise;
   // Storage size format (mount toolbars, free/total) - default: Decimal
   SizeFormat::SizeKind m_storageSizeFormat = SizeFormat::Decimal;
+
+  // Compare directories settings - default: ignore time (compare only by size)
+  bool m_compareIgnoreTime = true;
 };
 
 #endif

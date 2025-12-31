@@ -71,8 +71,147 @@ bool MainWindow::doAddTab(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doCompareDirectories";
-    return false;
+
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+    FilePanel* rightPanel = filePanelForSide(Side::Right);
+
+    if (!leftPanel || !rightPanel)
+        return true;
+
+    // Check if panels show the same directory
+    QString leftPath = QDir::cleanPath(leftPanel->currentPath);
+    QString rightPath = QDir::cleanPath(rightPanel->currentPath);
+
+    if (leftPath == rightPath) {
+        QMessageBox::warning(this, tr("Compare Directories"),
+            tr("Both panels show the same directory.\nPlease navigate to different directories to compare."));
+        return true;
+    }
+
+    // Save original sorting state
+    QString leftOriginalSortColumn = leftPanel->sortColumn;
+    Qt::SortOrder leftOriginalSortOrder = leftPanel->sortOrder;
+    QString rightOriginalSortColumn = rightPanel->sortColumn;
+    Qt::SortOrder rightOriginalSortOrder = rightPanel->sortOrder;
+
+    bool leftNeedsRestore = (leftOriginalSortColumn != "Name" || leftOriginalSortOrder != Qt::AscendingOrder);
+    bool rightNeedsRestore = (rightOriginalSortColumn != "Name" || rightOriginalSortOrder != Qt::AscendingOrder);
+
+    // Sort both panels by name (ascending)
+    leftPanel->sortColumn = "Name";
+    leftPanel->sortOrder = Qt::AscendingOrder;
+    leftPanel->sortEntries();
+
+    rightPanel->sortColumn = "Name";
+    rightPanel->sortOrder = Qt::AscendingOrder;
+    rightPanel->sortEntries();
+
+    // Build maps of files by name (only files, not directories)
+    QMap<QString, int> leftFiles;  // name -> index in entries
+    QMap<QString, int> rightFiles;
+
+    for (int i = 0; i < leftPanel->entries.size(); ++i) {
+        const auto& entry = leftPanel->entries[i];
+        if (!entry.info.isDir()) {
+            leftFiles[entry.info.fileName()] = i;
+        }
+    }
+
+    for (int i = 0; i < rightPanel->entries.size(); ++i) {
+        const auto& entry = rightPanel->entries[i];
+        if (!entry.info.isDir()) {
+            rightFiles[entry.info.fileName()] = i;
+        }
+    }
+
+    // Compare files
+    bool ignoreTime = Config::instance().compareIgnoreTime();
+    int markedCount = 0;
+    int offset = 1;  // Account for [..] entry
+
+    // Check files in left panel
+    for (auto it = leftFiles.constBegin(); it != leftFiles.constEnd(); ++it) {
+        const QString& fileName = it.key();
+        int leftIdx = it.value();
+        const auto& leftEntry = leftPanel->entries[leftIdx];
+
+        auto rightIt = rightFiles.find(fileName);
+        if (rightIt == rightFiles.end()) {
+            // File only in left panel - mark it
+            leftPanel->entries[leftIdx].isMarked = true;
+            leftPanel->updateRowMarking(leftIdx + offset, true);
+            ++markedCount;
+        } else {
+            // File exists in both panels - compare
+            int rightIdx = rightIt.value();
+            const auto& rightEntry = rightPanel->entries[rightIdx];
+
+            bool different = false;
+
+            // Compare size
+            if (leftEntry.info.size() != rightEntry.info.size()) {
+                different = true;
+            }
+
+            // Compare time (if not ignored)
+            if (!ignoreTime && !different) {
+                qint64 leftTime = leftEntry.info.lastModified().toSecsSinceEpoch();
+                qint64 rightTime = rightEntry.info.lastModified().toSecsSinceEpoch();
+                // 2 second tolerance
+                if (qAbs(leftTime - rightTime) > 2) {
+                    different = true;
+                }
+            }
+
+            if (different) {
+                // Mark in both panels
+                leftPanel->entries[leftIdx].isMarked = true;
+                leftPanel->updateRowMarking(leftIdx + offset, true);
+
+                rightPanel->entries[rightIdx].isMarked = true;
+                rightPanel->updateRowMarking(rightIdx + offset, true);
+                ++markedCount;
+            }
+        }
+    }
+
+    // Check files only in right panel
+    for (auto it = rightFiles.constBegin(); it != rightFiles.constEnd(); ++it) {
+        const QString& fileName = it.key();
+        int rightIdx = it.value();
+
+        if (!leftFiles.contains(fileName)) {
+            // File only in right panel - mark it
+            rightPanel->entries[rightIdx].isMarked = true;
+            rightPanel->updateRowMarking(rightIdx + offset, true);
+            ++markedCount;
+        }
+    }
+
+    // Restore original sorting if needed
+    if (leftNeedsRestore) {
+        leftPanel->sortColumn = leftOriginalSortColumn;
+        leftPanel->sortOrder = leftOriginalSortOrder;
+        leftPanel->sortEntriesApplyModel();
+    } else {
+        leftPanel->model->refresh();
+    }
+
+    if (rightNeedsRestore) {
+        rightPanel->sortColumn = rightOriginalSortColumn;
+        rightPanel->sortOrder = rightOriginalSortOrder;
+        rightPanel->sortEntriesApplyModel();
+    } else {
+        rightPanel->model->refresh();
+    }
+
+    // Show message if no differences found
+    if (markedCount == 0) {
+        QMessageBox::information(this, tr("Compare Directories"),
+            tr("No differences found."));
+    }
+
+    return true;
 }
 
 bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {

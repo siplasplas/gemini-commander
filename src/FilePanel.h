@@ -243,6 +243,7 @@ private:
 
     // FilePanelModel needs access to private members
     friend class FilePanelModel;
+    friend class MainWindow;
 
 protected:
     void scrollContentsBy(int dx, int dy) override;

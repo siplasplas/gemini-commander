@@ -571,11 +571,20 @@ void MainWindow::setupUi() {
     setCentralWidget(centralWidget);
 
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    QMenu* markMenu = menuBar()->addMenu(tr("&Mark"));
     QMenu* commandsMenu = menuBar()->addMenu(tr("&Commands"));
     QMenu* navigateMenu = menuBar()->addMenu(tr("&Navigate"));
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
     QMenu* configMenu = menuBar()->addMenu(tr("C&onfiguration"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+
+    // Mark menu
+    QAction* compareDirectoriesAction = new QAction(tr("Compare directories"), this);
+    compareDirectoriesAction->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F2));
+    connect(compareDirectoriesAction, &QAction::triggered, this, [this]() {
+        doCompareDirectories(nullptr, nullptr);
+    });
+    markMenu->addAction(compareDirectoriesAction);
 
     // Help menu
     QAction* aboutAction = new QAction(tr("About"), this);
