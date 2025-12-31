@@ -49,6 +49,7 @@ signals:
     void settingsApplied();
     void sortingChanged(int side, int column, int order);  // side: 0=Left, 1=Right
     void columnsChanged(int side, const QStringList& columns, const QVector<double>& proportions);
+    void toolbarResetRequested();
 
 private slots:
     void onCategoryChanged(int index);
@@ -119,7 +120,7 @@ private:
 
     // General page
     QCheckBox* m_confirmExit;
-    QCheckBox* m_showFunctionBar;
+    QPushButton* m_resetToolbarBtn;
     QComboBox* m_sizeFormat;
     QComboBox* m_storageSizeFormat;
 };

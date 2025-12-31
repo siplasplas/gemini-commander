@@ -86,6 +86,7 @@ public:
   ToolbarConfig toolbarConfig(const QString& name) const;
   void setToolbarConfig(const QString& name, const ToolbarConfig& config);
   QStringList toolbarNames() const;  // Returns all toolbar names in order
+  void initDefaultToolbars();  // Reset toolbar config to defaults
 
   // Legacy compatibility - maps to function_bar toolbar visibility
   bool showFunctionBar() const;
@@ -176,7 +177,6 @@ private:
   // Toolbar configuration
   bool m_menuVisible = true;
   QMap<QString, ToolbarConfig> m_toolbars;
-  void initDefaultToolbars();
 
   // Editor window geometry (relative to main window)
   int m_editorWidth = 800;

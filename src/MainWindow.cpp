@@ -637,6 +637,7 @@ void MainWindow::setupUi() {
                 panel->setColumns(columns, proportions);
             }
         });
+        connect(&dlg, &ConfigDialog::toolbarResetRequested, this, &MainWindow::applyToolbarConfig);
         dlg.exec();
     });
     configMenu->addAction(settingsAction);

@@ -584,9 +584,6 @@ void ConfigDialog::createGeneralPage()
     m_confirmExit = new QCheckBox(tr("Confirm before exit"), behaviorGroup);
     behaviorLayout->addWidget(m_confirmExit);
 
-    m_showFunctionBar = new QCheckBox(tr("Show function key bar (F1-F10)"), behaviorGroup);
-    behaviorLayout->addWidget(m_showFunctionBar);
-
     // Size format combos in a form layout for proper alignment
     auto* formatFormLayout = new QFormLayout();
     formatFormLayout->setFieldGrowthPolicy(QFormLayout::FieldsStayAtSizeHint);
@@ -608,6 +605,28 @@ void ConfigDialog::createGeneralPage()
     behaviorLayout->addLayout(formatFormLayout);
 
     layout->addWidget(behaviorGroup);
+
+    // Toolbar reset
+    auto* toolbarGroup = new QGroupBox(tr("Toolbars"), page);
+    auto* toolbarLayout = new QVBoxLayout(toolbarGroup);
+
+    auto* toolbarNote = new QLabel(
+        tr("Reset toolbar positions to defaults (all visible, main/mounts/storage on top, function bar on bottom)."),
+        toolbarGroup);
+    toolbarNote->setWordWrap(true);
+    toolbarLayout->addWidget(toolbarNote);
+
+    m_resetToolbarBtn = new QPushButton(tr("Reset Toolbar Layout"), toolbarGroup);
+    toolbarLayout->addWidget(m_resetToolbarBtn);
+
+    connect(m_resetToolbarBtn, &QPushButton::clicked, this, [this]() {
+        Config::instance().initDefaultToolbars();
+        Config::instance().setMenuVisible(true);
+        Config::instance().save();
+        emit toolbarResetRequested();
+    });
+
+    layout->addWidget(toolbarGroup);
     layout->addStretch();
 
     m_pagesStack->addWidget(page);
@@ -673,7 +692,6 @@ void ConfigDialog::loadSettings()
 
     // General page
     m_confirmExit->setChecked(cfg.confirmExit());
-    m_showFunctionBar->setChecked(cfg.showFunctionBar());
 
     // Size format: find index by data value
     int sizeFormatIdx = m_sizeFormat->findData(static_cast<int>(cfg.sizeFormat()));
@@ -739,7 +757,6 @@ void ConfigDialog::saveSettings()
 
     // General
     cfg.setConfirmExit(m_confirmExit->isChecked());
-    cfg.setShowFunctionBar(m_showFunctionBar->isChecked());
 
     // Size format
     int sizeFormatValue = m_sizeFormat->currentData().toInt();
