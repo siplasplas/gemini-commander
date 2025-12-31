@@ -158,6 +158,8 @@ add_executable(${PROJECT_NAME}
         src/udisks/UDisksDeviceManager.h
         src/mounts/ProcMountsManager.cpp
         src/mounts/ProcMountsManager.h
+        src/VerticalToolButton.cpp
+        src/VerticalToolButton.h
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}

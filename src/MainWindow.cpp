@@ -46,6 +46,7 @@
 #include "DistroInfo.h"
 #include "DistroInfoDialog.h"
 #include "FunctionBar.h"
+#include "VerticalToolButton.h"
 #include "editor/ViewerFrame.h"
 #include "keys/KeyRouter.h"
 #include "keys/ObjectRegistry.h"
@@ -696,12 +697,27 @@ void MainWindow::setupUi() {
     m_procMountsToolBar->setIconSize(icon16);
     m_storageInfoToolBar->setIconSize(icon16);
 
-    QFontMetrics fm(m_mainToolBar->font());
-    int h = fm.height() + 8;
-    m_mainToolBar->setFixedHeight(h);
-    m_mountsToolBar->setFixedHeight(h);
-    m_procMountsToolBar->setFixedHeight(h);
-    m_storageInfoToolBar->setFixedHeight(h);
+    // Helper to set toolbar size constraints based on orientation
+    auto setupToolbarOrientation = [](QToolBar* toolbar) {
+        auto updateConstraints = [toolbar]() {
+            QFontMetrics fm(toolbar->font());
+            int size = fm.height() + 8;
+            if (toolbar->orientation() == Qt::Horizontal) {
+                toolbar->setFixedHeight(size);
+                toolbar->setMaximumWidth(QWIDGETSIZE_MAX);
+            } else {
+                toolbar->setFixedWidth(size + 8);  // Extra width for vertical text
+                toolbar->setMaximumHeight(QWIDGETSIZE_MAX);
+            }
+        };
+        QObject::connect(toolbar, &QToolBar::orientationChanged, toolbar, updateConstraints);
+        updateConstraints();  // Initial setup
+    };
+
+    setupToolbarOrientation(m_mainToolBar);
+    setupToolbarOrientation(m_mountsToolBar);
+    setupToolbarOrientation(m_procMountsToolBar);
+    setupToolbarOrientation(m_storageInfoToolBar);
 
     QString tbStyle =
         "QToolBar QToolButton { "
@@ -1834,7 +1850,7 @@ void MainWindow::refreshMountsToolbar()
             .arg(qFormatSize(vol.bytesFree(), Config::instance().storageSizeFormat()))
             .arg(qFormatSize(vol.bytesTotal(), Config::instance().storageSizeFormat()));
 
-        QAction* act = new QAction(displayLabel, m_mountsToolBar);
+        auto* act = new VerticalToolButtonAction(displayLabel, m_mountsToolBar);
         act->setToolTip(tooltip);
         act->setData(vol.rootPath());
 
@@ -1883,7 +1899,7 @@ void MainWindow::refreshMountsToolbar()
                 .arg(dev.fsType);
         }
 
-        QAction* act = new QAction(label, m_mountsToolBar);
+        auto* act = new VerticalToolButtonAction(label, m_mountsToolBar);
         act->setToolTip(tooltip);
 
         // Store device info in action data for click handler
@@ -1986,7 +2002,7 @@ void MainWindow::refreshProcMountsToolbar()
             .arg(qFormatSize(storage.bytesFree(), Config::instance().storageSizeFormat()))
             .arg(qFormatSize(storage.bytesTotal(), Config::instance().storageSizeFormat()));
 
-        auto* act = new QAction(label, m_procMountsToolBar);
+        auto* act = new VerticalToolButtonAction(label, m_procMountsToolBar);
         act->setToolTip(tooltip);
         act->setData(mi.mountPoint);  // Store mount point for context menu
 
@@ -2067,8 +2083,7 @@ void MainWindow::updateStorageInfoToolbar()
         .arg(qFormatSize(storage.bytesFree(), Config::instance().storageSizeFormat()))
         .arg(qFormatSize(storage.bytesTotal(), Config::instance().storageSizeFormat()));
 
-    auto* label = new QLabel(text, m_storageInfoToolBar);
-    label->setContentsMargins(6, 0, 6, 0);
+    auto* label = new VerticalLabel(text, m_storageInfoToolBar);
     m_storageInfoToolBar->addWidget(label);
 }
 

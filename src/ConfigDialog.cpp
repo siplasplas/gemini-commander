@@ -600,8 +600,8 @@ void ConfigDialog::createGeneralPage()
 
     // Storage size format (mount toolbars, free/total space)
     m_storageSizeFormat = new QComboBox(behaviorGroup);
-    m_storageSizeFormat->addItem(tr("Decimal (1.5 G)"), 1);     // SizeFormat::Decimal
-    m_storageSizeFormat->addItem(tr("Binary (1.5 Gi)"), 2);     // SizeFormat::Binary
+    m_storageSizeFormat->addItem(tr("Decimal (1.5 M)"), 1);     // SizeFormat::Decimal
+    m_storageSizeFormat->addItem(tr("Binary (1.5 Mi)"), 2);     // SizeFormat::Binary
     m_storageSizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
     formatFormLayout->addRow(tr("Storage size format:"), m_storageSizeFormat);
 
