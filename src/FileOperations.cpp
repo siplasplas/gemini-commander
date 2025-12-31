@@ -9,7 +9,6 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProgressDialog>
-#include <QThread>
 
 #include <limits>
 
@@ -31,7 +30,6 @@ QMessageBox::StandardButton askOverwriteSingle(QWidget *parent, const QString &n
 }
 
 bool copyFile(const QString &srcPath, const QString &dstPath) {
-    QThread::msleep(1000);
     if (!QFile::copy(srcPath, dstPath)) {
         QMessageBox::warning(nullptr, QObject::tr("Error"),
                              QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
@@ -296,10 +294,15 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     collectCopyStats(currentPath, stats, statsOk);
     QString dstPath = resolveDstPath(currentPath, destInput);
 
-    // Multiple files: destination is ALWAYS treated as directory
-    auto ensureResult = ensureDestDirExists(dstPath, parent);
-    if (ensureResult == EnsureDirResult::Cancelled || ensureResult == EnsureDirResult::NotADir)
-        return {};
+    // Treat destination as directory when: ends with '/' OR multiple files
+    bool destIsDir = destInput.endsWith('/') || names.size() > 1;
+    if (destIsDir) {
+        auto ensureResult = ensureDestDirExists(dstPath, parent);
+        if (ensureResult == EnsureDirResult::Cancelled || ensureResult == EnsureDirResult::NotADir)
+            return {};
+    } else {
+        ensureParentDirExists(dstPath);
+    }
 
     QDir srcDir(currentPath);
     FileOperationProgressDialog progressDlg(QObject::tr("Copy"), static_cast<int>(names.size()), parent);
@@ -310,7 +313,7 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     QMessageBox::Button askPolice = QMessageBox::Yes;
     for (const QString &name: names) {
         QString srcPath = srcDir.absoluteFilePath(name);
-        QString dstFilePath = QDir(dstPath).filePath(name);
+        QString dstFilePath = destIsDir ? QDir(dstPath).filePath(name) : dstPath;
         QFileInfo srcInfo(srcPath);
 
         if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
@@ -342,10 +345,9 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                               move, names.size()>1, askPolice, &progressDlg);
         }
         else if (srcInfo.isDir()) {
-            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move,
+            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
                                              askPolice, stats,
                                              progressDlg, bytesCopied);
-
         }
         if (progressDlg.wasCanceled())
             break;
