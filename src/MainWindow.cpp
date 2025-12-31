@@ -264,6 +264,34 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     cfg.setLeftTabs(leftDirs, leftIndex);
     cfg.setRightTabs(rightDirs, rightIndex);
 
+    // Save current toolbar positions (user may have dragged them)
+    auto qtAreaToToolbarArea = [](Qt::ToolBarArea qtArea) -> ToolbarArea {
+        switch (qtArea) {
+            case Qt::TopToolBarArea: return ToolbarArea::Top;
+            case Qt::BottomToolBarArea: return ToolbarArea::Bottom;
+            case Qt::LeftToolBarArea: return ToolbarArea::Left;
+            case Qt::RightToolBarArea: return ToolbarArea::Right;
+            default: return ToolbarArea::Top;
+        }
+    };
+
+    auto saveToolbarState = [&](const QString& name, QToolBar* tb) {
+        if (!tb) return;
+        auto tcfg = cfg.toolbarConfig(name);
+        tcfg.area = qtAreaToToolbarArea(toolBarArea(tb));
+        tcfg.visible = tb->isVisible();
+        cfg.setToolbarConfig(name, tcfg);
+    };
+
+    saveToolbarState("main", m_mainToolBar);
+    saveToolbarState("mounts", m_mountsToolBar);
+    saveToolbarState("other_mounts", m_procMountsToolBar);
+    saveToolbarState("storage_info", m_storageInfoToolBar);
+    saveToolbarState("function_bar", m_functionBarToolBar);
+
+    // Save menu visibility
+    cfg.setMenuVisible(menuBar()->isVisible());
+
     // Always save config (at least sorting settings)
     cfg.save();
 
