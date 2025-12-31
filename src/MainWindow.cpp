@@ -614,6 +614,13 @@ void MainWindow::setupUi() {
     });
     fileMenu->addAction(extractAction);
 
+    QAction* multiRenameAction = new QAction(tr("Multi-&Rename Tool..."), this);
+    multiRenameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+    connect(multiRenameAction, &QAction::triggered, this, [this]() {
+        doMultiRename(nullptr, nullptr);
+    });
+    fileMenu->addAction(multiRenameAction);
+
     fileMenu->addSeparator();
 
     QAction* quitAction = new QAction(tr("Quit"), this);

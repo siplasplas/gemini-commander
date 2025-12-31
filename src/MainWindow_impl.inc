@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "Archives.h"
 #include "PackDialog.h"
+#include "MultiRenameDialog.h"
 #include "DistroInfo.h"
 
 #include <QApplication>
@@ -501,6 +502,77 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
     if (panel) {
         moveFromPanel(panel, true);  // inPlace = true (rename)
     }
+    return true;
+}
+
+bool MainWindow::doMultiRename(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return true;
+
+    // Get files to rename
+    QStringList filesToRename;
+    QStringList markedNames = panel->getMarkedNames();
+
+    if (!markedNames.isEmpty()) {
+        // Use marked files
+        filesToRename = markedNames;
+    } else {
+        // Use current file
+        auto [entry, row] = panel->currentEntryRow();
+        if (!entry) {
+            QMessageBox::warning(this, tr("Multi-Rename Tool"),
+                tr("No file selected."));
+            return true;
+        }
+        filesToRename << entry->info.fileName();
+    }
+
+    // Get all files in directory for conflict detection
+    QStringList existingNames;
+    for (const auto& entry : panel->entries) {
+        existingNames << entry.info.fileName();
+    }
+
+    // Show dialog
+    MultiRenameDialog dlg(filesToRename, existingNames, this);
+    if (dlg.exec() != QDialog::Accepted)
+        return true;
+
+    // Perform renames
+    auto operations = dlg.getRenameOperations();
+    if (operations.isEmpty())
+        return true;
+
+    QDir dir(panel->currentPath);
+    int successCount = 0;
+    int failCount = 0;
+
+    for (const auto& [oldName, newName] : operations) {
+        QString oldPath = dir.absoluteFilePath(oldName);
+        QString newPath = dir.absoluteFilePath(newName);
+
+        QFile file(oldPath);
+        if (file.rename(newPath)) {
+            ++successCount;
+        } else {
+            ++failCount;
+            qWarning() << "Failed to rename" << oldPath << "to" << newPath;
+        }
+    }
+
+    // Refresh panel
+    panel->loadDirectory();
+
+    if (failCount > 0) {
+        QMessageBox::warning(this, tr("Multi-Rename Tool"),
+            tr("Renamed %1 files, %2 failed.")
+                .arg(successCount).arg(failCount));
+    }
+
     return true;
 }
 
