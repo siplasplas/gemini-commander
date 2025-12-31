@@ -8,6 +8,12 @@ class QWidget;
 
 namespace FileOperations {
 
+struct Params {
+    QString srcPath;
+    QStringList names;
+    QString destPath;
+};
+
 enum class EnsureDirResult { Created, Exists, Cancelled, NotADir };
 
 // Check if target is invalid (same path or subdirectory of source)
