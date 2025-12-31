@@ -671,6 +671,7 @@ void MainWindow::setupUi() {
     // --- TOOLBAR ---
     m_mainToolBar = addToolBar(tr("Main toolbar"));
     m_mainToolBar->setMovable(true);
+    m_mainToolBar->setFloatable(false);
 
     m_openTerminalAction = new QAction(tr("Terminal"), this);
     m_openTerminalAction->setIcon(QIcon(":/icons/terminal.svg"));
@@ -687,6 +688,7 @@ void MainWindow::setupUi() {
     // Storage info toolbar (shows free/total space for active panel)
     m_storageInfoToolBar = addToolBar(tr("Storage Info"));
     m_storageInfoToolBar->setMovable(true);
+    m_storageInfoToolBar->setFloatable(false);
 
     QSize icon16(16,16);
     m_mainToolBar->setIconSize(icon16);
@@ -1099,6 +1101,7 @@ void MainWindow::createMountsToolbar()
 {
     m_mountsToolBar = addToolBar(tr("Mounts"));
     m_mountsToolBar->setMovable(true);
+    m_mountsToolBar->setFloatable(false);
 
     // Initial population will happen after UDisks manager starts
     // in the constructor
@@ -1943,6 +1946,7 @@ void MainWindow::createProcMountsToolbar()
 {
     m_procMountsToolBar = addToolBar(tr("Other Mounts"));
     m_procMountsToolBar->setMovable(true);
+    m_procMountsToolBar->setFloatable(false);
 
     refreshProcMountsToolbar();
 }
@@ -2036,6 +2040,7 @@ void MainWindow::createProcMountsToolbar()
 {
     m_procMountsToolBar = addToolBar(tr("Other Mounts"));
     m_procMountsToolBar->setMovable(true);
+    m_procMountsToolBar->setFloatable(false);
 }
 
 void MainWindow::refreshProcMountsToolbar()
