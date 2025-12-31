@@ -220,7 +220,9 @@ bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
+        auto params = askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
+        auto selectedName = FileOperations::executeCopy(params.srcPath, params.names, params.destPath, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;
 }
@@ -230,7 +232,9 @@ bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
+        auto params = askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
+        auto selectedName = FileOperations::executeCopy(params.srcPath, params.names, params.destPath, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;
 }
@@ -490,7 +494,9 @@ bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        askForFileOperation(panel, false, true);  // inPlace=false, isMove=true
+        auto params = askForFileOperation(panel, false, true);  // inPlace=false, isMove=true
+        auto selectedName = FileOperations::executeMove(params.srcPath, params.names, params.destPath, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;
 }
@@ -500,7 +506,9 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
     if (panel) {
-        askForFileOperation(panel, true, true);  // inPlace=true, isMove=true
+        auto params = askForFileOperation(panel, true, true);  // inPlace=true, isMove=true
+        auto selectedName = FileOperations::executeMove(params.srcPath, params.names, params.destPath, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
     }
     return true;
 }

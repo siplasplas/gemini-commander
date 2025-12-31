@@ -9,6 +9,7 @@ class QWidget;
 namespace FileOperations {
 
 struct Params {
+    bool valid = false;
     QString srcPath;
     QStringList names;
     QString destPath;

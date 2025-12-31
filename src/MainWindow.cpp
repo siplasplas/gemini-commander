@@ -1329,10 +1329,10 @@ void MainWindow::selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPan
     }
 }
 
-void MainWindow::askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove)
+FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove)
 {
     if (!srcPanel)
-        return;
+        return {};
 
     // Get destination panel info
     Side srcSide = srcPanel->side();
@@ -1356,11 +1356,11 @@ void MainWindow::askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isM
         // Single file: get current item (use getRowRelPath for Branch mode compatibility)
         QModelIndex currentIndex = srcPanel->currentIndex();
         if (!currentIndex.isValid())
-            return;
+            return {};
 
         QString currentName = srcPanel->getRowRelPath(currentIndex.row());
         if (currentName.isEmpty())
-            return; // [..]
+            return {}; // [..]
 
         names << currentName;
 
@@ -1382,14 +1382,14 @@ void MainWindow::askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isM
     QString destInput = QInputDialog::getText(this, title, label, QLineEdit::Normal, suggested, &ok);
 
     if (!ok || destInput.isEmpty())
-        return;
+        return {};
 
-    // Delegate to FileOperations module
-    QString selectedName = isMove
-        ? FileOperations::executeMove(srcPanel->currentPath, names, destInput, this)
-        : FileOperations::executeCopy(srcPanel->currentPath, names, destInput, this);
-
-    selectAfterFileOperation(srcPanel, dstPanel, selectedName);
+    FileOperations::Params params;
+    params.valid = true;
+    params.srcPath = srcPanel->currentPath;
+    params.names = names;
+    params.destPath = destInput;
+    return params;
 }
 
 bool MainWindow::handle(const char* handler, QKeyEvent* ev) {

@@ -10,6 +10,7 @@
 #include <QToolButton>
 #include <QFileSystemWatcher>
 
+#include "FileOperations.h"
 #include "editor/EditorFrame.h"
 #include "keys/KeyMap.h"
 #ifndef _WIN32
@@ -80,7 +81,7 @@ private:
 
     void createMountsToolbar();
     void selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath);
-    void askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove);
+    FileOperations::Params askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove);
 
     KeyMap keyMap;
 
