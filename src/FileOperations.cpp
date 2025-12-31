@@ -162,54 +162,6 @@ bool copyDirInLoop(const QString& srcPath, const QString& dstPath, const QString
     return !userAbort;
 }
 
-// Move directory across filesystems (copy + delete)
-bool moveDirCrossFs(const QString& srcPath, const QString& dstPath, const QString& name, QWidget* parent, bool& userAbort)
-{
-    FilePanel::CopyStats stats;
-    bool statsOk = false;
-    FilePanel::collectCopyStats(srcPath, stats, statsOk);
-
-    QProgressDialog progress(
-        QObject::tr("Moving %1...").arg(name), QObject::tr("Cancel"), 0,
-        static_cast<int>(qMin<quint64>(stats.totalBytes, std::numeric_limits<int>::max())),
-        parent
-    );
-    progress.setWindowModality(Qt::ApplicationModal);
-    progress.setMinimumDuration(0);
-    progress.show();
-
-    quint64 bytesCopied = 0;
-    if (FilePanel::copyDirectoryRecursive(srcPath, dstPath, stats, progress, bytesCopied, userAbort)) {
-        QDir(srcPath).removeRecursively();
-        return true;
-    }
-    return false;
-}
-
-bool copySingleFileWithProgress(const QString& srcPath, const QString& dstPath, QWidget* parent)
-{
-    QFileInfo srcInfo(srcPath);
-
-    // Ensure parent directory exists
-    QDir parentDir = QFileInfo(dstPath).absoluteDir();
-    if (!parentDir.exists()) {
-        parentDir.mkpath(".");
-    }
-
-    // Show progress dialog
-    FileOperationProgressDialog progressDlg(QObject::tr("Copy"), 1, parent);
-    progressDlg.show();
-    progressDlg.updateProgress(1, srcInfo.fileName(), srcInfo.size());
-
-    if (!QFile::copy(srcPath, dstPath)) {
-        QMessageBox::warning(parent, QObject::tr("Error"),
-            QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
-        return false;
-    }
-    finalizeCopiedFile(srcPath, dstPath);
-    return true;
-}
-
 bool copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
                                const QString& displayName, bool deleteSourceAfter, QWidget* parent)
 {
@@ -433,9 +385,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
                     finalizeCopiedFile(srcPath, dstFilePath);
                     QFile::remove(srcPath);
                 } else if (srcFileInfo.isDir()) {
-                    bool userAbort = false;
-                    moveDirCrossFs(srcPath, dstFilePath, name, parent, userAbort);
-                    if (userAbort)
+                    if (!copyDirectoryWithProgress(srcPath, dstFilePath, name, true, parent))
                         break;
                 }
             }
@@ -491,9 +441,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
             finalizeCopiedFile(srcPath, finalDstPath);
             QFile::remove(srcPath);
         } else if (srcInfo.isDir()) {
-            bool userAbort = false;
-            moveDirCrossFs(srcPath, finalDstPath, currentName, parent, userAbort);
-            if (userAbort)
+            if (!copyDirectoryWithProgress(srcPath, finalDstPath, currentName, true, parent))
                 return {};
         }
     }

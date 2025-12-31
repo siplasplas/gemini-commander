@@ -26,9 +26,6 @@ EnsureDirResult ensureDestDirExists(const QString& dstPath, QWidget* parent);
 // Check if destination input indicates a directory
 bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 
-// Copy a single file with progress dialog
-bool copySingleFileWithProgress(const QString& srcPath, const QString& dstPath, QWidget* parent);
-
 // Copy a directory recursively with progress dialog
 // Returns true on success, false on failure or user abort
 // If deleteSourceAfter is true, removes source after successful copy
