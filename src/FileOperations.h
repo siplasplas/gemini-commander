@@ -35,13 +35,13 @@ bool copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
 // baseDirForRelative: base directory for resolving relative destInput
 // Returns: name of copied file for selection (empty if multiple files)
 QString executeCopy(const QString& currentPath, const QStringList& names,
-                    const QString& destInput, const QString& baseDirForRelative,
+                    const QString& destInput,
                     QWidget* parent);
 
 // Execute move operation after destination path is confirmed
 // Returns: name of moved file for selection (empty if multiple files)
 QString executeMove(const QString& currentPath, const QStringList& names,
-                    const QString& destInput, const QString& baseDirForRelative,
+                    const QString& destInput,
                     QWidget* parent);
 
 } // namespace FileOperations

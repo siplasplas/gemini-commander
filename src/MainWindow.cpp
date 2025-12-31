@@ -1392,7 +1392,7 @@ void MainWindow::copyFromPanel(FilePanel* srcPanel, bool inPlace)
 
     // Delegate to FileOperations module
     QString selectedName = FileOperations::executeCopy(
-        srcPanel->currentPath, names, destInput, srcPanel->currentPath, this);
+        srcPanel->currentPath, names, destInput, this);
     selectAfterFileOperation(srcPanel, dstPanel, selectedName);
 }
 
@@ -1458,7 +1458,7 @@ void MainWindow::moveFromPanel(FilePanel* srcPanel, bool inPlace)
 
     // Delegate to FileOperations module
     QString selectedName = FileOperations::executeMove(
-        srcPanel->currentPath, names, destInput, srcPanel->currentPath, this);
+        srcPanel->currentPath, names, destInput, this);
 
     selectAfterFileOperation(srcPanel, dstPanel, selectedName);
 }

@@ -162,7 +162,7 @@ bool copyDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
 }
 
 QString executeCopy(const QString& currentPath, const QStringList& names,
-                    const QString& destInput, const QString& baseDirForRelative,
+                    const QString& destInput,
                     QWidget* parent)
 {
     if (names.isEmpty())
@@ -173,7 +173,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
     if (QDir::isAbsolutePath(destInput)) {
         dstPath = destInput;
     } else {
-        QDir baseDir(baseDirForRelative);
+        QDir baseDir(currentPath);
         dstPath = baseDir.absoluteFilePath(destInput);
     }
 
@@ -332,7 +332,7 @@ QString executeCopy(const QString& currentPath, const QStringList& names,
 }
 
 QString executeMove(const QString& currentPath, const QStringList& names,
-                    const QString& destInput, const QString& baseDirForRelative,
+                    const QString& destInput,
                     QWidget* parent)
 {
     if (names.isEmpty())
@@ -343,7 +343,7 @@ QString executeMove(const QString& currentPath, const QStringList& names,
     if (QDir::isAbsolutePath(destInput)) {
         dstPath = destInput;
     } else {
-        QDir baseDir(baseDirForRelative);
+        QDir baseDir(currentPath);
         dstPath = baseDir.absoluteFilePath(destInput);
     }
 
