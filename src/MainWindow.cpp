@@ -1340,7 +1340,7 @@ void MainWindow::createMountsToolbar()
 
 void MainWindow::createNewDirectory(QWidget *dialogParent) {
     FilePanel* panel = currentFilePanel();
-    QString suggestedName = panel->getCurrentRelPath();
+    QString suggestedName = panel->currentRelPath();
 
     QWidget *parent = dialogParent ? dialogParent : this;
 
@@ -1411,6 +1411,70 @@ void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *ds
     m_suppressDirWatcher = false;
 }
 
+// Helper: check if deleted path affects panel (is direct child or panel itself/parent)
+static bool shouldRefreshPanel(const QString& deletedCanonical, const QString& panelPath) {
+    QString panelCanonical = QDir::cleanPath(panelPath);
+
+    // Case 1: deleted == panelPath (deleted the current directory itself)
+    if (deletedCanonical == panelCanonical)
+        return true;
+
+    // Case 2: panelPath starts with deleted (deleted a parent of current dir)
+    if (panelCanonical.startsWith(deletedCanonical + "/"))
+        return true;
+
+    // Case 3: deleted is direct child of panelPath (one level only)
+    if (deletedCanonical.startsWith(panelCanonical + "/")) {
+        QString relativePart = deletedCanonical.mid(panelCanonical.length() + 1);
+        if (!relativePart.contains('/'))
+            return true;  // Direct child - refresh needed
+    }
+
+    return false;  // Deleted something deeper - no refresh needed
+}
+
+void MainWindow::selectNameAfterDelete(FilePanel *srcPanel, FilePanel *dstPanel, const QString& deletedName)
+{
+    QString deletedCanonical = QDir::cleanPath(QDir(srcPanel->currentPath).absoluteFilePath(deletedName));
+
+    // Remember current selection before refresh
+    QString srcSelRelPath = srcPanel->currentRelPath();
+
+    // Suppress QFileSystemWatcher reload - we handle it ourselves
+    m_suppressDirWatcher = true;
+
+    bool srcRefreshed = false;
+    bool dstRefreshed = false;
+
+    // Refresh srcPanel if needed
+    if (shouldRefreshPanel(deletedCanonical, srcPanel->currentPath)) {
+        srcPanel->loadDirectory();
+        srcPanel->selectEntryByRelPath(srcSelRelPath);  // Try to restore position
+        srcRefreshed = true;
+    }
+
+    // Refresh dstPanel if needed
+    if (dstPanel && shouldRefreshPanel(deletedCanonical, dstPanel->currentPath)) {
+        QString dstSelRelPath = dstPanel->currentRelPath();
+        dstPanel->loadDirectory();
+        dstPanel->selectEntryByRelPath(dstSelRelPath);
+        dstRefreshed = true;
+    }
+
+    if (srcRefreshed || dstRefreshed) {
+        QTimer::singleShot(50, this, [this, srcPanel, srcRefreshed]() {
+            m_suppressDirWatcher = false;
+            if (srcRefreshed) {
+                srcPanel->setFocus();
+                srcPanel->restoreSelectionFromMemory();
+            }
+        });
+    } else {
+        m_suppressDirWatcher = false;
+    }
+}
+
+
 FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove)
 {
     if (!srcPanel)
@@ -1447,7 +1511,7 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
     if (hasMarked && markedNames.size()>1) {
         suggested = inPlace ? QString() : targetDir;
     } else {
-        QString currentName = srcPanel->getCurrentRelPath();
+        QString currentName = srcPanel->currentRelPath();
         if (currentName.isEmpty())
             return {}; // [..]
 

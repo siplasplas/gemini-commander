@@ -85,6 +85,7 @@ private:
     void createNewDirectory(QWidget *dialogParent);
     void selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString &relativeName);
     void selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath);
+    void selectNameAfterDelete(FilePanel *srcPanel, FilePanel *dstPanel, const QString &deletedName);
     FileOperations::Params askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove);
 
     KeyMap keyMap;

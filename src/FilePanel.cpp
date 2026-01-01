@@ -572,7 +572,7 @@ QString FilePanel::getRowName(int row) const {
     return model->data(idx, Qt::UserRole).toString();
 }
 
-QString FilePanel::getCurrentRelPath() const {
+QString FilePanel::currentRelPath() const {
     QModelIndex currIndex = currentIndex();
     if (!currIndex.isValid())
         return {};
@@ -610,17 +610,17 @@ void FilePanel::selectEntryByRelPath(const QString &relPath) {
 
         if (entryRelPath == relPath || relPath.startsWith(entryRelPath+"/")) {
             // In branch mode, row == entry index; otherwise account for [..]
-            int row = branchMode ? i : i + 1;
+            int row = branchMode || currentRelPath()=="/" ? i : i + 1;
             m_lastSelectedRow = row;
             if (hasFocus())
                 restoreSelectionFromMemory();
             return;
         }
     }
-
-    // Fallback: try to match just the filename
-    QString fileName = relPath.section('/', -1);
-    selectEntryByName(fileName);
+    size_t max_row = branchMode || currentRelPath()=="/" ? entries.size()-1 : entries.size();
+    m_lastSelectedRow = std::min(m_lastSelectedRow, (int)max_row);
+    if (hasFocus())
+        restoreSelectionFromMemory();
 }
 
 void FilePanel::selectEntryByName(const QString &fullName) {

@@ -140,7 +140,7 @@ public:
     void loadDirectory();
 
     QString getRowName(int row) const;
-    QString getCurrentRelPath() const;
+    QString currentRelPath() const;
     QString getRowRelPath(int row) const;
     void selectEntryByName(const QString& fullName);
     void selectEntryByRelPath(const QString& relPath);
