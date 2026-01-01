@@ -612,7 +612,7 @@ void MainWindow::setupUi() {
     QMenu* markMenu = menuBar()->addMenu(tr("&Mark"));
     QMenu* commandsMenu = menuBar()->addMenu(tr("&Commands"));
     QMenu* navigateMenu = menuBar()->addMenu(tr("&Navigate"));
-    QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
+    QMenu* showMenu = menuBar()->addMenu(tr("&Show"));
     QMenu* configMenu = menuBar()->addMenu(tr("C&onfiguration"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
 
@@ -658,6 +658,12 @@ void MainWindow::setupUi() {
         doMultiRename(nullptr, nullptr);
     });
     fileMenu->addAction(multiRenameAction);
+
+    // File menu - File/Directory Info
+    QAction* fileInfoAction = new QAction(tr("File Info..."), this);
+    fileInfoAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
+    connect(fileInfoAction, &QAction::triggered, this, &MainWindow::showFileInfo);
+    fileMenu->addAction(fileInfoAction);
 
     fileMenu->addSeparator();
 
@@ -730,12 +736,6 @@ void MainWindow::setupUi() {
         }
     });
     commandsMenu->addAction(calcAllSizesAction);
-
-    // Commands menu - File/Directory Info
-    QAction* fileInfoAction = new QAction(tr("File Info..."), this);
-    fileInfoAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
-    connect(fileInfoAction, &QAction::triggered, this, &MainWindow::showFileInfo);
-    commandsMenu->addAction(fileInfoAction);
 
     commandsMenu->addSeparator();
 
@@ -965,7 +965,7 @@ void MainWindow::setupUi() {
         Config::instance().setShowFunctionBar(checked);
         Config::instance().save();
     });
-    viewMenu->addAction(m_showFunctionBarAction);
+    showMenu->addAction(m_showFunctionBarAction);
 
     // Apply toolbar configuration from config
     applyToolbarConfig();
