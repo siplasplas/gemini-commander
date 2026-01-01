@@ -1,5 +1,6 @@
 #include "ViewerWidget.h"
 #include "HexViewWidget.h"
+#include "../Config.h"
 
 #include <QVBoxLayout>
 #include <QLabel>
@@ -9,6 +10,51 @@
 #include <QContextMenuEvent>
 #include <QEvent>
 #include "../../external/textviewers/wid/TextViewer.h"
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
+namespace {
+// Get system RAM in bytes
+qint64 getSystemRamBytes()
+{
+#ifdef Q_OS_LINUX
+    // /proc/meminfo is a virtual file with size 0, must use readAll()
+    QFile meminfo("/proc/meminfo");
+    if (meminfo.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QByteArray content = meminfo.readAll();
+        meminfo.close();
+
+        QStringList lines = QString::fromUtf8(content).split('\n', Qt::SkipEmptyParts);
+        for (const QString& line : lines) {
+            if (line.startsWith("MemTotal:")) {
+                // Format: "MemTotal:       16384000 kB"
+                QStringList parts = line.simplified().split(' ');
+                if (parts.size() >= 2) {
+                    bool ok;
+                    qint64 kB = parts[1].toLongLong(&ok);
+                    if (ok) {
+                        return kB * 1024;  // Convert KB to bytes
+                    }
+                }
+                break;
+            }
+        }
+    }
+    return 4LL * 1024 * 1024 * 1024;  // Fallback: 4 GB
+#elif defined(Q_OS_WIN)
+    MEMORYSTATUSEX memStatus;
+    memStatus.dwLength = sizeof(memStatus);
+    if (GlobalMemoryStatusEx(&memStatus)) {
+        return static_cast<qint64>(memStatus.ullTotalPhys);
+    }
+    return 4LL * 1024 * 1024 * 1024;  // Fallback: 4 GB
+#else
+    return 4LL * 1024 * 1024 * 1024;  // Fallback: 4 GB
+#endif
+}
+} // namespace
 
 // KTextEditor includes
 #include <KTextEditor/Editor>
@@ -148,8 +194,14 @@ void ViewerWidget::showTextView()
 
     qint64 fileSize = m_file->size();
 
-    // Large files: use wid::TextViewer (memory-mapped)
-    if (fileSize > SmallFileThreshold) {
+    // Calculate effective threshold: min(config threshold, 10% of RAM)
+    double configThresholdMB = Config::instance().kteThresholdMB();
+    qint64 configThresholdBytes = static_cast<qint64>(configThresholdMB * 1024.0 * 1024.0);
+    qint64 ramLimitBytes = getSystemRamBytes() / 10;  // 10% of RAM
+    qint64 effectiveThreshold = qMin(configThresholdBytes, ramLimitBytes);
+
+    // Large files (> threshold): use wid::TextViewer (memory-mapped)
+    if (fileSize > effectiveThreshold) {
         uchar* addr = m_file->map(0, fileSize);
         if (!addr) {
             auto* label = new QLabel(tr("Cannot map file:\n%1").arg(m_currentFile), this);
@@ -159,7 +211,7 @@ void ViewerWidget::showTextView()
         }
         createTextViewer(addr, fileSize);
     } else {
-        // Small files: use KTextEditor
+        // Small files (<= threshold): use KTextEditor
         createKTextEditorView(m_currentFile);
     }
 }

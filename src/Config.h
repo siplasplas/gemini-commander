@@ -169,6 +169,10 @@ public:
   bool compareIgnoreSize() const { return m_compareIgnoreSize; }
   void setCompareIgnoreSize(bool ignore) { m_compareIgnoreSize = ignore; }
 
+  // KTextEditor threshold (in MB, decimal) - files smaller than this use KTextEditor
+  double kteThresholdMB() const { return m_kteThresholdMB; }
+  void setKteThresholdMB(double mb) { m_kteThresholdMB = mb; }
+
   // Large file copy mode
   CopyMode copyMode() const { return m_copyMode; }
   void setCopyMode(CopyMode mode) { m_copyMode = mode; }
@@ -241,6 +245,9 @@ private:
   // Compare directories settings
   bool m_compareIgnoreTime = false;
   bool m_compareIgnoreSize = false;
+
+  // KTextEditor threshold in MB (decimal) - default 1.0 MB
+  double m_kteThresholdMB = 1.0;
 
   // Large file copy settings
   CopyMode m_copyMode = CopyMode::ChunkedSha;  // Default: chunked with SHA

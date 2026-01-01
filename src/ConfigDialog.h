@@ -66,6 +66,8 @@ private:
     void loadSettings();
     void saveSettings();
     void showRestartWarningIfNeeded();
+    void validateKteThreshold();
+    double getSystemRamMB() const;
 
     bool isWayland() const;
 
@@ -125,6 +127,8 @@ private:
     QComboBox* m_storageSizeFormat;
     QCheckBox* m_compareIgnoreTime;
     QCheckBox* m_compareIgnoreSize;
+    QLineEdit* m_kteThreshold;
+    QLabel* m_kteThresholdInfo;
 
     // Copy settings
     QComboBox* m_copyMode;

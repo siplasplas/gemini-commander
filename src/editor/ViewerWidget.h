@@ -40,9 +40,6 @@ public:
 
     void setViewMode(ViewMode mode);
 
-    // Threshold for switching between KTextEditor and wid::TextViewer (bytes)
-    static constexpr qint64 SmallFileThreshold = 70 * 1024;  // 70 KB
-
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 

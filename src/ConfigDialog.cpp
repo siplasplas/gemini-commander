@@ -2,6 +2,13 @@
 #include "Config.h"
 #include "SizeFormat.h"
 
+#ifdef Q_OS_LINUX
+#include <QFile>
+#endif
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -617,6 +624,26 @@ void ConfigDialog::createGeneralPage()
 
     layout->addWidget(compareGroup);
 
+    // Quick View threshold for KTextEditor
+    auto* viewerGroup = new QGroupBox(tr("Quick View (Ctrl+Q)"), page);
+    auto* viewerLayout = new QFormLayout(viewerGroup);
+
+    m_kteThreshold = new QLineEdit(viewerGroup);
+    m_kteThreshold->setPlaceholderText("1.0");
+    m_kteThreshold->setMaximumWidth(100);
+    viewerLayout->addRow(tr("KTextEditor threshold (MB):"), m_kteThreshold);
+
+    m_kteThresholdInfo = new QLabel(viewerGroup);
+    m_kteThresholdInfo->setWordWrap(true);
+    m_kteThresholdInfo->setStyleSheet("QLabel { color: gray; }");
+    viewerLayout->addRow(m_kteThresholdInfo);
+
+    connect(m_kteThreshold, &QLineEdit::editingFinished, this, [this]() {
+        validateKteThreshold();
+    });
+
+    layout->addWidget(viewerGroup);
+
     // Large file copy settings
     auto* copyGroup = new QGroupBox(tr("Large File Copy (>threshold)"), page);
     auto* copyLayout = new QFormLayout(copyGroup);
@@ -743,6 +770,10 @@ void ConfigDialog::loadSettings()
     m_compareIgnoreTime->setChecked(cfg.compareIgnoreTime());
     m_compareIgnoreSize->setChecked(cfg.compareIgnoreSize());
 
+    // KTE threshold
+    m_kteThreshold->setText(QString::number(cfg.kteThresholdMB(), 'f', 3));
+    validateKteThreshold();
+
     // Copy settings
     int copyModeIdx = m_copyMode->findData(static_cast<int>(cfg.copyMode()));
     if (copyModeIdx >= 0)
@@ -817,6 +848,13 @@ void ConfigDialog::saveSettings()
     cfg.setCompareIgnoreTime(m_compareIgnoreTime->isChecked());
     cfg.setCompareIgnoreSize(m_compareIgnoreSize->isChecked());
 
+    // KTE threshold
+    bool ok;
+    double kteMB = m_kteThreshold->text().toDouble(&ok);
+    if (ok && kteMB > 0) {
+        cfg.setKteThresholdMB(kteMB);
+    }
+
     // Copy settings
     int copyModeValue = m_copyMode->currentData().toInt();
     cfg.setCopyMode(static_cast<CopyMode>(copyModeValue));
@@ -864,4 +902,74 @@ void ConfigDialog::showRestartWarningIfNeeded()
 bool ConfigDialog::isWayland() const
 {
     return QGuiApplication::platformName() == QLatin1String("wayland");
+}
+
+double ConfigDialog::getSystemRamMB() const
+{
+#ifdef Q_OS_LINUX
+    // /proc/meminfo is a virtual file with size 0, must use readAll()
+    QFile meminfo("/proc/meminfo");
+    if (meminfo.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QByteArray content = meminfo.readAll();
+        meminfo.close();
+
+        QStringList lines = QString::fromUtf8(content).split('\n', Qt::SkipEmptyParts);
+        for (const QString& line : lines) {
+            if (line.startsWith("MemTotal:")) {
+                // Format: "MemTotal:       16384000 kB"
+                QStringList parts = line.simplified().split(' ');
+                if (parts.size() >= 2) {
+                    bool ok;
+                    qint64 kB = parts[1].toLongLong(&ok);
+                    if (ok) {
+                        return static_cast<double>(kB) / 1024.0;  // Convert KB to MB
+                    }
+                }
+                break;
+            }
+        }
+    }
+    return 4096.0;  // Fallback: 4 GB
+#elif defined(Q_OS_WIN)
+    MEMORYSTATUSEX memStatus;
+    memStatus.dwLength = sizeof(memStatus);
+    if (GlobalMemoryStatusEx(&memStatus)) {
+        return static_cast<double>(memStatus.ullTotalPhys) / (1024.0 * 1024.0);
+    }
+    return 4096.0;  // Fallback: 4 GB
+#else
+    return 4096.0;  // Fallback: 4 GB
+#endif
+}
+
+void ConfigDialog::validateKteThreshold()
+{
+    double ramMB = getSystemRamMB();
+    double maxAllowedMB = ramMB * 0.10;  // 10% of RAM
+
+    bool ok;
+    double enteredMB = m_kteThreshold->text().toDouble(&ok);
+
+    if (!ok || enteredMB <= 0) {
+        m_kteThresholdInfo->setText(tr("Invalid value. Using default (1.0 MB)."));
+        m_kteThreshold->setText("1.0");
+        return;
+    }
+
+    if (enteredMB > maxAllowedMB) {
+        // Limit to 10% of RAM
+        m_kteThreshold->setText(QString::number(maxAllowedMB, 'f', 3));
+        m_kteThresholdInfo->setText(
+            tr("Limited to 10% of RAM (%1 MB). System RAM: %2 MB.")
+                .arg(maxAllowedMB, 0, 'f', 1)
+                .arg(ramMB, 0, 'f', 0));
+        m_kteThresholdInfo->setStyleSheet("QLabel { color: orange; }");
+    } else {
+        m_kteThresholdInfo->setText(
+            tr("Files < %1 MB use KTextEditor, larger use TextViewer. Max: %2 MB (10% of %3 MB RAM).")
+                .arg(enteredMB, 0, 'f', 3)
+                .arg(maxAllowedMB, 0, 'f', 1)
+                .arg(ramMB, 0, 'f', 0));
+        m_kteThresholdInfo->setStyleSheet("QLabel { color: gray; }");
+    }
 }
