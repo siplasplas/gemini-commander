@@ -84,17 +84,7 @@ void ViewerWidget::openFile(const QString& filePath)
 
     m_currentFile = filePath;
 
-    QFileInfo fileInfo(filePath);
-    qint64 fileSize = fileInfo.size();
-
-    if (fileSize == 0) {
-        auto* label = new QLabel(tr("(empty file)"), this);
-        label->setAlignment(Qt::AlignCenter);
-        m_layout->addWidget(label);
-        return;
-    }
-
-    // Open and map file for text viewer or hex viewer
+    // Open file (needed for mmap in TextViewer/HexViewer, not for KTextEditor)
     m_file = std::make_unique<QFile>(filePath);
     if (!m_file->open(QIODevice::ReadOnly)) {
         auto* label = new QLabel(tr("Cannot open file:\n%1").arg(filePath), this);
@@ -189,18 +179,18 @@ bool ViewerWidget::eventFilter(QObject* watched, QEvent* event)
 
 void ViewerWidget::showTextView()
 {
-    if (!m_file || m_file->size() == 0)
+    if (!m_file)
         return;
 
     qint64 fileSize = m_file->size();
 
     // Calculate effective threshold: min(config threshold, 10% of RAM)
     double configThresholdMB = Config::instance().kteThresholdMB();
-    qint64 configThresholdBytes = static_cast<qint64>(configThresholdMB * 1024.0 * 1024.0);
+    auto configThresholdBytes = static_cast<qint64>(configThresholdMB * 1024.0 * 1024.0);
     qint64 ramLimitBytes = getSystemRamBytes() / 10;  // 10% of RAM
     qint64 effectiveThreshold = qMin(configThresholdBytes, ramLimitBytes);
 
-    // Large files (> threshold): use wid::TextViewer (memory-mapped)
+    // Large files (> threshold): use wid::TextViewer (memory-mapped, requires size > 0)
     if (fileSize > effectiveThreshold) {
         uchar* addr = m_file->map(0, fileSize);
         if (!addr) {
@@ -211,15 +201,24 @@ void ViewerWidget::showTextView()
         }
         createTextViewer(addr, fileSize);
     } else {
-        // Small files (<= threshold): use KTextEditor
+        // Small files (<= threshold) or virtual files (size 0): use KTextEditor
+        // KTextEditor can read virtual files like /proc/* that report size 0
         createKTextEditorView(m_currentFile);
     }
 }
 
 void ViewerWidget::showHexView()
 {
-    if (!m_file || m_file->size() == 0)
+    if (!m_file)
         return;
+
+    if (m_file->size() == 0) {
+        // Hex view requires mmap, can't work with virtual files (size 0)
+        auto* label = new QLabel(tr("(empty or virtual file - hex view unavailable)"), this);
+        label->setAlignment(Qt::AlignCenter);
+        m_layout->addWidget(label);
+        return;
+    }
 
     uchar* addr = m_file->map(0, m_file->size());
     if (!addr) {
