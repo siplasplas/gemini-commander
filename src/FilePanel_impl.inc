@@ -125,7 +125,7 @@ bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
 
         auto reply = QMessageBox::warning(
             window(), tr("Permanent Delete"), question,
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::No
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
         );
 
         if (reply != QMessageBox::Yes)
@@ -191,7 +191,7 @@ bool FilePanel::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     QString question = tr("PERMANENTLY delete '%1'? This cannot be undone!").arg(name);
     auto reply = QMessageBox::warning(
         window(), tr("Permanent Delete"), question,
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::No
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
     );
     if (reply != QMessageBox::Yes)
         return true;
