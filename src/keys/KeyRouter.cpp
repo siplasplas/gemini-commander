@@ -7,6 +7,7 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QMetaMethod>
+#include <QWidget>
 
 #include "KeyMap.h"
 #include "ObjectRegistry.h"
@@ -72,14 +73,19 @@ bool KeyRouter::eventFilter(QObject* obj, QEvent* event)
 
     auto* keyEvent = static_cast<QKeyEvent*>(event);
 
-    // If operation is in progress, only allow ESC key
+    // If operation is in progress, only allow ESC key (except for dialogs)
     if (m_operationInProgress) {
+        // Check if there's an active modal dialog - if so, let it handle keys
+        QWidget* modalWidget = QApplication::activeModalWidget();
+        if (modalWidget && qobject_cast<QDialog*>(modalWidget)) {
+            // Active modal dialog - let it handle keys (OK, Cancel, etc.)
+            return owner_->eventFilter(obj, event);
+        }
+
         if (keyEvent->key() == Qt::Key_Escape) {
             // Allow ESC to pass through for cancellation
-            qDebug() << "[KeyRouter] Operation in progress - allowing ESC";
         } else {
             // Block all other keys during operation
-            qDebug() << "[KeyRouter] Operation in progress - blocking key:" << keyEvent->key();
             return true;  // Consume the event
         }
     }
