@@ -121,12 +121,6 @@ MainWindow::MainWindow(QWidget *parent)
                 this, &MainWindow::updateStorageInfoToolbar);
     }
 
-    // Update storage info toolbar on tab changes
-    connect(m_leftTabs, &QTabWidget::currentChanged,
-            this, &MainWindow::updateStorageInfoToolbar);
-    connect(m_rightTabs, &QTabWidget::currentChanged,
-            this, &MainWindow::updateStorageInfoToolbar);
-
     filePanelForSide(Side::Left)->setFocus();
 
     updateCurrentPathLabel();  // initial update
@@ -173,6 +167,28 @@ MainWindow::MainWindow(QWidget *parent)
         connect(panel, &FilePanel::visibleFilesChanged,
                 this, &MainWindow::onVisibleFilesChanged);
     }
+
+    // Update storage info toolbar and reload directory on tab changes
+    connect(m_leftTabs, &QTabWidget::currentChanged, this, [this](int index) {
+        updateStorageInfoToolbar();
+        if (auto* pane = qobject_cast<FilePaneWidget*>(m_leftTabs->widget(index))) {
+            pane->filePanel()->doRefresh(pane->filePanel(), nullptr);
+            QTimer::singleShot(10, pane->filePanel(), [pane] {
+                pane->filePanel()->setFocus();
+                pane->pathEdit()->setSelection(0,0);
+            });
+        }
+    });
+    connect(m_rightTabs, &QTabWidget::currentChanged, this, [this](int index) {
+        updateStorageInfoToolbar();
+        if (auto* pane = qobject_cast<FilePaneWidget*>(m_rightTabs->widget(index))) {
+            pane->filePanel()->doRefresh(pane->filePanel(), nullptr);
+            QTimer::singleShot(10, pane->filePanel(), [pane] {
+                pane->filePanel()->setFocus();
+                pane->pathEdit()->setSelection(0,0);
+            });
+        }
+    });
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event)
