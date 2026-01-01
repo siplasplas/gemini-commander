@@ -83,8 +83,8 @@ private:
 
     void createMountsToolbar();
     void createNewDirectory(QWidget *dialogParent);
-    void selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString &relativeName);
-    void selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath);
+    void selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString &srcName, const QString &relativeName);
+    void selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString &srcPath, const QString& selectedPath);
     void selectNameAfterDelete(FilePanel *srcPanel, FilePanel *dstPanel, const QString &deletedName);
     FileOperations::Params askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove);
 

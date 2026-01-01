@@ -225,7 +225,10 @@ bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     if (panel) {
         auto params = askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
-        selectPathAfterFileOperation(panel, oppositeFilePanel(), selected_path);
+        QString srcPath;
+        if (params.names.size() == 1)
+            srcPath = params.names[0];
+        selectNameAfterFileOperation(panel, oppositeFilePanel(), srcPath, selected_path);
     }
     return true;
 }
@@ -237,7 +240,10 @@ bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     if (panel) {
         auto params = askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
-        selectPathAfterFileOperation(panel, oppositeFilePanel(), selected_path);
+        QString srcPath;
+        if (params.names.size() == 1)
+            srcPath = params.names[0];
+        selectNameAfterFileOperation(panel, oppositeFilePanel(), srcPath, selected_path);
     }
     return true;
 }
@@ -710,7 +716,10 @@ bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     if (panel) {
         auto params = askForFileOperation(panel, false, true);  // inPlace=false, isMove=true
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
-        selectPathAfterFileOperation(panel, oppositeFilePanel(), selected_path);
+        QString srcPath;
+        if (params.names.size() == 1)
+            srcPath = params.names[0];
+        selectNameAfterFileOperation(panel, oppositeFilePanel(), srcPath, selected_path);
     }
     return true;
 }
@@ -722,7 +731,10 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
     if (panel) {
         auto params = askForFileOperation(panel, true, true);  // inPlace=true, isMove=true
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
-        selectPathAfterFileOperation(panel, oppositeFilePanel(), selected_path);
+        QString srcPath;
+        if (params.names.size() == 1)
+            srcPath = params.names[0];
+        selectNameAfterFileOperation(panel, oppositeFilePanel(), srcPath, selected_path);
     }
     return true;
 }

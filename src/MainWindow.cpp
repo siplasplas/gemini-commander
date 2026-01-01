@@ -1360,25 +1360,28 @@ void MainWindow::createNewDirectory(QWidget *dialogParent) {
         QMessageBox::warning(parent, tr("Error"), tr("Failed to create directory."));
         return;
     }
-    selectPathAfterFileOperation(panel, nullptr, fullPath);
+    selectPathAfterFileOperation(panel, nullptr, fullPath, fullPath);
 }
 
-void MainWindow::selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& relativeName) {
+void MainWindow::selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString &srcName, const QString& relativeName) {
+    QString srcPath = QDir(srcPanel->currentPath).absoluteFilePath(srcName);
     QString fullPath = QDir(srcPanel->currentPath).absoluteFilePath(relativeName);
-    selectPathAfterFileOperation(srcPanel, dstPanel, fullPath);
+    selectPathAfterFileOperation(srcPanel, dstPanel, srcPath, fullPath);
 }
 
-void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath)
+void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString &srcPath, const QString& selectedPath)
 {
     // Suppress QFileSystemWatcher reload - we handle it ourselves
     m_suppressDirWatcher = true;
+    QString srcCanonical = QDir::cleanPath(srcPath);
     QString selCanonical = QDir::cleanPath(selectedPath);
 
+    bool srcHasSelected = false;
     srcPanel->loadDirectory();
     if (!selectedPath.isEmpty()) {
         QDir srcDir(srcPanel->currentPath);
-        QString srcCanonical = QDir::cleanPath(srcPanel->currentPath);
-        if (selCanonical.startsWith(srcCanonical + "/") || selCanonical == srcCanonical) {
+        QString dirCanonical = QDir::cleanPath(srcPanel->currentPath);
+        if (srcCanonical.startsWith(dirCanonical + "/") || srcCanonical == dirCanonical) {
             QString relPath = srcDir.relativeFilePath(selectedPath);
             srcPanel->selectEntryByRelPath(relPath);
             QTimer::singleShot(50, this, [this, srcPanel]() {
@@ -1386,22 +1389,23 @@ void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *ds
                 srcPanel->setFocus();
                 srcPanel->restoreSelectionFromMemory();
             });
-            return;
+            srcHasSelected = true;
         }
     }
     if (dstPanel) {
         dstPanel->loadDirectory();
         if (!selectedPath.isEmpty()) {
             QDir dstDir(dstPanel->currentPath);
-            QString dstCanonical = QDir::cleanPath(dstPanel->currentPath);
-            if (selCanonical.startsWith(dstCanonical + "/") || selCanonical == dstCanonical) {
+            QString dirCanonical = QDir::cleanPath(dstPanel->currentPath);
+            if (selCanonical.startsWith(dirCanonical + "/") || selCanonical == dirCanonical) {
                 QString relPath = dstDir.relativeFilePath(selectedPath);
                 dstPanel->selectEntryByRelPath(relPath);
-                QTimer::singleShot(50, this, [this, dstPanel]() {
-                    m_suppressDirWatcher = false;
-                    dstPanel->setFocus();
-                    dstPanel->restoreSelectionFromMemory();
-                });
+                if (!srcHasSelected)
+                    QTimer::singleShot(50, this, [this, dstPanel]() {
+                        m_suppressDirWatcher = false;
+                        dstPanel->setFocus();
+                        dstPanel->restoreSelectionFromMemory();
+                    });
                 return;
             }
         }
