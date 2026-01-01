@@ -33,8 +33,6 @@
 # LATER (Nice-to-Have / Advanced)
 
 * **Advanced operations**
-    * Multi-rename (Ctrl+M).
-    * Directory comparison and synchronization.
     * File attribute editing (permissions, hidden).
     * Proper handling of symbolic links.
 * 
