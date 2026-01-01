@@ -184,25 +184,43 @@ void ViewerWidget::showTextView()
 
     qint64 fileSize = m_file->size();
 
+    // Virtual file (size 0) - try readAll(), then decide based on content size
+    if (fileSize == 0) {
+        m_virtualFileContent = m_file->readAll();
+        if (m_virtualFileContent.isEmpty()) {
+            auto* label = new QLabel(tr("(empty file)"), this);
+            label->setAlignment(Qt::AlignCenter);
+            m_layout->addWidget(label);
+            return;
+        }
+        fileSize = m_virtualFileContent.size();
+    }
+
     // Calculate effective threshold: min(config threshold, 10% of RAM)
     double configThresholdMB = Config::instance().kteThresholdMB();
     auto configThresholdBytes = static_cast<qint64>(configThresholdMB * 1024.0 * 1024.0);
     qint64 ramLimitBytes = getSystemRamBytes() / 10;  // 10% of RAM
     qint64 effectiveThreshold = qMin(configThresholdBytes, ramLimitBytes);
 
-    // Large files (> threshold): use wid::TextViewer (memory-mapped, requires size > 0)
+    // Large files (> threshold): use wid::TextViewer
     if (fileSize > effectiveThreshold) {
-        uchar* addr = m_file->map(0, fileSize);
-        if (!addr) {
-            auto* label = new QLabel(tr("Cannot map file:\n%1").arg(m_currentFile), this);
-            label->setAlignment(Qt::AlignCenter);
-            m_layout->addWidget(label);
-            return;
+        uchar* addr = nullptr;
+        if (!m_virtualFileContent.isEmpty()) {
+            // Virtual file already read
+            addr = reinterpret_cast<uchar*>(m_virtualFileContent.data());
+        } else {
+            // Regular file - use mmap
+            addr = m_file->map(0, fileSize);
+            if (!addr) {
+                auto* label = new QLabel(tr("Cannot map file:\n%1").arg(m_currentFile), this);
+                label->setAlignment(Qt::AlignCenter);
+                m_layout->addWidget(label);
+                return;
+            }
         }
         createTextViewer(addr, fileSize);
     } else {
-        // Small files (<= threshold) or virtual files (size 0): use KTextEditor
-        // KTextEditor can read virtual files like /proc/* that report size 0
+        // Small files (<= threshold): use KTextEditor
         createKTextEditorView(m_currentFile);
     }
 }
@@ -213,10 +231,16 @@ void ViewerWidget::showHexView()
         return;
 
     if (m_file->size() == 0) {
-        // Hex view requires mmap, can't work with virtual files (size 0)
-        auto* label = new QLabel(tr("(empty or virtual file - hex view unavailable)"), this);
-        label->setAlignment(Qt::AlignCenter);
-        m_layout->addWidget(label);
+        // Virtual file (like /proc/*) - try readAll()
+        m_virtualFileContent = m_file->readAll();
+        if (m_virtualFileContent.isEmpty()) {
+            auto* label = new QLabel(tr("(empty file)"), this);
+            label->setAlignment(Qt::AlignCenter);
+            m_layout->addWidget(label);
+            return;
+        }
+        createHexViewer(reinterpret_cast<uchar*>(m_virtualFileContent.data()),
+                        m_virtualFileContent.size());
         return;
     }
 
@@ -328,6 +352,9 @@ void ViewerWidget::clearViewer()
         delete m_hexViewer;
         m_hexViewer = nullptr;
     }
+
+    // Clear virtual file content buffer
+    m_virtualFileContent.clear();
 
     // Also remove any labels
     while (m_layout->count() > 0) {

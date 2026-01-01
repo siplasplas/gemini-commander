@@ -52,6 +52,7 @@ private:
     void clearViewer();
 
     std::unique_ptr<QFile> m_file;
+    QByteArray m_virtualFileContent;  // For virtual files read via readAll()
     wid::TextViewer* m_textViewer = nullptr;
     KTextEditor::Document* m_kteDocument = nullptr;
     KTextEditor::View* m_kteView = nullptr;
