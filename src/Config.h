@@ -158,6 +158,8 @@ public:
   // Compare directories settings
   bool compareIgnoreTime() const { return m_compareIgnoreTime; }
   void setCompareIgnoreTime(bool ignore) { m_compareIgnoreTime = ignore; }
+  bool compareIgnoreSize() const { return m_compareIgnoreSize; }
+  void setCompareIgnoreSize(bool ignore) { m_compareIgnoreSize = ignore; }
 
 private:
   Config()
@@ -220,8 +222,9 @@ private:
   // Storage size format (mount toolbars, free/total) - default: Decimal
   SizeFormat::SizeKind m_storageSizeFormat = SizeFormat::Decimal;
 
-  // Compare directories settings - default: ignore time (compare only by size)
-  bool m_compareIgnoreTime = true;
+  // Compare directories settings
+  bool m_compareIgnoreTime = false;
+  bool m_compareIgnoreSize = false;
 };
 
 #endif

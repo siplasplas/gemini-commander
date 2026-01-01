@@ -606,6 +606,17 @@ void ConfigDialog::createGeneralPage()
 
     layout->addWidget(behaviorGroup);
 
+    // Compare directories settings
+    auto* compareGroup = new QGroupBox(tr("Compare Directories"), page);
+    auto* compareLayout = new QVBoxLayout(compareGroup);
+
+    m_compareIgnoreTime = new QCheckBox(tr("Ignore modification time"), compareGroup);
+    m_compareIgnoreSize = new QCheckBox(tr("Ignore file size"), compareGroup);
+    compareLayout->addWidget(m_compareIgnoreTime);
+    compareLayout->addWidget(m_compareIgnoreSize);
+
+    layout->addWidget(compareGroup);
+
     // Toolbar reset
     auto* toolbarGroup = new QGroupBox(tr("Toolbars"), page);
     auto* toolbarLayout = new QVBoxLayout(toolbarGroup);
@@ -702,6 +713,10 @@ void ConfigDialog::loadSettings()
     int storageSizeFormatIdx = m_storageSizeFormat->findData(static_cast<int>(cfg.storageSizeFormat()));
     if (storageSizeFormatIdx >= 0)
         m_storageSizeFormat->setCurrentIndex(storageSizeFormatIdx);
+
+    // Compare directories settings
+    m_compareIgnoreTime->setChecked(cfg.compareIgnoreTime());
+    m_compareIgnoreSize->setChecked(cfg.compareIgnoreSize());
 }
 
 void ConfigDialog::saveSettings()
@@ -765,6 +780,10 @@ void ConfigDialog::saveSettings()
     // Storage size format
     int storageSizeFormatValue = m_storageSizeFormat->currentData().toInt();
     cfg.setStorageSizeFormat(static_cast<SizeFormat::SizeKind>(storageSizeFormatValue));
+
+    // Compare directories settings
+    cfg.setCompareIgnoreTime(m_compareIgnoreTime->isChecked());
+    cfg.setCompareIgnoreSize(m_compareIgnoreSize->isChecked());
 
     // Save to file
     cfg.save();

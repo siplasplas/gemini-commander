@@ -134,6 +134,8 @@ bool Config::load(const QString& path)
                 m_confirmExit = *confirm;
             if (auto ignoreTime = general["compare_ignore_time"].value<bool>())
                 m_compareIgnoreTime = *ignoreTime;
+            if (auto ignoreSize = general["compare_ignore_size"].value<bool>())
+                m_compareIgnoreSize = *ignoreSize;
         }
 
         // [window] section
@@ -414,6 +416,7 @@ bool Config::save() const
     toml::table generalTbl;
     generalTbl.insert("confirm_exit", m_confirmExit);
     generalTbl.insert("compare_ignore_time", m_compareIgnoreTime);
+    generalTbl.insert("compare_ignore_size", m_compareIgnoreSize);
     tbl.insert("general", generalTbl);
 
     // [window] section

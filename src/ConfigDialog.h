@@ -123,4 +123,6 @@ private:
     QPushButton* m_resetToolbarBtn;
     QComboBox* m_sizeFormat;
     QComboBox* m_storageSizeFormat;
+    QCheckBox* m_compareIgnoreTime;
+    QCheckBox* m_compareIgnoreSize;
 };

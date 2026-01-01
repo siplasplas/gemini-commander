@@ -129,6 +129,7 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
 
     // Compare files
     bool ignoreTime = Config::instance().compareIgnoreTime();
+    bool ignoreSize = Config::instance().compareIgnoreSize();
     int markedCount = 0;
     int offset = 1;  // Account for [..] entry
 
@@ -151,8 +152,8 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
 
             bool different = false;
 
-            // Compare size
-            if (leftEntry.info.size() != rightEntry.info.size()) {
+            // Compare size (if not ignored)
+            if (!ignoreSize && leftEntry.info.size() != rightEntry.info.size()) {
                 different = true;
             }
 
