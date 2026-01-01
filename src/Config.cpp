@@ -136,6 +136,15 @@ bool Config::load(const QString& path)
                 m_compareIgnoreTime = *ignoreTime;
             if (auto ignoreSize = general["compare_ignore_size"].value<bool>())
                 m_compareIgnoreSize = *ignoreSize;
+            if (auto copyMode = general["copy_mode"].value<std::string_view>()) {
+                QString mode = QString::fromUtf8(copyMode->data(), static_cast<int>(copyMode->size()));
+                if (mode == "system") m_copyMode = CopyMode::System;
+                else if (mode == "chunked") m_copyMode = CopyMode::Chunked;
+                else if (mode == "chunked_sha") m_copyMode = CopyMode::ChunkedSha;
+                else if (mode == "chunked_sync") m_copyMode = CopyMode::ChunkedSync;
+            }
+            if (auto threshold = general["large_file_threshold"].value<int64_t>())
+                m_largeFileThreshold = *threshold;
         }
 
         // [window] section
@@ -417,6 +426,15 @@ bool Config::save() const
     generalTbl.insert("confirm_exit", m_confirmExit);
     generalTbl.insert("compare_ignore_time", m_compareIgnoreTime);
     generalTbl.insert("compare_ignore_size", m_compareIgnoreSize);
+    const char* copyModeStr = "chunked_sha";
+    switch (m_copyMode) {
+        case CopyMode::System: copyModeStr = "system"; break;
+        case CopyMode::Chunked: copyModeStr = "chunked"; break;
+        case CopyMode::ChunkedSha: copyModeStr = "chunked_sha"; break;
+        case CopyMode::ChunkedSync: copyModeStr = "chunked_sync"; break;
+    }
+    generalTbl.insert("copy_mode", copyModeStr);
+    generalTbl.insert("large_file_threshold", static_cast<int64_t>(m_largeFileThreshold));
     tbl.insert("general", generalTbl);
 
     // [window] section

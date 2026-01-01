@@ -1,14 +1,23 @@
 #include "FileOperations.h"
+#include "Config.h"
 #include "FileOperationProgressDialog.h"
 #include "SortedDirIterator.h"
 #include "quitls.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProgressDialog>
+
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 #include <limits>
 
@@ -29,7 +38,107 @@ QMessageBox::StandardButton askOverwriteSingle(QWidget *parent, const QString &n
     return reply;
 }
 
+// Copy file in chunks with optional SHA-256 verification and sync per chunk
+bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mode) {
+    QFile srcFile(srcPath);
+    if (!srcFile.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+                             QObject::tr("Failed to open source file:\n%1").arg(srcPath));
+        return false;
+    }
+
+    QFile dstFile(dstPath);
+    if (!dstFile.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+                             QObject::tr("Failed to create destination file:\n%1").arg(dstPath));
+        return false;
+    }
+
+    constexpr qint64 chunkSize = 64 * 1024; // 64KB chunks
+    QByteArray buffer;
+    QCryptographicHash srcHash(QCryptographicHash::Sha256);
+    bool useSha = (mode == CopyMode::ChunkedSha);
+    bool useSync = (mode == CopyMode::ChunkedSync);
+
+    while (!srcFile.atEnd()) {
+        buffer = srcFile.read(chunkSize);
+        if (buffer.isEmpty() && !srcFile.atEnd()) {
+            QMessageBox::warning(nullptr, QObject::tr("Error"),
+                                 QObject::tr("Failed to read from source file:\n%1").arg(srcPath));
+            dstFile.remove();
+            return false;
+        }
+
+        if (useSha)
+            srcHash.addData(buffer);
+
+        if (dstFile.write(buffer) != buffer.size()) {
+            QMessageBox::warning(nullptr, QObject::tr("Error"),
+                                 QObject::tr("Failed to write to destination file:\n%1").arg(dstPath));
+            dstFile.remove();
+            return false;
+        }
+
+        if (useSync) {
+            dstFile.flush();
+#ifdef _WIN32
+            FlushFileBuffers(reinterpret_cast<HANDLE>(_get_osfhandle(dstFile.handle())));
+#else
+            fsync(dstFile.handle());
+#endif
+        }
+
+        QCoreApplication::processEvents();
+    }
+
+    srcFile.close();
+    dstFile.close();
+
+    // Verify SHA-256 if enabled
+    if (useSha) {
+        // Read back the destination file to compute its hash
+        QFile dstCheck(dstPath);
+        if (!dstCheck.open(QIODevice::ReadOnly)) {
+            QMessageBox::warning(nullptr, QObject::tr("Error"),
+                                 QObject::tr("Failed to verify destination file:\n%1").arg(dstPath));
+            return false;
+        }
+
+        QCryptographicHash dstHash(QCryptographicHash::Sha256);
+        while (!dstCheck.atEnd()) {
+            buffer = dstCheck.read(chunkSize);
+            dstHash.addData(buffer);
+            QCoreApplication::processEvents();
+        }
+        dstCheck.close();
+
+        if (srcHash.result() != dstHash.result()) {
+            QMessageBox::warning(nullptr, QObject::tr("Error"),
+                                 QObject::tr("SHA-256 verification failed!\n"
+                                             "Source and destination files do not match:\n%1").arg(dstPath));
+            QFile::remove(dstPath);
+            return false;
+        }
+    }
+
+    finalizeCopiedFile(srcPath, dstPath);
+    return true;
+}
+
 bool copyFile(const QString &srcPath, const QString &dstPath) {
+    const auto& cfg = Config::instance();
+    QFileInfo srcInfo(srcPath);
+    qint64 fileSize = srcInfo.size();
+
+    // For files larger than threshold, use configured copy mode
+    if (fileSize > cfg.largeFileThreshold()) {
+        CopyMode mode = cfg.copyMode();
+        if (mode != CopyMode::System) {
+            return copyFileChunked(srcPath, dstPath, mode);
+        }
+    }
+
+    // Default: use system copy
     if (!QFile::copy(srcPath, dstPath)) {
         QMessageBox::warning(nullptr, QObject::tr("Error"),
                              QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));

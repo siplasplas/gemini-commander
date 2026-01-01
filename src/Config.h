@@ -13,6 +13,14 @@ struct FavoriteDir {
   QString group;
 };
 
+// Large file copy mode
+enum class CopyMode {
+    System,         // QFile::copy(), no progress
+    Chunked,        // Chunked with progress, no SHA, no sync per chunk
+    ChunkedSha,     // Chunked with SHA at end (fast if RAM > file size)
+    ChunkedSync     // Chunked with sync per chunk (honest progress, slower)
+};
+
 // Toolbar dock area
 enum class ToolbarArea {
     Top,
@@ -161,6 +169,12 @@ public:
   bool compareIgnoreSize() const { return m_compareIgnoreSize; }
   void setCompareIgnoreSize(bool ignore) { m_compareIgnoreSize = ignore; }
 
+  // Large file copy mode
+  CopyMode copyMode() const { return m_copyMode; }
+  void setCopyMode(CopyMode mode) { m_copyMode = mode; }
+  qint64 largeFileThreshold() const { return m_largeFileThreshold; }
+  void setLargeFileThreshold(qint64 bytes) { m_largeFileThreshold = bytes; }
+
 private:
   Config()
       : m_leftColumns(defaultColumns())
@@ -225,6 +239,10 @@ private:
   // Compare directories settings
   bool m_compareIgnoreTime = false;
   bool m_compareIgnoreSize = false;
+
+  // Large file copy settings
+  CopyMode m_copyMode = CopyMode::ChunkedSha;  // Default: chunked with SHA
+  qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MB
 };
 
 #endif

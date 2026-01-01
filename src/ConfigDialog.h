@@ -125,4 +125,8 @@ private:
     QComboBox* m_storageSizeFormat;
     QCheckBox* m_compareIgnoreTime;
     QCheckBox* m_compareIgnoreSize;
+
+    // Copy settings
+    QComboBox* m_copyMode;
+    QSpinBox* m_largeFileThreshold;
 };

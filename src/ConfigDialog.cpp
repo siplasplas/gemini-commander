@@ -617,6 +617,25 @@ void ConfigDialog::createGeneralPage()
 
     layout->addWidget(compareGroup);
 
+    // Large file copy settings
+    auto* copyGroup = new QGroupBox(tr("Large File Copy (>threshold)"), page);
+    auto* copyLayout = new QFormLayout(copyGroup);
+
+    m_copyMode = new QComboBox(copyGroup);
+    m_copyMode->addItem(tr("System (no progress)"), static_cast<int>(CopyMode::System));
+    m_copyMode->addItem(tr("Chunked with progress"), static_cast<int>(CopyMode::Chunked));
+    m_copyMode->addItem(tr("Chunked + SHA-256 verification"), static_cast<int>(CopyMode::ChunkedSha));
+    m_copyMode->addItem(tr("Chunked + sync per chunk (slow but no progress freeze)"), static_cast<int>(CopyMode::ChunkedSync));
+    copyLayout->addRow(tr("Copy mode:"), m_copyMode);
+
+    m_largeFileThreshold = new QSpinBox(copyGroup);
+    m_largeFileThreshold->setRange(1, 1000);
+    m_largeFileThreshold->setSuffix(" MB");
+    m_largeFileThreshold->setValue(5);
+    copyLayout->addRow(tr("Large file threshold:"), m_largeFileThreshold);
+
+    layout->addWidget(copyGroup);
+
     // Toolbar reset
     auto* toolbarGroup = new QGroupBox(tr("Toolbars"), page);
     auto* toolbarLayout = new QVBoxLayout(toolbarGroup);
@@ -717,6 +736,12 @@ void ConfigDialog::loadSettings()
     // Compare directories settings
     m_compareIgnoreTime->setChecked(cfg.compareIgnoreTime());
     m_compareIgnoreSize->setChecked(cfg.compareIgnoreSize());
+
+    // Copy settings
+    int copyModeIdx = m_copyMode->findData(static_cast<int>(cfg.copyMode()));
+    if (copyModeIdx >= 0)
+        m_copyMode->setCurrentIndex(copyModeIdx);
+    m_largeFileThreshold->setValue(static_cast<int>(cfg.largeFileThreshold() / (1024 * 1024)));
 }
 
 void ConfigDialog::saveSettings()
@@ -784,6 +809,11 @@ void ConfigDialog::saveSettings()
     // Compare directories settings
     cfg.setCompareIgnoreTime(m_compareIgnoreTime->isChecked());
     cfg.setCompareIgnoreSize(m_compareIgnoreSize->isChecked());
+
+    // Copy settings
+    int copyModeValue = m_copyMode->currentData().toInt();
+    cfg.setCopyMode(static_cast<CopyMode>(copyModeValue));
+    cfg.setLargeFileThreshold(static_cast<qint64>(m_largeFileThreshold->value()) * 1024 * 1024);
 
     // Save to file
     cfg.save();
