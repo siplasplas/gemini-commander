@@ -528,6 +528,12 @@ void MainWindow::setupUi() {
 
             // Install event filter on path edit
             pane->pathEdit()->installEventFilter(this);
+
+            // Update Quick View in opposite panel when selection changes
+            connect(pane->filePanel()->selectionModel(), &QItemSelectionModel::currentChanged,
+                    this, [this, side]() {
+                onPanelSelectionChanged(side);
+            });
         }
 
         tabWidget->setCurrentIndex(selectedIndex);
@@ -1403,6 +1409,36 @@ void MainWindow::showFileInfo()
     info += tr("On disk: %1 B (%2)").arg(diskBytes, diskHuman);
 
     QMessageBox::information(this, title, info);
+}
+
+void MainWindow::onPanelSelectionChanged(Side side)
+{
+    // Only react if this is the active panel and Quick View is active in opposite
+    if (side != m_activeSide)
+        return;
+
+    FilePaneWidget* oppPane = paneForSide(opposite(side));
+    if (!oppPane || !oppPane->isQuickViewActive())
+        return;
+
+    // Get current entry from active panel
+    FilePanel* panel = filePanelForSide(side);
+    if (!panel)
+        return;
+
+    auto [entry, row] = panel->currentEntryRow();
+    QString path;
+    if (row == 0) {
+        // ".." - show current directory info
+        path = panel->currentPath;
+    } else if (entry) {
+        path = entry->info.absoluteFilePath();
+    } else {
+        return;
+    }
+
+    // Update Quick View with new path
+    oppPane->showQuickView(path);
 }
 
 void MainWindow::createMountsToolbar()

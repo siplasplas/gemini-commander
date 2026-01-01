@@ -477,9 +477,10 @@ void FilePaneWidget::showQuickView(const QString& path)
             if (m_viewedFile->size() > 0) {
                 uchar* addr = m_viewedFile->map(0, m_viewedFile->size());
                 if (addr) {
-                    if (m_embeddedViewer)
+                    if (m_embeddedViewer) {
                         m_embeddedViewer->setData(reinterpret_cast<char*>(addr), m_viewedFile->size());
-                    else {
+                        m_embeddedViewer->show();
+                    } else {
                         // Lazy create embedded viewer
                         m_embeddedViewer = new wid::TextViewer(reinterpret_cast<char*>(addr), m_viewedFile->size(), this);
                         m_stackedWidget->addWidget(m_embeddedViewer);  // Index 1
