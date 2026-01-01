@@ -6,18 +6,33 @@
 #include <QLabel>
 #include <QStringList>
 #include <QToolButton>
+#include <QStackedWidget>
+#include <QFile>
+#include <memory>
 
 #include "FilePanel.h"
+
+namespace wid { class TextViewer; }
+class SizeCalculationWidget;
 
 class SearchEdit;
 class FilePaneWidget : public QWidget
 {
   Q_OBJECT
 public:
+  enum class QuickViewState { Normal, FileViewer, SizeCalculation };
+
   FilePaneWidget(Side side, QWidget* parent = nullptr);
+  ~FilePaneWidget() override;
 
   FilePanel* filePanel() const { return m_filePanel; }
   QLineEdit* pathEdit() const { return m_pathEdit; }
+
+  // Quick View methods
+  void showQuickView(const QString& path);
+  void hideQuickView();
+  bool isQuickViewActive() const { return m_quickViewState != QuickViewState::Normal; }
+  QuickViewState quickViewState() const { return m_quickViewState; }
 
   void setCurrentPath(const QString& path);
   QString currentPath() const;
@@ -56,6 +71,13 @@ private:
   QLabel*    m_statusLabel = nullptr;
 
   SearchEdit* m_searchEdit = nullptr;
+
+  // Quick View components
+  QStackedWidget* m_stackedWidget = nullptr;
+  wid::TextViewer* m_embeddedViewer = nullptr;
+  SizeCalculationWidget* m_sizeWidget = nullptr;
+  std::unique_ptr<QFile> m_viewedFile;
+  QuickViewState m_quickViewState = QuickViewState::Normal;
 
   void updateStatusLabel();
 

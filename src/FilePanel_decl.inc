@@ -11,7 +11,6 @@
     Q_INVOKABLE bool doJumpDownToFiles(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doJumpUpToDirectories(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doOccupiedSpace(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doQuickView(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doRefresh(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doRestoreSelection(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSelectAll(QObject *obj, QKeyEvent *keyEvent);

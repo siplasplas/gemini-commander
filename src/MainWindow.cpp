@@ -952,6 +952,16 @@ void MainWindow::setupUi() {
         showToolbarContextMenu(menuBar()->mapToGlobal(pos));
     });
 
+    // Show menu - Quick View
+    QAction* quickViewAction = new QAction(tr("Quick View"), this);
+    quickViewAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q));
+    connect(quickViewAction, &QAction::triggered, this, [this]() {
+        doQuickView(nullptr, nullptr);
+    });
+    showMenu->addAction(quickViewAction);
+
+    showMenu->addSeparator();
+
     // View menu - Function Bar toggle
     m_showFunctionBarAction = new QAction(tr("Show Function Bar"), this);
     m_showFunctionBarAction->setCheckable(true);

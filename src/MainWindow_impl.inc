@@ -1096,6 +1096,39 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+bool MainWindow::doQuickView(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    // Get opposite pane widget
+    FilePaneWidget* oppPane = paneForSide(opposite(m_activeSide));
+    if (!oppPane)
+        return true;
+
+    // Toggle behavior
+    if (oppPane->isQuickViewActive()) {
+        oppPane->hideQuickView();
+        return true;
+    }
+
+    // Get current entry from THIS panel (where cursor is)
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return true;
+
+    QString path;
+    auto [entry, row] = panel->currentEntryRow();
+    if (row == 0)
+        path = currentPanelPath();
+    else if (row > 0)
+        path = entry->info.absoluteFilePath();
+    else
+        return true;
+
+    oppPane->showQuickView(path);
+    return true;
+}
+
 bool MainWindow::doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel)

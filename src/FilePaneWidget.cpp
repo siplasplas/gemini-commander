@@ -2,6 +2,7 @@
 #include "SearchEdit.h"
 #include "SizeFormat.h"
 #include "Config.h"
+#include "widgets/SizeCalculationWidget.h"
 
 #include <QItemSelectionModel>
 #include <QStandardItemModel>
@@ -15,6 +16,7 @@
 
 #include "keys/ObjectRegistry.h"
 #include "quitls.h"
+#include "wid/TextViewer.h"
 
 FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     : m_side(side), QWidget(parent)
@@ -65,8 +67,13 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     m_statusLabel->setStyleSheet("QLabel { padding: 2px 6px; }");
     m_statusLabel->setText(QString());
 
+    // Create stacked widget for FilePanel and Quick View modes
+    m_stackedWidget = new QStackedWidget(this);
+    m_stackedWidget->addWidget(m_filePanel);  // Index 0: FilePanel (default)
+    // Index 1 and 2 will be created lazily for viewer and size widget
+
     layout->addLayout(pathLayout);
-    layout->addWidget(m_filePanel);
+    layout->addWidget(m_stackedWidget);
     layout->addWidget(m_searchEdit);
     layout->addWidget(m_statusLabel);
 
@@ -452,4 +459,61 @@ bool FilePaneWidget::doNavigateOrRestore(QObject *obj, QKeyEvent *keyEvent)
     }
 
     return true;
+}
+
+FilePaneWidget::~FilePaneWidget()
+{
+    hideQuickView();
+}
+
+void FilePaneWidget::showQuickView(const QString& path)
+{
+    QFileInfo info(path);
+
+    if (info.isFile()) {
+        // Open and map file
+        m_viewedFile = std::make_unique<QFile>(path);
+        if (m_viewedFile->open(QIODevice::ReadOnly)) {
+            if (m_viewedFile->size() > 0) {
+                uchar* addr = m_viewedFile->map(0, m_viewedFile->size());
+                if (addr) {
+                    if (m_embeddedViewer)
+                        m_embeddedViewer->setData(reinterpret_cast<char*>(addr), m_viewedFile->size());
+                    else {
+                        // Lazy create embedded viewer
+                        m_embeddedViewer = new wid::TextViewer(reinterpret_cast<char*>(addr), m_viewedFile->size(), this);
+                        m_stackedWidget->addWidget(m_embeddedViewer);  // Index 1
+                    }
+                }
+            } else {
+                if (m_embeddedViewer)
+                    m_embeddedViewer->hide();
+            }
+        }
+
+        m_stackedWidget->setCurrentWidget(m_embeddedViewer);
+        m_quickViewState = QuickViewState::FileViewer;
+
+    } else if (info.isDir()) {
+        // Lazy create size widget
+        if (!m_sizeWidget) {
+            m_sizeWidget = new SizeCalculationWidget(this);
+            m_stackedWidget->addWidget(m_sizeWidget);  // Index 2
+        }
+
+        m_sizeWidget->startCalculation(path);
+        m_stackedWidget->setCurrentWidget(m_sizeWidget);
+        m_quickViewState = QuickViewState::SizeCalculation;
+    }
+}
+
+void FilePaneWidget::hideQuickView()
+{
+    if (m_quickViewState == QuickViewState::SizeCalculation && m_sizeWidget) {
+        m_sizeWidget->cancel();
+    }
+
+    m_viewedFile.reset();  // Close file, unmap memory
+    m_stackedWidget->setCurrentIndex(0);  // Back to FilePanel
+    m_quickViewState = QuickViewState::Normal;
 }

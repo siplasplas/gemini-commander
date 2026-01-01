@@ -207,13 +207,6 @@ bool FilePanel::doOccupiedSpace(QObject *obj, QKeyEvent *keyEvent) {
     return false;
 }
 
-bool FilePanel::doQuickView(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    qDebug() << "handler: doQuickView";
-    return false;
-}
-
 bool FilePanel::doRefresh(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);

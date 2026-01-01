@@ -145,6 +145,64 @@ void calculateEntrySize(const QString& path, CopyStats& stats, quint64 clusterSi
     }
 }
 
+void calculateEntrySizeAtomic(const QString& path, AtomicStats& stats, quint64 clusterSize, std::atomic<bool>* cancelFlag) {
+    if (cancelFlag && cancelFlag->load()) return;
+
+    QFileInfo fi(path);
+    if (!fi.exists()) return;
+
+    // Handle symbolic links first
+    if (fi.isSymLink()) {
+        (*stats.symlinks)++;
+        (*stats.bytesOnDisk) += clusterSize;
+        return;
+    }
+
+    if (fi.isFile()) {
+        (*stats.totalFiles)++;
+        quint64 size = static_cast<quint64>(fi.size());
+        (*stats.totalBytes) += size;
+        (*stats.bytesOnDisk) += (size == 0) ? 0 : roundUpToCluster(size, clusterSize);
+        return;
+    }
+
+    if (fi.isDir()) {
+        (*stats.totalDirs)++;
+#ifndef _WIN32
+        (*stats.totalBytes) += static_cast<quint64>(fi.size());
+#endif
+        (*stats.bytesOnDisk) += calculateDirOnDiskSize(path, fi, clusterSize);
+
+        SortedDirIterator it(path, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+        while (it.hasNext()) {
+            if (cancelFlag && cancelFlag->load()) return;
+
+            it.next();
+            const QString entryPath = it.filePath();
+            const QFileInfo entryInfo = it.fileInfo();
+
+            if (entryInfo.isSymLink()) {
+                (*stats.symlinks)++;
+                (*stats.bytesOnDisk) += clusterSize;
+                continue;
+            }
+
+            if (entryInfo.isFile()) {
+                (*stats.totalFiles)++;
+                quint64 size = static_cast<quint64>(entryInfo.size());
+                (*stats.totalBytes) += size;
+                (*stats.bytesOnDisk) += (size == 0) ? 0 : roundUpToCluster(size, clusterSize);
+            } else if (entryInfo.isDir()) {
+                (*stats.totalDirs)++;
+#ifndef _WIN32
+                (*stats.totalBytes) += static_cast<quint64>(entryInfo.size());
+#endif
+                (*stats.bytesOnDisk) += calculateDirOnDiskSize(entryPath, entryInfo, clusterSize);
+            }
+        }
+    }
+}
+
 void calculateEntriesSize(const QString& basePath, const QStringList& names, CopyStats& stats, bool* cancelFlag) {
     quint64 clusterSize = getClusterSize(basePath);
     QDir dir(basePath);

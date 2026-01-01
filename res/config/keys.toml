@@ -70,8 +70,6 @@ keys = [
 
     { key = "Ctrl+B",              handler = "doBranchViewWithSubdirs" },
 
-    { key = "Ctrl+Q",              handler = "doQuickView" },
-
     { key = "Ctrl+R",              handler = "doRefresh" },
 ]
 
@@ -86,6 +84,7 @@ keys = [
 keys = [
     { key = "Ctrl+T",              handler = "doAddTab" },
     { key = "Ctrl+W",              handler = "doRemoveTab" },
+    { key = "Ctrl+Q",              handler = "doQuickView" },
 
     { key = "Return",                 handler = "doActivate" },
 

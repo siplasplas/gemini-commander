@@ -35,7 +35,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets DBus)
+find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets DBus Concurrent)
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 find_package(PkgConfig REQUIRED)
@@ -121,6 +121,7 @@ add_executable(${PROJECT_NAME}
         src/editor/EditorFrame.h
         src/editor/mainheader.cpp
         src/widgets/mrutabwidget.cpp
+        src/widgets/SizeCalculationWidget.cpp
         src/utils/Ev.cpp
         src/editor/BaseViewer.cpp
         src/editor/BaseViewer.h
@@ -178,6 +179,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         core
         Qt${QT_MAJOR_VERSION}::Widgets
         Qt${QT_MAJOR_VERSION}::DBus
+        Qt${QT_MAJOR_VERSION}::Concurrent
         KF${KF_MAJOR_VERSION}::TextEditor
         KF${KF_MAJOR_VERSION}::CoreAddons
         KF${KF_MAJOR_VERSION}::I18n

@@ -34,5 +34,6 @@
     Q_INVOKABLE bool doSwitchSide(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doTestArchives(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doView(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doQuickView(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doMakeDirectory(QObject *obj, QKeyEvent *keyEvent);

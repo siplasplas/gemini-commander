@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QString>
 #include <QStringList>
+#include <atomic>
 
 class QWidget;
 class QProgressDialog;
@@ -38,6 +39,18 @@ void calculateEntrySize(const QString& path, CopyStats& stats, quint64 clusterSi
 // Calculate size of multiple entries (files/directories) from a list of names
 // basePath is the directory containing the entries
 void calculateEntriesSize(const QString& basePath, const QStringList& names, CopyStats& stats, bool* cancelFlag = nullptr);
+
+// Thread-safe atomic stats for live progress updates
+struct AtomicStats {
+    std::atomic<quint64>* totalFiles;
+    std::atomic<quint64>* totalDirs;
+    std::atomic<quint64>* totalBytes;
+    std::atomic<quint64>* bytesOnDisk;
+    std::atomic<quint64>* symlinks;
+};
+
+// Calculate size with atomic stats for thread-safe progress updates
+void calculateEntrySizeAtomic(const QString& path, AtomicStats& stats, quint64 clusterSize, std::atomic<bool>* cancelFlag);
 
 // Collect statistics about directory to copy (file count, total size)
 void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag = nullptr);
