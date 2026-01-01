@@ -109,9 +109,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUi();
 
+    // Connect signals for all panels
     for (auto* panel : allFilePanels()) {
-        panel->loadDirectory();
-        panel->selectFirstEntry();
         panel->styleInactive();
         // Connect directoryChanged to update the label
         connect(panel, &FilePanel::directoryChanged,
@@ -121,7 +120,20 @@ MainWindow::MainWindow(QWidget *parent)
                 this, &MainWindow::updateStorageInfoToolbar);
     }
 
-    filePanelForSide(Side::Left)->setFocus();
+    // Lazy loading: only load active tabs (2 panels instead of all 8)
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+    FilePanel* rightPanel = filePanelForSide(Side::Right);
+    if (leftPanel) {
+        leftPanel->loadDirectory();
+        leftPanel->selectFirstEntry();
+    }
+    if (rightPanel) {
+        rightPanel->loadDirectory();
+        rightPanel->selectFirstEntry();
+    }
+
+    if (leftPanel)
+        leftPanel->setFocus();
 
     updateCurrentPathLabel();  // initial update
     updateStorageInfoToolbar();  // initial update
@@ -146,6 +158,13 @@ MainWindow::MainWindow(QWidget *parent)
     m_dirWatcher = new QFileSystemWatcher(this);
     connect(m_dirWatcher, &QFileSystemWatcher::directoryChanged,
             this, &MainWindow::onDirectoryChanged);
+
+    // Debounce timer for directory changes (500ms)
+    m_dirChangeDebounceTimer = new QTimer(this);
+    m_dirChangeDebounceTimer->setSingleShot(true);
+    m_dirChangeDebounceTimer->setInterval(350);
+    connect(m_dirChangeDebounceTimer, &QTimer::timeout,
+            this, &MainWindow::processPendingDirChanges);
 
     // Update watched dirs when panels change directory
     for (auto* panel : allFilePanels()) {
@@ -1532,23 +1551,34 @@ void MainWindow::onDirectoryChanged(const QString& path)
     if (m_suppressDirWatcher)
         return;
 
-    // Refresh panels showing this directory
-    // Skip panels in branchMode - they use incremental updates
-    FilePanel* leftPanel = filePanelForSide(Side::Left);
-    FilePanel* rightPanel = filePanelForSide(Side::Right);
-
-    if (leftPanel && leftPanel->currentPath == path && !leftPanel->branchMode) {
-        leftPanel->loadDirectory();
-    }
-    if (rightPanel && rightPanel->currentPath == path && !rightPanel->branchMode) {
-        rightPanel->loadDirectory();
-    }
+    // Add path to pending set and restart debounce timer
+    m_pendingDirChanges.insert(path);
+    m_dirChangeDebounceTimer->start();
 
     // Re-add path to watcher (some systems like Linux inotify remove it after change)
-    // Check if already watched to avoid unnecessary call
     if (m_dirWatcher && QDir(path).exists()) {
         if (!m_dirWatcher->directories().contains(path)) {
             m_dirWatcher->addPath(path);
+        }
+    }
+}
+
+void MainWindow::processPendingDirChanges()
+{
+    // Take pending paths and clear the set
+    QSet<QString> paths = m_pendingDirChanges;
+    m_pendingDirChanges.clear();
+
+    // Refresh panels showing these directories
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+    FilePanel* rightPanel = filePanelForSide(Side::Right);
+
+    for (const QString& path : paths) {
+        if (leftPanel && leftPanel->currentPath == path && !leftPanel->branchMode) {
+            leftPanel->loadDirectory();
+        }
+        if (rightPanel && rightPanel->currentPath == path && !rightPanel->branchMode) {
+            rightPanel->loadDirectory();
         }
     }
 }

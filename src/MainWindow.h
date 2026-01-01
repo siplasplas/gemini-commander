@@ -5,8 +5,10 @@
 
 #include <QMainWindow>
 #include <QPointer>
+#include <QSet>
 #include <QTableView>
 #include <QProgressDialog>
+#include <QTimer>
 #include <QToolButton>
 #include <QFileSystemWatcher>
 
@@ -100,7 +102,10 @@ private:
     // Directory monitoring
     QFileSystemWatcher* m_dirWatcher = nullptr;
     bool m_suppressDirWatcher = false;  // Suppress reload during file operations
+    QTimer* m_dirChangeDebounceTimer = nullptr;
+    QSet<QString> m_pendingDirChanges;  // Paths waiting for debounced reload
     void updateWatchedDirectories();
+    void processPendingDirChanges();
 
     // File monitoring (visible files only)
     QFileSystemWatcher* m_leftFileWatcher = nullptr;
