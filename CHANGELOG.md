@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-01-01
+
+### Added
+- Symbolic link handling for F5/F6 operations:
+  - Same filesystem: symlinks are copied/moved as links (not followed)
+  - Cross-filesystem: symlinks are skipped with info message (exFAT compatibility)
+- Tab switching now refreshes directory contents automatically
+
+### Changed
+- Lazy tab loading: only active tabs are loaded at startup (2 instead of 8)
+- Directory watcher uses 350ms debounce to reduce redundant refreshes
+
+### Fixed
+- Focus correctly set to FilePanel after tab switch
+
 ## [1.4.0] - 2026-01-01
 
 ### Added
