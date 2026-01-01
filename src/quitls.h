@@ -7,6 +7,7 @@
 class QString;
 class QFileInfo;
 
+QString qMakeTempPartPath(const QString& path, bool pathIsDir);
 QString qFormatSize(std::size_t value, SizeFormat::SizeKind format);
 QString formatWithSeparators(std::size_t value);
 

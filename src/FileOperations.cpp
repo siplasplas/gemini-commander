@@ -39,6 +39,7 @@ QMessageBox::StandardButton askOverwriteSingle(QWidget *parent, const QString &n
 }
 
 // Copy file in chunks with optional SHA-256 verification and sync per chunk
+// Uses temp file + atomic rename for safety
 bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mode) {
     QFile srcFile(srcPath);
     if (!srcFile.open(QIODevice::ReadOnly)) {
@@ -47,10 +48,24 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
         return false;
     }
 
+    // Create temp file path in destination directory
+    QString tempPath = qMakeTempPartPath(dstPath, false);
+
+    // Open destination file to reserve the name (prevents race conditions)
     QFile dstFile(dstPath);
     if (!dstFile.open(QIODevice::WriteOnly)) {
         QMessageBox::warning(nullptr, QObject::tr("Error"),
                              QObject::tr("Failed to create destination file:\n%1").arg(dstPath));
+        return false;
+    }
+
+    // Open temp file for actual writing
+    QFile tempFile(tempPath);
+    if (!tempFile.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+                             QObject::tr("Failed to create temp file:\n%1").arg(tempPath));
+        dstFile.close();
+        dstFile.remove();
         return false;
     }
 
@@ -65,6 +80,9 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
         if (buffer.isEmpty() && !srcFile.atEnd()) {
             QMessageBox::warning(nullptr, QObject::tr("Error"),
                                  QObject::tr("Failed to read from source file:\n%1").arg(srcPath));
+            tempFile.close();
+            tempFile.remove();
+            dstFile.close();
             dstFile.remove();
             return false;
         }
@@ -72,19 +90,22 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
         if (useSha)
             srcHash.addData(buffer);
 
-        if (dstFile.write(buffer) != buffer.size()) {
+        if (tempFile.write(buffer) != buffer.size()) {
             QMessageBox::warning(nullptr, QObject::tr("Error"),
-                                 QObject::tr("Failed to write to destination file:\n%1").arg(dstPath));
+                                 QObject::tr("Failed to write to temp file:\n%1").arg(tempPath));
+            tempFile.close();
+            tempFile.remove();
+            dstFile.close();
             dstFile.remove();
             return false;
         }
 
         if (useSync) {
-            dstFile.flush();
+            tempFile.flush();
 #ifdef _WIN32
-            FlushFileBuffers(reinterpret_cast<HANDLE>(_get_osfhandle(dstFile.handle())));
+            FlushFileBuffers(reinterpret_cast<HANDLE>(_get_osfhandle(tempFile.handle())));
 #else
-            fsync(dstFile.handle());
+            fsync(tempFile.handle());
 #endif
         }
 
@@ -92,15 +113,27 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
     }
 
     srcFile.close();
-    dstFile.close();
+    tempFile.close();
 
-    // Verify SHA-256 if enabled
+    // Atomic rename: close and remove empty dest, rename temp to dest
+    dstFile.close();
+    dstFile.remove();
+
+    if (!QFile::rename(tempPath, dstPath)) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+                             QObject::tr("Failed to rename temp file to destination:\n%1\n->\n%2")
+                             .arg(tempPath, dstPath));
+        QFile::remove(tempPath);
+        return false;
+    }
+
+    // Verify SHA-256 if enabled (verify final file after rename)
     if (useSha) {
-        // Read back the destination file to compute its hash
         QFile dstCheck(dstPath);
         if (!dstCheck.open(QIODevice::ReadOnly)) {
             QMessageBox::warning(nullptr, QObject::tr("Error"),
                                  QObject::tr("Failed to verify destination file:\n%1").arg(dstPath));
+            QFile::remove(dstPath);
             return false;
         }
 

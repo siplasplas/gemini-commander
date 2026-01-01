@@ -14,6 +14,10 @@
 #include <unistd.h>
 #endif
 
+QString qMakeTempPartPath(const QString& path, bool pathIsDir) {
+    return QString::fromStdString(utils::makeTempPartPath(path.toStdString(), pathIsDir));
+}
+
 QString qFormatSize(std::size_t value, SizeFormat::SizeKind format) {
     return QString::fromStdString(SizeFormat::formatSize(value, format));
 }

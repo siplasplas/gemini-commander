@@ -57,6 +57,7 @@ std::string escapePathForShell(const std::string& path)
     replaceAll(escaped, "'", "'\\''");
     return "'" + escaped + "'";
 }
+
 std::string makeTempPartPath(const std::string& path, bool pathIsDir)
 {
     static std::atomic<uint32_t> g_seq{0};
