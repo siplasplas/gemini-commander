@@ -3,13 +3,10 @@
 
 #include <QDialog>
 
-class QFile;
-
-namespace wid {
-class TextViewer;
-}
-class Viewer;
+class ViewerWidget;
 class QVBoxLayout;
+class QMenuBar;
+class QAction;
 
 class ViewerFrame : public QDialog
 {
@@ -25,12 +22,20 @@ protected:
     void closeEvent(QCloseEvent *event) override;
     void showEvent(QShowEvent *event) override;
 
+private slots:
+    void onTextModeTriggered();
+    void onHexModeTriggered();
+
 private:
+    void setupMenuBar();
+    void updateMenuChecks();
     void saveGeometryToConfig();
 
-    std::unique_ptr<QFile> file;
-    wid::TextViewer *m_viewer = nullptr;
-    QVBoxLayout *m_layout = nullptr;
+    ViewerWidget* m_viewerWidget = nullptr;
+    QVBoxLayout* m_layout = nullptr;
+    QMenuBar* m_menuBar = nullptr;
+    QAction* m_textAction = nullptr;
+    QAction* m_hexAction = nullptr;
     bool m_geometryRestored = false;
 };
 
