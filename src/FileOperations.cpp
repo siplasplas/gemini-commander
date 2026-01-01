@@ -352,7 +352,10 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         if (progressDlg.wasCanceled())
             break;
     }
-    return {};
+    if (names.size() == 1)
+        return dstPath;
+    else
+        return {};
 }
 
 } // namespace FileOperations

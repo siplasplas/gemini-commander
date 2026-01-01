@@ -1305,6 +1305,9 @@ void MainWindow::createMountsToolbar()
 
 void MainWindow::selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath)
 {
+    // Suppress QFileSystemWatcher reload - we handle it ourselves
+    m_suppressDirWatcher = true;
+
     srcPanel->loadDirectory();
     if (!selectedPath.isEmpty()) {
         QDir srcDir(srcPanel->currentPath);
@@ -1313,6 +1316,12 @@ void MainWindow::selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPan
         if (selCanonical.startsWith(srcCanonical + "/") || selCanonical == srcCanonical) {
             QString relPath = srcDir.relativeFilePath(selectedPath);
             srcPanel->selectEntryByRelPath(relPath);
+            QTimer::singleShot(50, this, [this, srcPanel]() {
+                m_suppressDirWatcher = false;
+                srcPanel->setFocus();
+                srcPanel->restoreSelectionFromMemory();
+            });
+            return;
         }
     }
     if (dstPanel) {
@@ -1324,9 +1333,18 @@ void MainWindow::selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPan
             if (selCanonical.startsWith(dstCanonical + "/") || selCanonical == dstCanonical) {
                 QString relPath = dstDir.relativeFilePath(selectedPath);
                 dstPanel->selectEntryByRelPath(relPath);
+                QTimer::singleShot(50, this, [this, dstPanel]() {
+                    m_suppressDirWatcher = false;
+                    dstPanel->setFocus();
+                    dstPanel->restoreSelectionFromMemory();
+                });
+                return;
             }
         }
     }
+
+    // If no selection was made, still re-enable watcher
+    m_suppressDirWatcher = false;
 }
 
 FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove)
@@ -1494,6 +1512,10 @@ void MainWindow::updateWatchedDirectories()
 
 void MainWindow::onDirectoryChanged(const QString& path)
 {
+    // Skip if we're handling a file operation ourselves
+    if (m_suppressDirWatcher)
+        return;
+
     // Refresh panels showing this directory
     // Skip panels in branchMode - they use incremental updates
     FilePanel* leftPanel = filePanelForSide(Side::Left);

@@ -99,6 +99,7 @@ private:
 
     // Directory monitoring
     QFileSystemWatcher* m_dirWatcher = nullptr;
+    bool m_suppressDirWatcher = false;  // Suppress reload during file operations
     void updateWatchedDirectories();
 
     // File monitoring (visible files only)

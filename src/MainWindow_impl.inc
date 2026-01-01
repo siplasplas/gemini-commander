@@ -223,8 +223,8 @@ bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
-        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
-        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
+        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selected_path);
     }
     return true;
 }
@@ -235,8 +235,8 @@ bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
-        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
-        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
+        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selected_path);
     }
     return true;
 }
@@ -497,8 +497,8 @@ bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, false, true);  // inPlace=false, isMove=true
-        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
-        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
+        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selected_path);
     }
     return true;
 }
@@ -509,8 +509,8 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, true, true);  // inPlace=true, isMove=true
-        auto selectedName = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
-        selectAfterFileOperation(panel, oppositeFilePanel(), selectedName);
+        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this);
+        selectAfterFileOperation(panel, oppositeFilePanel(), selected_path);
     }
     return true;
 }
