@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-01
+
+### Added
+- Progress dialogs for F5 (Copy) and F6 (Move) operations with cancel support
+- Multi-Rename Tool (Ctrl+M) for batch file renaming
+- Compare directories (Shift+F2) in Mark menu
+
+### Changed
+- File operations (copy/move) extracted to separate FileOperations module
+- Selection is restored after file operations (cursor moves to copied/moved file)
+- Shift+F5/F6 for in-place copy/rename operations
+
+### Fixed
+- Correct destination path handling when copying/moving single files
+- Selection no longer lost after copy/move (QFileSystemWatcher conflict resolved)
+- Modal dialogs (overwrite confirmation) now properly handle keyboard input
+- Toolbar visibility safeguard works correctly at startup
+
 ## [1.3.0] - 2025-12-31
 
 ### Added
