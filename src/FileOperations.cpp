@@ -324,7 +324,8 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     QDir srcDir(currentPath);
     FileOperationProgressDialog progressDlg(QObject::tr("Copy"), static_cast<int>(names.size()), parent);
     progressDlg.show();
-    progressDlg.processEvents();
+    progressDlg.activateWindow();
+    qApp->processEvents();
 
     int currentFile = 0;
     QMessageBox::Button askPolice = QMessageBox::Yes;
