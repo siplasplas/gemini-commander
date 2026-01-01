@@ -1342,12 +1342,16 @@ void FilePanel::createNewDirectory(QWidget *dialogParent) {
 
     QWidget *parent = dialogParent ? dialogParent : this;
 
-    bool ok = false;
-    QString name = QInputDialog::getText(parent, tr("Create new directory"), tr("Input new name:"), QLineEdit::Normal,
-                                         suggestedName, &ok);
+    QInputDialog dlg(parent);
+    dlg.setWindowTitle(tr("Create new directory"));
+    dlg.setLabelText(tr("Input new name:"));
+    dlg.setTextValue(suggestedName);
+    dlg.resize(500, dlg.sizeHint().height());
 
-    if (!ok || name.isEmpty())
+    if (dlg.exec() != QDialog::Accepted || dlg.textValue().isEmpty())
         return;
+
+    QString name = dlg.textValue();
 
     if (!dir->mkpath(name)) {
         QMessageBox::warning(parent, tr("Error"), tr("Failed to create directory."));

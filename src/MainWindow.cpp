@@ -1451,11 +1451,16 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
         ? (hasMarked ? tr("Move %1 items to:").arg(markedNames.size()) : tr("Move to:"))
         : (hasMarked ? tr("Copy %1 items to:").arg(markedNames.size()) : tr("Copy to:"));
 
-    bool ok = false;
-    QString destInput = QInputDialog::getText(this, title, label, QLineEdit::Normal, suggested, &ok);
+    QInputDialog dlg(this);
+    dlg.setWindowTitle(title);
+    dlg.setLabelText(label);
+    dlg.setTextValue(suggested);
+    dlg.resize(500, dlg.sizeHint().height());
 
-    if (!ok || destInput.isEmpty())
+    if (dlg.exec() != QDialog::Accepted || dlg.textValue().isEmpty())
         return {};
+
+    QString destInput = dlg.textValue();
 
     FileOperations::Params params;
     params.valid = true;
