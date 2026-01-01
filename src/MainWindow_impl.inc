@@ -264,6 +264,217 @@ bool MainWindow::doCurrentPathToCommandLine(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* panel = currentFilePanel();
+
+    QDir dir(panel->currentPath);
+
+    // Check for marked files
+    QStringList markedPaths = panel->getMarkedRelPaths();
+
+    if (!markedPaths.isEmpty()) {
+        // Delete all marked files permanently
+        QString question = tr("PERMANENTLY delete %1 marked item(s)? This cannot be undone!")
+            .arg(markedPaths.size());
+
+        auto reply = QMessageBox::warning(
+            window(), tr("Permanent Delete"), question,
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+        );
+
+        if (reply != QMessageBox::Yes)
+            return true;
+
+        QStringList failedItems;
+        for (const QString& relPath : markedPaths) {
+            if (relPath == "." || relPath == "..")
+                continue;
+
+            QString fullPath = dir.absoluteFilePath(relPath);
+            QFileInfo info(fullPath);
+            if (!info.exists())
+                continue;
+
+            bool ok = false;
+            if (info.isDir()) {
+                QDir d(fullPath);
+                ok = d.removeRecursively();
+            } else {
+                ok = QFile::remove(fullPath);
+            }
+
+            if (ok) {
+                if (panel->branchMode)
+                    panel->removeEntryByRelPath(relPath);
+            } else {
+                failedItems << relPath;
+            }
+        }
+
+        if (!panel->branchMode)
+            selectNameAfterDelete(panel, oppositeFilePanel(), panel->currentRelPath());
+
+        if (!failedItems.isEmpty()) {
+            QMessageBox::warning(window(), tr("Error"),
+                tr("Could not delete %1 item(s):\n%2")
+                    .arg(failedItems.size())
+                    .arg(failedItems.join("\n")));
+        }
+        return true;
+    }
+
+    // Single file deletion (no marked files)
+    QString name = panel->currentRelPath();
+    if (name.isEmpty())
+        return true;
+
+    QString fullPath = dir.absoluteFilePath(name);
+    QFileInfo info(fullPath);
+    if (!info.exists())
+        return true;
+
+    QString question = tr("PERMANENTLY delete '%1'? This cannot be undone!").arg(name);
+    auto reply = QMessageBox::warning(
+        window(), tr("Permanent Delete"), question,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+    );
+    if (reply != QMessageBox::Yes)
+        return true;
+
+    bool ok = false;
+    if (info.isDir()) {
+        QDir d(fullPath);
+        ok = d.removeRecursively();
+    } else {
+        ok = QFile::remove(fullPath);
+    }
+
+    if (!ok) {
+        QMessageBox::warning(window(), tr("Error"),
+            tr("Could not delete '%1'").arg(name));
+    } else {
+        selectNameAfterDelete(panel, oppositeFilePanel(), fullPath);
+    }
+    return true;
+}
+
+bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* panel = currentFilePanel();
+
+    QDir dir(panel->currentPath);
+
+    // Check for marked files
+    QStringList markedPaths = panel->getMarkedRelPaths();
+
+    if (!markedPaths.isEmpty()) {
+        // Delete all marked files
+        QString question = tr("Delete %1 marked item(s) to trash?").arg(markedPaths.size());
+
+        auto reply = QMessageBox::question(
+            window(), tr("Delete"), question,
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+        );
+
+        if (reply != QMessageBox::Yes)
+            return true;
+
+        QStringList failedItems;
+        for (const QString& relPath : markedPaths) {
+            if (relPath == "." || relPath == "..")
+                continue;
+
+            QString fullPath = dir.absoluteFilePath(relPath);
+            QFileInfo info(fullPath);
+            if (!info.exists())
+                continue;
+
+            bool ok = false;
+            if (info.isDir()) {
+                QDir d(fullPath);
+                if (d.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden))
+                    ok = dir.rmdir(relPath);
+                else
+                    ok = QFile::moveToTrash(fullPath);
+            } else {
+                ok = QFile::moveToTrash(fullPath);
+            }
+
+            if (ok) {
+                if (panel->branchMode)
+                    panel->removeEntryByRelPath(relPath);
+            } else {
+                failedItems << relPath;
+            }
+        }
+
+        if (!panel->branchMode)
+            selectNameAfterDelete(panel, oppositeFilePanel(), panel->currentRelPath());
+
+        if (!failedItems.isEmpty()) {
+            QMessageBox::warning(window(), tr("Error"),
+                tr("Could not delete %1 item(s):\n%2")
+                    .arg(failedItems.size())
+                    .arg(failedItems.join("\n")));
+        }
+        return true;
+    }
+
+    // Single file deletion (no marked files)
+
+    QString name = panel->currentRelPath();
+    if (name.isEmpty())
+        return true;
+
+    QString fullPath = dir.absoluteFilePath(name);
+    QFileInfo info(fullPath);
+    if (!info.exists())
+        return true;
+
+    QString question;
+    bool useTrash = true;
+
+    if (info.isDir()) {
+        QDir d(fullPath);
+        bool empty = d.isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+        if (empty) {
+            question = tr("Delete selected empty dir '%1'?").arg(name);
+            useTrash = false;
+        } else {
+            question = tr("Delete selected non empty dir '%1' into trashcan?").arg(name);
+        }
+    } else {
+        question = tr("Delete selected '%1' into trashcan?").arg(name);
+    }
+
+    auto reply = QMessageBox::question(
+        window(), tr("Delete"), question,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+    );
+    if (reply != QMessageBox::Yes)
+        return true;
+
+    bool ok = false;
+    if (info.isDir() && !useTrash) {
+        ok = dir.rmdir(name);
+    } else {
+        ok = QFile::moveToTrash(fullPath);
+    }
+
+    if (!ok) {
+        QMessageBox::warning(window(), tr("Error"),
+            tr("Could not delete '%1'").arg(name));
+    } else {
+        selectNameAfterDelete(panel, oppositeFilePanel(), fullPath);
+    }
+    return true;
+}
+
 bool MainWindow::doDirHotlist(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -886,18 +1097,3 @@ bool MainWindow::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
         createNewDirectory(panel);
     return true;
 }
-
-bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
-    FilePanel* panel = currentFilePanel();
-    if (panel)
-        return panel->doDeleteToTrash(obj, keyEvent);
-    return true;
-}
-
-bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
-    FilePanel* panel = currentFilePanel();
-    if (panel)
-        return panel->doDeletePermanently(obj, keyEvent);
-    return true;
-}
-

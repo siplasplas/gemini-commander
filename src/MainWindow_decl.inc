@@ -8,6 +8,8 @@
     Q_INVOKABLE bool doCurrentDirToCommandLine(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCurrentNameToCommandLine(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCurrentPathToCommandLine(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doDeletePermanently(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doDirHotlist(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doDirHotlistConfig(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doEdit(QObject *obj, QKeyEvent *keyEvent);
@@ -34,5 +36,3 @@
     Q_INVOKABLE bool doView(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doMakeDirectory(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent);
-    Q_INVOKABLE bool doDeletePermanently(QObject *obj, QKeyEvent *keyEvent);
