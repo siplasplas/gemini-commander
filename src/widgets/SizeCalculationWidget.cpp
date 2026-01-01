@@ -68,6 +68,10 @@ void SizeCalculationWidget::startCalculation(const QString& path)
     m_pathLabel->setText(tr("Calculating: %1").arg(info.fileName()));
     m_statsLabel->setText(tr("Scanning..."));
 
+    // Yellow progress bar during calculation
+    m_progressBar->setStyleSheet("QProgressBar::chunk { background-color: #f0ad4e; }");
+    m_progressBar->setRange(0, 0); // Indeterminate
+
     m_updateTimer->start();
 
     // Run calculation in background thread
@@ -136,6 +140,11 @@ void SizeCalculationWidget::onCalculationDone()
 
     // Final update
     updateDisplay();
+
+    // Blue progress bar when completed
+    m_progressBar->setStyleSheet("QProgressBar::chunk { background-color: #5bc0de; }");
+    m_progressBar->setRange(0, 100);
+    m_progressBar->setValue(100);
 
     // Emit final stats
     m_finalStats.totalFiles = m_totalFiles.load();
