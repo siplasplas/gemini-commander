@@ -53,6 +53,7 @@
 #include "quitls.h"
 #include "FileOperationProgressDialog.h"
 #include "FileOperations.h"
+#include "SizeFormat.h"
 #ifndef _WIN32
 #include "udisks/UDisksDeviceManager.h"
 #endif
@@ -730,6 +731,12 @@ void MainWindow::setupUi() {
     });
     commandsMenu->addAction(calcAllSizesAction);
 
+    // Commands menu - File/Directory Info
+    QAction* fileInfoAction = new QAction(tr("File Info..."), this);
+    fileInfoAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
+    connect(fileInfoAction, &QAction::triggered, this, &MainWindow::showFileInfo);
+    commandsMenu->addAction(fileInfoAction);
+
     commandsMenu->addSeparator();
 
     QAction* distroInfoAction = new QAction(tr("Distribution Info..."), this);
@@ -1325,6 +1332,67 @@ void MainWindow::onOpenTerminal()
                              tr("Terminal"),
                              tr("Failed to start terminal: %1").arg(termCmd));
     }
+}
+
+void MainWindow::showFileInfo()
+{
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return;
+
+    QStringList names;
+    QString title;
+
+    if (panel->hasMarkedEntries()) {
+        names = panel->getMarkedNames();
+        title = tr("Info: %n item(s)", "", names.size());
+    } else {
+        auto [entry, row] = panel->currentEntryRow();
+        // For ".." entry, show info for current directory
+        if (row == 0) {
+            names << ".";
+            title = tr("Info: %1").arg(QFileInfo(panel->currentPath).fileName());
+        } else if (row > 0){
+            QString name = entry->info.fileName();
+            names << name;
+            title = tr("Info: %1").arg(name);
+        } else return;
+    }
+
+    if (names.isEmpty())
+        return;
+
+    FileOperations::CopyStats stats;
+    FileOperations::calculateEntriesSize(panel->currentPath, names, stats);
+
+    // Format sizes
+    QString sizeBytes = QString::fromStdString(
+        SizeFormat::formatWithSeparators(static_cast<size_t>(stats.totalBytes)));
+    QString sizeHuman = QString::fromStdString(
+        SizeFormat::formatSize(static_cast<size_t>(stats.totalBytes), SizeFormat::Binary));
+    QString diskBytes = QString::fromStdString(
+        SizeFormat::formatWithSeparators(static_cast<size_t>(stats.bytesOnDisk)));
+    QString diskHuman = QString::fromStdString(
+        SizeFormat::formatSize(static_cast<size_t>(stats.bytesOnDisk), SizeFormat::Binary));
+
+    // Build info message
+    QString info;
+    if (stats.totalFiles > 0) {
+        info += tr("Files: %1\n").arg(stats.totalFiles);
+    }
+    if (stats.totalDirs > 0) {
+        info += tr("Directories: %1\n").arg(stats.totalDirs);
+    }
+    if (stats.symlinks > 0) {
+        info += tr("Symlinks: %1\n").arg(stats.symlinks);
+    }
+    if (!info.isEmpty()) {
+        info += "\n";
+    }
+    info += tr("Size: %1 B (%2)\n").arg(sizeBytes, sizeHuman);
+    info += tr("On disk: %1 B (%2)").arg(diskBytes, diskHuman);
+
+    QMessageBox::information(this, title, info);
 }
 
 void MainWindow::createMountsToolbar()

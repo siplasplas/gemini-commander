@@ -20,12 +20,24 @@ struct Params {
 
 struct CopyStats {
     quint64 totalBytes = 0;
+    quint64 bytesOnDisk = 0;
     quint64 totalFiles = 0;
     quint64 totalDirs  = 0;
-    quint64 skippedSymlinks = 0;  // Symlinks skipped (cross-FS operations)
+    quint64 symlinks = 0;
 };
 
 enum class EnsureDirResult { Created, Exists, Cancelled, NotADir };
+
+// Get filesystem cluster size for a path
+quint64 getClusterSize(const QString& path);
+
+// Calculate size of a single file or directory (with subdirectories)
+// Updates stats with file count, dir count, symlinks, totalBytes and bytesOnDisk
+void calculateEntrySize(const QString& path, CopyStats& stats, quint64 clusterSize, bool* cancelFlag = nullptr);
+
+// Calculate size of multiple entries (files/directories) from a list of names
+// basePath is the directory containing the entries
+void calculateEntriesSize(const QString& basePath, const QStringList& names, CopyStats& stats, bool* cancelFlag = nullptr);
 
 // Collect statistics about directory to copy (file count, total size)
 void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag = nullptr);

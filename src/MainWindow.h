@@ -142,6 +142,7 @@ public slots:
 
 private slots:
     void onOpenTerminal();
+    void showFileInfo();
     void onDirectoryChanged(const QString& path);
     void onVisibleFilesChanged(Side side, const QStringList& paths);
     void onLeftFileChanged(const QString& path);

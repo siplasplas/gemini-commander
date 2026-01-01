@@ -16,12 +16,146 @@
 #include <io.h>
 #include <windows.h>
 #else
+#include <sys/statvfs.h>
 #include <unistd.h>
 #endif
 
 #include <limits>
 
 namespace FileOperations {
+
+// Helper: round up size to cluster boundary
+static quint64 roundUpToCluster(quint64 size, quint64 clusterSize) {
+    if (clusterSize == 0) return size;
+    return ((size + clusterSize - 1) / clusterSize) * clusterSize;
+}
+
+quint64 getClusterSize(const QString& path) {
+    if (path.isEmpty()) return 4096; // fallback
+
+#ifdef _WIN32
+    // Get root path (e.g., "C:\")
+    QString rootPath = QFileInfo(path).absoluteFilePath();
+    if (rootPath.length() >= 2 && rootPath[1] == ':') {
+        rootPath = rootPath.left(3); // "C:\"
+    }
+
+    DWORD sectorsPerCluster, bytesPerSector, freeClusters, totalClusters;
+    if (GetDiskFreeSpaceW(reinterpret_cast<LPCWSTR>(rootPath.utf16()),
+                          &sectorsPerCluster, &bytesPerSector,
+                          &freeClusters, &totalClusters)) {
+        return static_cast<quint64>(sectorsPerCluster) * bytesPerSector;
+    }
+    return 4096; // fallback
+#else
+    struct statvfs buf;
+    QByteArray pathBytes = path.toLocal8Bit();
+    if (statvfs(pathBytes.constData(), &buf) == 0) {
+        return static_cast<quint64>(buf.f_bsize);
+    }
+    return 4096; // fallback
+#endif
+}
+
+// Helper: calculate directory on-disk size for a single directory (not recursive)
+static quint64 calculateDirOnDiskSize(const QString& path, [[maybe_unused]] const QFileInfo& fi, quint64 clusterSize) {
+#ifdef _WIN32
+    // Windows: estimate directory size based on entries
+    // Base overhead for empty directory = 1 cluster
+    // Each entry: ~64 bytes base + 2 bytes per Unicode char in filename
+    QDir dir(path);
+    QStringList entries = dir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+
+    quint64 dirSize = 64; // base overhead for directory itself
+    for (const QString& name : entries) {
+        dirSize += 64 + static_cast<quint64>(name.length()) * 2;
+    }
+    return roundUpToCluster(dirSize, clusterSize);
+#else
+    // Linux: directory has its own size directly from stat
+    quint64 dirSize = static_cast<quint64>(fi.size());
+    return roundUpToCluster(dirSize, clusterSize);
+#endif
+}
+
+void calculateEntrySize(const QString& path, CopyStats& stats, quint64 clusterSize, bool* cancelFlag) {
+    if (cancelFlag && *cancelFlag) return;
+
+    QFileInfo fi(path);
+    if (!fi.exists()) return;
+
+    // Handle symbolic links first (before isFile/isDir checks)
+    if (fi.isSymLink()) {
+        stats.symlinks++;
+        stats.bytesOnDisk += clusterSize; // symlink = 1 cluster
+        return;
+    }
+
+    if (fi.isFile()) {
+        stats.totalFiles++;
+        quint64 size = static_cast<quint64>(fi.size());
+        stats.totalBytes += size;
+        stats.bytesOnDisk += (size == 0) ? 0 : roundUpToCluster(size, clusterSize);
+        return;
+    }
+
+    if (fi.isDir()) {
+        // Count the root directory
+        stats.totalDirs++;
+#ifndef _WIN32
+        stats.totalBytes += static_cast<quint64>(fi.size());
+#endif
+        stats.bytesOnDisk += calculateDirOnDiskSize(path, fi, clusterSize);
+
+        // SortedDirIterator iterates recursively through all subdirectories
+        SortedDirIterator it(path, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+        int counter = 0;
+        while (it.hasNext()) {
+            if (cancelFlag && *cancelFlag) return;
+
+            if (++counter % 100 == 0) {
+                QCoreApplication::processEvents();
+            }
+
+            it.next();
+            const QString entryPath = it.filePath();
+            const QFileInfo entryInfo = it.fileInfo();
+
+            // Handle symbolic links
+            if (entryInfo.isSymLink()) {
+                stats.symlinks++;
+                stats.bytesOnDisk += clusterSize;
+                continue;
+            }
+
+            if (entryInfo.isFile()) {
+                stats.totalFiles++;
+                quint64 size = static_cast<quint64>(entryInfo.size());
+                stats.totalBytes += size;
+                stats.bytesOnDisk += (size == 0) ? 0 : roundUpToCluster(size, clusterSize);
+            } else if (entryInfo.isDir()) {
+                // Just count the directory itself, iterator will provide its contents
+                stats.totalDirs++;
+#ifndef _WIN32
+                stats.totalBytes += static_cast<quint64>(entryInfo.size());
+#endif
+                stats.bytesOnDisk += calculateDirOnDiskSize(entryPath, entryInfo, clusterSize);
+            }
+        }
+    }
+}
+
+void calculateEntriesSize(const QString& basePath, const QStringList& names, CopyStats& stats, bool* cancelFlag) {
+    quint64 clusterSize = getClusterSize(basePath);
+    QDir dir(basePath);
+
+    for (const QString& name : names) {
+        if (cancelFlag && *cancelFlag) return;
+
+        QString absPath = dir.absoluteFilePath(name);
+        calculateEntrySize(absPath, stats, clusterSize, cancelFlag);
+    }
+}
 
 QMessageBox::StandardButton askOverwriteMulti(QWidget *parent, const QString &name) {
     auto reply = QMessageBox::question(
@@ -328,7 +462,7 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
                 }
             } else {
                 // Cross-FS: skip symlinks
-                stats.skippedSymlinks++;
+                stats.symlinks++;
             }
             continue;
         }
@@ -502,7 +636,7 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                 }
             } else {
                 // Cross-FS: skip symlinks
-                stats.skippedSymlinks++;
+                stats.symlinks++;
             }
             continue;
         }
@@ -540,11 +674,11 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     }
 
     // Show info message if symlinks were skipped
-    if (stats.skippedSymlinks > 0) {
+    if (stats.symlinks > 0) {
         QMessageBox::information(parent, QObject::tr("Symbolic Links Skipped"),
             QObject::tr("%1 symbolic link(s) were skipped.\n"
                         "Symbolic links cannot be copied/moved across different filesystems.")
-            .arg(stats.skippedSymlinks));
+            .arg(stats.symlinks));
     }
 
     if (names.size() == 1)
