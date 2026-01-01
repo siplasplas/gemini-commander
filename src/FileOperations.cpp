@@ -39,6 +39,26 @@ bool copyFile(const QString &srcPath, const QString &dstPath) {
     return true;
 }
 
+// Copy a symbolic link (creates new link with same target, doesn't follow it)
+bool copySymlink(const QString &srcPath, const QString &dstPath) {
+    QString target = QFile::symLinkTarget(srcPath);
+    if (target.isEmpty()) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+                             QObject::tr("Failed to read symlink target:\n%1").arg(srcPath));
+        return false;
+    }
+    // Remove existing file/link at destination if exists
+    if (QFileInfo::exists(dstPath)) {
+        QFile::remove(dstPath);
+    }
+    if (!QFile::link(target, dstPath)) {
+        QMessageBox::warning(nullptr, QObject::tr("Error"),
+                             QObject::tr("Failed to create symlink:\n%1\n->\n%2").arg(dstPath, target));
+        return false;
+    }
+    return true;
+}
+
 QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &dstPath, bool multi,
                                          QMessageBox::Button askPolice, QWidget *parent) {
     QFileInfo dstInfo(dstPath);
@@ -120,7 +140,7 @@ void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *
 }
 
 QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, bool move,
-                                                 QMessageBox::Button askPolice, const CopyStats &stats,
+                                                 bool sameFs, QMessageBox::Button askPolice, CopyStats &stats,
                                                  FileOperationProgressDialog &progress, quint64 &bytesCopied) {
     if (askPolice == QMessageBox::Abort)
         return QMessageBox::Abort;
@@ -138,11 +158,12 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
 
     QDir dir(srcRoot);
 
-    const QFileInfoList files = dir.entryInfoList(QDir::Files | QDir::Hidden | QDir::NoDotAndDotDot, QDir::Name);
+    // Get all entries including symlinks (System flag includes symlinks on Unix)
+    const QFileInfoList entries = dir.entryInfoList(
+        QDir::Files | QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot | QDir::System,
+        QDir::Name);
 
-    const QFileInfoList dirs = dir.entryInfoList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot, QDir::Name);
-
-    for (const QFileInfo &fi: files) {
+    for (const QFileInfo &fi: entries) {
         // Handle Cancel
         if (progress.wasCanceled()) {
             auto reply = QMessageBox::question(nullptr, QObject::tr("Cancel copy"),
@@ -155,43 +176,39 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
         const QString srcPath = fi.absoluteFilePath();
         const QString dstPath = QDir(dstRoot).filePath(fi.fileName());
 
-        askPolice = copyOrMoveFileAskOverwrite(srcPath, dstPath, move, true, askPolice, &progress);
+        // Handle symbolic links
+        if (fi.isSymLink()) {
+            if (sameFs) {
+                // Same FS: copy the symlink itself (don't follow)
+                copySymlink(srcPath, dstPath);
+                if (move) {
+                    QFile::remove(srcPath);
+                }
+            } else {
+                // Cross-FS: skip symlinks
+                stats.skippedSymlinks++;
+            }
+            continue;
+        }
 
-        if (askPolice == QMessageBox::Abort)
-            return QMessageBox::Abort;
-        if (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll) {
-            bytesCopied += static_cast<quint64>(fi.size());
-            if (stats.totalBytes > 0) {
-                const int value = static_cast<int>(qMin<quint64>(bytesCopied, stats.totalBytes));
-                //progress.setValue(value);
+        // Handle regular files
+        if (fi.isFile()) {
+            askPolice = copyOrMoveFileAskOverwrite(srcPath, dstPath, move, true, askPolice, &progress);
+
+            if (askPolice == QMessageBox::Abort)
+                return QMessageBox::Abort;
+            if (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll) {
+                bytesCopied += static_cast<quint64>(fi.size());
             }
         }
-        qApp->processEvents();
-    }
+        // Handle directories (recursive)
+        else if (fi.isDir()) {
+            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress, bytesCopied);
 
-    for (const QFileInfo &fi: dirs) {
-        // Handle Cancel
-        if (progress.wasCanceled()) {
-            auto reply = QMessageBox::question(nullptr, QObject::tr("Cancel copy"),
-                                               QObject::tr("Do you really want to cancel the copy operation?"),
-                                               QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-            if (reply == QMessageBox::Yes)
+            if (askPolice == QMessageBox::Abort)
                 return QMessageBox::Abort;
         }
 
-        const QString srcPath = fi.absoluteFilePath();
-        const QString dstPath = QDir(dstRoot).filePath(fi.fileName());
-        askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, askPolice, stats, progress, bytesCopied);
-
-        if (askPolice == QMessageBox::Abort)
-            return QMessageBox::Abort;
-        if (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll) {
-            bytesCopied += static_cast<quint64>(fi.size());
-            if (stats.totalBytes > 0) {
-                const int value = static_cast<int>(qMin<quint64>(bytesCopied, stats.totalBytes));
-                //progress.setValue(value);
-            }
-        }
         qApp->processEvents();
     }
     return askPolice;
@@ -324,7 +341,30 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         if (progressDlg.wasCanceled())
             break;
 
-        if (move && areOnSameFilesystem(srcPath, dstFilePath)) {
+        bool sameFs = areOnSameFilesystem(srcPath, dstFilePath);
+
+        // Handle symbolic links
+        if (srcInfo.isSymLink()) {
+            if (sameFs) {
+                if (move) {
+                    // Same FS move: rename works for symlinks
+                    QFile file(srcPath);
+                    if (!file.rename(dstFilePath)) {
+                        QMessageBox::warning(parent, QObject::tr("Error"),
+                            QObject::tr("Failed to move symlink '%1'").arg(name));
+                    }
+                } else {
+                    // Same FS copy: copy the symlink itself
+                    copySymlink(srcPath, dstFilePath);
+                }
+            } else {
+                // Cross-FS: skip symlinks
+                stats.skippedSymlinks++;
+            }
+            continue;
+        }
+
+        if (move && sameFs) {
             // Same filesystem - use rename (fast move)
             progressDlg.updateMoveProgress(currentFile, 100);
             if (progressDlg.wasCanceled())
@@ -339,19 +379,31 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             continue;
         }
 
-
         if (srcInfo.isFile()) {
             askPolice = copyOrMoveFileAskOverwrite(srcPath, dstFilePath,
                               move, names.size()>1, askPolice, &progressDlg);
         }
         else if (srcInfo.isDir()) {
             askPolice = copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
-                                             askPolice, stats,
+                                             sameFs, askPolice, stats,
                                              progressDlg, bytesCopied);
+            // After copying directory, delete source if move
+            if (move && (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll)) {
+                QDir(srcPath).removeRecursively();
+            }
         }
         if (progressDlg.wasCanceled())
             break;
     }
+
+    // Show info message if symlinks were skipped
+    if (stats.skippedSymlinks > 0) {
+        QMessageBox::information(parent, QObject::tr("Symbolic Links Skipped"),
+            QObject::tr("%1 symbolic link(s) were skipped.\n"
+                        "Symbolic links cannot be copied/moved across different filesystems.")
+            .arg(stats.skippedSymlinks));
+    }
+
     if (names.size() == 1)
         return dstPath;
     else
