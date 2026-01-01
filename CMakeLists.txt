@@ -127,6 +127,8 @@ add_executable(${PROJECT_NAME}
         src/editor/BaseViewer.h
         src/editor/ViewerFrame.cpp
         src/editor/ViewerFrame.h
+        src/editor/ViewerWidget.cpp
+        src/editor/ViewerWidget.h
         external/textviewers/wid/TextViewer.cpp
         external/textviewers/wid/PaintArea.cpp
         external/textviewers/logic/AbstractView.cpp

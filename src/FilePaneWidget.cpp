@@ -16,7 +16,7 @@
 
 #include "keys/ObjectRegistry.h"
 #include "quitls.h"
-#include "wid/TextViewer.h"
+#include "editor/ViewerWidget.h"
 
 FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     : m_side(side), QWidget(parent)
@@ -471,28 +471,14 @@ void FilePaneWidget::showQuickView(const QString& path)
     QFileInfo info(path);
 
     if (info.isFile()) {
-        // Open and map file
-        m_viewedFile = std::make_unique<QFile>(path);
-        if (m_viewedFile->open(QIODevice::ReadOnly)) {
-            if (m_viewedFile->size() > 0) {
-                uchar* addr = m_viewedFile->map(0, m_viewedFile->size());
-                if (addr) {
-                    if (m_embeddedViewer) {
-                        m_embeddedViewer->setData(reinterpret_cast<char*>(addr), m_viewedFile->size());
-                        m_embeddedViewer->show();
-                    } else {
-                        // Lazy create embedded viewer
-                        m_embeddedViewer = new wid::TextViewer(reinterpret_cast<char*>(addr), m_viewedFile->size(), this);
-                        m_stackedWidget->addWidget(m_embeddedViewer);  // Index 1
-                    }
-                }
-            } else {
-                if (m_embeddedViewer)
-                    m_embeddedViewer->hide();
-            }
+        // Lazy create viewer widget
+        if (!m_viewerWidget) {
+            m_viewerWidget = new ViewerWidget(this);
+            m_stackedWidget->addWidget(m_viewerWidget);  // Index 1
         }
 
-        m_stackedWidget->setCurrentWidget(m_embeddedViewer);
+        m_viewerWidget->openFile(path);
+        m_stackedWidget->setCurrentWidget(m_viewerWidget);
         m_quickViewState = QuickViewState::FileViewer;
 
     } else if (info.isDir()) {
@@ -514,7 +500,9 @@ void FilePaneWidget::hideQuickView()
         m_sizeWidget->cancel();
     }
 
-    m_viewedFile.reset();  // Close file, unmap memory
+    if (m_viewerWidget) {
+        m_viewerWidget->clear();
+    }
     m_stackedWidget->setCurrentIndex(0);  // Back to FilePanel
     m_quickViewState = QuickViewState::Normal;
 }

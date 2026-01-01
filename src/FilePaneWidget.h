@@ -12,7 +12,7 @@
 
 #include "FilePanel.h"
 
-namespace wid { class TextViewer; }
+class ViewerWidget;
 class SizeCalculationWidget;
 
 class SearchEdit;
@@ -74,9 +74,8 @@ private:
 
   // Quick View components
   QStackedWidget* m_stackedWidget = nullptr;
-  wid::TextViewer* m_embeddedViewer = nullptr;
+  ViewerWidget* m_viewerWidget = nullptr;
   SizeCalculationWidget* m_sizeWidget = nullptr;
-  std::unique_ptr<QFile> m_viewedFile;
   QuickViewState m_quickViewState = QuickViewState::Normal;
 
   void updateStatusLabel();
