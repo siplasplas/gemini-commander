@@ -1361,7 +1361,6 @@ void MainWindow::createNewDirectory(QWidget *dialogParent) {
         return;
     }
     selectPathAfterFileOperation(panel, nullptr, fullPath);
-    //auto firstPart = name.section('/', 0, 0);
 }
 
 void MainWindow::selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& relativeName) {
@@ -1373,12 +1372,12 @@ void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *ds
 {
     // Suppress QFileSystemWatcher reload - we handle it ourselves
     m_suppressDirWatcher = true;
+    QString selCanonical = QDir::cleanPath(selectedPath);
 
     srcPanel->loadDirectory();
     if (!selectedPath.isEmpty()) {
         QDir srcDir(srcPanel->currentPath);
         QString srcCanonical = QDir::cleanPath(srcPanel->currentPath);
-        QString selCanonical = QDir::cleanPath(selectedPath);
         if (selCanonical.startsWith(srcCanonical + "/") || selCanonical == srcCanonical) {
             QString relPath = srcDir.relativeFilePath(selectedPath);
             srcPanel->selectEntryByRelPath(relPath);
@@ -1395,7 +1394,6 @@ void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *ds
         if (!selectedPath.isEmpty()) {
             QDir dstDir(dstPanel->currentPath);
             QString dstCanonical = QDir::cleanPath(dstPanel->currentPath);
-            QString selCanonical = QDir::cleanPath(selectedPath);
             if (selCanonical.startsWith(dstCanonical + "/") || selCanonical == dstCanonical) {
                 QString relPath = dstDir.relativeFilePath(selectedPath);
                 dstPanel->selectEntryByRelPath(relPath);

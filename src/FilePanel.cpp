@@ -608,7 +608,7 @@ void FilePanel::selectEntryByRelPath(const QString &relPath) {
         else
             entryRelPath = entry.branch + "/" + entry.info.fileName();
 
-        if (entryRelPath == relPath) {
+        if (entryRelPath == relPath || relPath.startsWith(entryRelPath+"/")) {
             // In branch mode, row == entry index; otherwise account for [..]
             int row = branchMode ? i : i + 1;
             m_lastSelectedRow = row;
