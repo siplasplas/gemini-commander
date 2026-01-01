@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(gemini-commander VERSION 1.4.1 LANGUAGES CXX)
+project(gemini-commander VERSION 1.4.2 LANGUAGES CXX)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
