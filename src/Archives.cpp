@@ -622,9 +622,9 @@ QString extractArchive(const QString& archivePath, const QString& destDir)
         if (proc.exitCode() == 0) {
             return {};  // Success
         }
-        QString stderr = QString::fromUtf8(proc.readAllStandardError()).trimmed();
+        QString standardError = QString::fromUtf8(proc.readAllStandardError()).trimmed();
         return QObject::tr("unar failed with exit code %1:\n%2")
-                   .arg(proc.exitCode()).arg(stderr);
+                   .arg(proc.exitCode()).arg(standardError);
     }
 
     return QObject::tr("No extraction tool found. Install 7z or unar.");
