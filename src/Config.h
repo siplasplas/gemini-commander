@@ -174,6 +174,8 @@ public:
   void setCopyMode(CopyMode mode) { m_copyMode = mode; }
   qint64 largeFileThreshold() const { return m_largeFileThreshold; }
   void setLargeFileThreshold(qint64 bytes) { m_largeFileThreshold = bytes; }
+  qint64 copyChunkSize() const { return m_copyChunkSize; }
+  void setCopyChunkSize(qint64 bytes) { m_copyChunkSize = bytes; }
 
 private:
   Config()
@@ -242,7 +244,8 @@ private:
 
   // Large file copy settings
   CopyMode m_copyMode = CopyMode::ChunkedSha;  // Default: chunked with SHA
-  qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MB
+  qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MiB
+  qint64 m_copyChunkSize = 5 * 1024 * 1024;  // 5 MiB
 };
 
 #endif

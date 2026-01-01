@@ -129,4 +129,5 @@ private:
     // Copy settings
     QComboBox* m_copyMode;
     QSpinBox* m_largeFileThreshold;
+    QSpinBox* m_copyChunkSize;
 };

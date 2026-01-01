@@ -630,9 +630,15 @@ void ConfigDialog::createGeneralPage()
 
     m_largeFileThreshold = new QSpinBox(copyGroup);
     m_largeFileThreshold->setRange(1, 1000);
-    m_largeFileThreshold->setSuffix(" MB");
+    m_largeFileThreshold->setSuffix(" MiB");
     m_largeFileThreshold->setValue(5);
     copyLayout->addRow(tr("Large file threshold:"), m_largeFileThreshold);
+
+    m_copyChunkSize = new QSpinBox(copyGroup);
+    m_copyChunkSize->setRange(1, 100);
+    m_copyChunkSize->setSuffix(" MiB");
+    m_copyChunkSize->setValue(5);
+    copyLayout->addRow(tr("Chunk size:"), m_copyChunkSize);
 
     layout->addWidget(copyGroup);
 
@@ -742,6 +748,7 @@ void ConfigDialog::loadSettings()
     if (copyModeIdx >= 0)
         m_copyMode->setCurrentIndex(copyModeIdx);
     m_largeFileThreshold->setValue(static_cast<int>(cfg.largeFileThreshold() / (1024 * 1024)));
+    m_copyChunkSize->setValue(static_cast<int>(cfg.copyChunkSize() / (1024 * 1024)));
 }
 
 void ConfigDialog::saveSettings()
@@ -814,6 +821,7 @@ void ConfigDialog::saveSettings()
     int copyModeValue = m_copyMode->currentData().toInt();
     cfg.setCopyMode(static_cast<CopyMode>(copyModeValue));
     cfg.setLargeFileThreshold(static_cast<qint64>(m_largeFileThreshold->value()) * 1024 * 1024);
+    cfg.setCopyChunkSize(static_cast<qint64>(m_copyChunkSize->value()) * 1024 * 1024);
 
     // Save to file
     cfg.save();

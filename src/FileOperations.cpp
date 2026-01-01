@@ -54,7 +54,7 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
         return false;
     }
 
-    constexpr qint64 chunkSize = 64 * 1024; // 64KB chunks
+    const qint64 chunkSize = Config::instance().copyChunkSize();
     QByteArray buffer;
     QCryptographicHash srcHash(QCryptographicHash::Sha256);
     bool useSha = (mode == CopyMode::ChunkedSha);
