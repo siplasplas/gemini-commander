@@ -2037,7 +2037,11 @@ void MainWindow::applyToolbarConfig()
 
     // Emergency safeguard: ensure at least menu OR main toolbar is visible
     // Without this, user would have no way to restore visibility
-    if (!menuBar()->isVisible() && m_mainToolBar && !m_mainToolBar->isVisible()) {
+    // Note: Use config values, not isVisible() - isVisible() returns false at startup
+    // when main window is not yet shown
+    bool menuVisible = config.menuVisible();
+    bool mainToolbarVisible = config.toolbarConfig("main").visible;
+    if (!menuVisible && !mainToolbarVisible) {
         menuBar()->setVisible(true);
         Config::instance().setMenuVisible(true);
         qWarning() << "Emergency safeguard: Both menu and main toolbar were hidden. Restoring menu visibility.";
