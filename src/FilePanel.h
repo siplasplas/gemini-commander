@@ -140,6 +140,7 @@ public:
     void loadDirectory();
 
     QString getRowName(int row) const;
+    QString getCurrentRelPath() const;
     QString getRowRelPath(int row) const;
     void selectEntryByName(const QString& fullName);
     void selectEntryByRelPath(const QString& relPath);
@@ -150,7 +151,6 @@ public:
     void sortEntriesApplyModel();
     void trigger(const QModelIndex &index);
     void triggerCurrentEntry();
-    void createNewDirectory(QWidget*dialogParent);
     void renameOrMoveEntry(QWidget* dialogParent = nullptr,
                        const QString& defaultTargetDir = QString());
     void toggleMarkOnCurrent(bool advanceRow);

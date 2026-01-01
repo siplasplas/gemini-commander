@@ -82,7 +82,9 @@ private:
     QAction* m_searchAction = nullptr;
 
     void createMountsToolbar();
-    void selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath);
+    void createNewDirectory(QWidget *dialogParent);
+    void selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString &relativeName);
+    void selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath);
     FileOperations::Params askForFileOperation(FilePanel* srcPanel, bool inPlace, bool isMove);
 
     KeyMap keyMap;

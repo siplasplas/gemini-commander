@@ -572,6 +572,13 @@ QString FilePanel::getRowName(int row) const {
     return model->data(idx, Qt::UserRole).toString();
 }
 
+QString FilePanel::getCurrentRelPath() const {
+    QModelIndex currIndex = currentIndex();
+    if (!currIndex.isValid())
+        return {};
+    return getRowRelPath(currIndex.row());
+}
+
 QString FilePanel::getRowRelPath(int row) const {
     if (!branchMode)
         return getRowName(row);
@@ -1325,42 +1332,6 @@ EntryContentState FilePanel::ensureContentState(PanelEntry &entry) const {
                                  : EntryContentState::DirNotEmpty;
 
     return entry.contentState;
-}
-
-void FilePanel::createNewDirectory(QWidget *dialogParent) {
-    if (!dir)
-        return;
-
-    QModelIndex current_index = currentIndex();
-    QString suggestedName;
-
-    if (current_index.isValid()) {
-        QString fullName = getRowName(current_index.row());
-        if (!fullName.isEmpty())
-            suggestedName = fullName; // poprawna nazwa pliku/katalogu
-    }
-
-    QWidget *parent = dialogParent ? dialogParent : this;
-
-    QInputDialog dlg(parent);
-    dlg.setWindowTitle(tr("Create new directory"));
-    dlg.setLabelText(tr("Input new name:"));
-    dlg.setTextValue(suggestedName);
-    dlg.resize(500, dlg.sizeHint().height());
-
-    if (dlg.exec() != QDialog::Accepted || dlg.textValue().isEmpty())
-        return;
-
-    QString name = dlg.textValue();
-
-    if (!dir->mkpath(name)) {
-        QMessageBox::warning(parent, tr("Error"), tr("Failed to create directory."));
-        return;
-    }
-
-    loadDirectory();
-    auto firstPart = name.section('/', 0, 0);
-    selectEntryByName(firstPart);
 }
 
 void FilePanel::renameOrMoveEntry(QWidget *dialogParent, const QString &defaultTargetDir) {

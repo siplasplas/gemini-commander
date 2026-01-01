@@ -1338,7 +1338,38 @@ void MainWindow::createMountsToolbar()
     refreshMountsToolbar();
 }
 
-void MainWindow::selectAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath)
+void MainWindow::createNewDirectory(QWidget *dialogParent) {
+    FilePanel* panel = currentFilePanel();
+    QString suggestedName = panel->getCurrentRelPath();
+
+    QWidget *parent = dialogParent ? dialogParent : this;
+
+    QInputDialog dlg(parent);
+    dlg.setWindowTitle(tr("Create new directory"));
+    dlg.setLabelText(tr("Input new name:"));
+    dlg.setTextValue(suggestedName);
+    dlg.resize(500, dlg.sizeHint().height());
+
+    if (dlg.exec() != QDialog::Accepted || dlg.textValue().isEmpty())
+        return;
+
+    QString name = dlg.textValue();
+    QString fullPath = QDir(panel->currentPath).absoluteFilePath(name);
+
+    if (!QDir().mkpath(fullPath)) {
+        QMessageBox::warning(parent, tr("Error"), tr("Failed to create directory."));
+        return;
+    }
+    selectPathAfterFileOperation(panel, nullptr, fullPath);
+    //auto firstPart = name.section('/', 0, 0);
+}
+
+void MainWindow::selectNameAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& relativeName) {
+    QString fullPath = QDir(srcPanel->currentPath).absoluteFilePath(relativeName);
+    selectPathAfterFileOperation(srcPanel, dstPanel, fullPath);
+}
+
+void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *dstPanel, const QString& selectedPath)
 {
     // Suppress QFileSystemWatcher reload - we handle it ourselves
     m_suppressDirWatcher = true;
@@ -1418,12 +1449,7 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
     if (hasMarked && markedNames.size()>1) {
         suggested = inPlace ? QString() : targetDir;
     } else {
-        // Single file: get current item (use getRowRelPath for Branch mode compatibility)
-        QModelIndex currentIndex = srcPanel->currentIndex();
-        if (!currentIndex.isValid())
-            return {};
-
-        QString currentName = srcPanel->getRowRelPath(currentIndex.row());
+        QString currentName = srcPanel->getCurrentRelPath();
         if (currentName.isEmpty())
             return {}; // [..]
 

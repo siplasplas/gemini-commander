@@ -442,13 +442,6 @@ bool FilePanel::doJumpUpToDirectories(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
-bool FilePanel::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
-    Q_UNUSED(obj);
-    Q_UNUSED(keyEvent);
-    createNewDirectory(window());
-    return true;
-}
-
 bool FilePanel::doOccupiedSpace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
