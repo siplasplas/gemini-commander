@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Build script for Gemini Commander .deb package (Qt5/KF5 version)
-# For Ubuntu LTS (20.04, 22.04) and Linux Mint
+# For Ubuntu LTS (24.04) and Linux Mint
 # Usage: ./build-deb-qt5.sh [source-dir]
 #
 

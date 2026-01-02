@@ -17,8 +17,8 @@ cd install
 ```
 
 Packages will be in `install/output/`:
-- `gemini-commander_1.5.0_amd64_ubuntu22.04.deb` - Qt5/KF5 for Ubuntu 22.04, Mint 21
-- `gemini-commander_1.5.0_amd64_ubuntu24.10.deb` - Qt6/KF6 for Ubuntu 24.10+
+- `gemini-commander_1.5.0_amd64_ubuntu24.04.deb` - Qt5/KF5 for Ubuntu 24.04, Mint 22
+- `gemini-commander_1.5.0_amd64_debian-sid.deb` - Qt6/KF6 for Ubuntu 24.10+
 
 ## Container Build Commands
 
@@ -36,17 +36,17 @@ Requirements: `podman` or `docker` installed.
 
 | Package | Qt/KF Version | Target Systems |
 |---------|---------------|----------------|
-| `*_ubuntu22.04.deb` | Qt5 / KF5 | Ubuntu 22.04 LTS, Linux Mint 21.x |
-| `*_ubuntu24.10.deb` | Qt6 / KF6 | Ubuntu 24.10+, systems with KDE Frameworks 6 |
+| `*_ubuntu24.04.deb` | Qt5 / KF5 | Ubuntu 24.04 LTS, Linux Mint 22.x |
+| `*_.deb ` | Qt6 / KF6 | Ubuntu 24.10+, systems with KDE Frameworks 6 |
 
 ## Installing the Package
 
 ```bash
-# Ubuntu 22.04 / Mint 21
-sudo apt install ./gemini-commander_*_ubuntu22.04.deb
+# Ubuntu 24.04 / Mint 22
+sudo apt install ./gemini-commander_*_ubuntu24.04.deb
 
 # Ubuntu 24.10+
-sudo apt install ./gemini-commander_*_ubuntu24.10.deb
+sudo apt install ./gemini-commander_*_debian-sid.deb
 ```
 
 ## Directory Structure
@@ -55,8 +55,8 @@ sudo apt install ./gemini-commander_*_ubuntu24.10.deb
 install/
 ├── build-in-container.sh    # Main build script
 ├── docker/
-│   ├── Dockerfile.ubuntu22.04   # Qt5/KF5 build environment
-│   └── Dockerfile.ubuntu24.10   # Qt6/KF6 build environment
+│   ├── Dockerfile.ubuntu24.04   # Qt5/KF5 build environment
+│   └── Dockerfile.debian-sid    # Qt6/KF6 build environment
 ├── deb/                     # Qt6/KF6 debian packaging files
 │   └── debian/
 ├── deb-qt5/                 # Qt5/KF5 debian packaging files
