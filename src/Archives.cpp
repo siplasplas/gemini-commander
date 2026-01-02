@@ -541,7 +541,7 @@ ArchiveContents readArchiveWithUnar(const QString& archivePath)
 
         e.name = QFileInfo(e.path).fileName();
         e.isDirectory = obj["XADIsDirectory"].toBool();
-        e.size = obj["XADFileSize"].toInteger();
+        e.size = obj["XADFileSize"].toVariant().toLongLong();
 
         // Parse date if available
         QString dateStr = obj["XADLastModificationDate"].toString();
