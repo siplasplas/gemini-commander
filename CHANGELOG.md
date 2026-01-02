@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-02
+
+### Added
+- File Info dialog (Ctrl+L) with recursive size statistics for files and directories
+- Quick View mode (Ctrl+Q) shows file preview in opposite panel
+  - Updates automatically on arrow keys and selection changes
+  - Shows directory size calculation with live progress (yellow bar → blue when done)
+- Hex viewer mode in Quick View and Viewer (F3)
+  - Context menu to switch between Text and Hex modes
+  - Menu bar in Viewer (F3) with View → Text/Hex selection
+- KTextEditor integration for small files in viewer
+  - Configurable threshold (MB) in Settings with 10% RAM limit
+- Virtual file support (/proc files) via readAll() for Text and Hex views
+
+### Changed
+- Menu "View" renamed to "Show", File Info moved to File menu
+- ViewerFrame (F3) uses ViewerWidget internally with full Text/Hex/KTextEditor support
+- View mode (Text/Hex) persists between F3 calls in same session
+
+### Fixed
+- Virtual files (size 0 like /proc/*) can now be viewed correctly
+
 ## [1.4.2] - 2026-01-01
 
 ### Added
