@@ -75,7 +75,7 @@ void SizeCalculationWidget::startCalculation(const QString& path)
     m_updateTimer->start();
 
     // Run calculation in background thread
-    QtConcurrent::run([this, path]() {
+    auto future = QtConcurrent::run([this, path]() {
         quint64 clusterSize = FileOperations::getClusterSize(path);
 
         FileOperations::AtomicStats stats;

@@ -23,7 +23,7 @@ bool FileIconResolver::isElf(const QString& filePath)
 
     // ELF magic: 0x7f 'E' 'L' 'F'
     return header.size() >= 4 &&
-           header[0] == 0x7f &&
+           header[0] == '\x7f' &&
            header[1] == 'E' &&
            header[2] == 'L' &&
            header[3] == 'F';
