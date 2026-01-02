@@ -598,6 +598,7 @@ void ConfigDialog::createGeneralPage()
     // File size format (file sizes, status bar bytes)
     m_sizeFormat = new QComboBox(behaviorGroup);
     m_sizeFormat->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_sizeFormat->setMinimumHeight(m_sizeFormat->fontMetrics().height() + 8);
     m_sizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
     m_sizeFormat->addItem(tr("Decimal (1.5 M)"), 1);     // SizeFormat::Decimal
     m_sizeFormat->addItem(tr("Binary (1.5 Mi)"), 2);     // SizeFormat::Binary
@@ -606,6 +607,7 @@ void ConfigDialog::createGeneralPage()
     // Storage size format (mount toolbars, free/total space)
     m_storageSizeFormat = new QComboBox(behaviorGroup);
     m_storageSizeFormat->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_storageSizeFormat->setMinimumHeight(m_storageSizeFormat->fontMetrics().height() + 8);
     m_storageSizeFormat->addItem(tr("Decimal (1.5 M)"), 1);     // SizeFormat::Decimal
     m_storageSizeFormat->addItem(tr("Binary (1.5 Mi)"), 2);     // SizeFormat::Binary
     m_storageSizeFormat->addItem(tr("Precise (1'500'000)"), 0); // SizeFormat::Precise
