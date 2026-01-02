@@ -1,0 +1,10 @@
+gemini-commander (1.5.0) unstable; urgency=medium
+
+  * Initial Debian package release
+  * Dual-pane file manager with Qt6 and KDE Frameworks 6
+  * Archive support via libarchive and unar
+  * UDisks2/D-Bus device detection
+  * Built-in text viewer with KTextEditor
+  * Hex viewer widget
+
+ -- Andrzej Borucki <borucki.andrzej@gmail.com>  Thu, 02 Jan 2025 12:00:00 +0100

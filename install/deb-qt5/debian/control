@@ -1,0 +1,46 @@
+Source: gemini-commander
+Section: utils
+Priority: optional
+Maintainer: Andrzej Borucki <borucki.andrzej@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.16),
+               g++ (>= 10),
+               qtbase5-dev,
+               qttools5-dev,
+               qttools5-dev-tools,
+               libkf5texteditor-dev,
+               libkf5widgetsaddons-dev,
+               libkf5iconthemes-dev,
+               libkf5archive-dev,
+               libkf5coreaddons-dev,
+               libkf5i18n-dev,
+               libkf5windowsystem-dev,
+               libkf5kio-dev,
+               libkf5parts-dev,
+               extra-cmake-modules,
+               libgl1-mesa-dev,
+               libicu-dev,
+               libarchive-dev,
+               libbotan-2-dev,
+               pkg-config
+Standards-Version: 4.6.2
+Homepage: https://github.com/siplasplas/gemini-commander
+Rules-Requires-Root: no
+
+Package: gemini-commander
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Recommends: gnome-terminal | konsole | x-terminal-emulator,
+            unar
+Description: Dual-pane file manager built with Qt5 and KDE Frameworks
+ Gemini Commander is a modern dual-pane file manager featuring:
+  * Dual-pane interface for efficient file operations
+  * Built-in text viewer with syntax highlighting (KTextEditor)
+  * Hex viewer for binary files
+  * Archive support (zip, rar, 7z, arj and more via unar)
+  * Device detection via UDisks2/D-Bus
+  * Configurable keyboard shortcuts
+ .
+ Built with Qt5 and KDE Frameworks 5 for compatibility with
+ Ubuntu LTS and Linux Mint.

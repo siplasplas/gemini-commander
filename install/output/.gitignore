@@ -1,0 +1,4 @@
+# Ignore built packages
+*.deb
+*.buildinfo
+*.changes
