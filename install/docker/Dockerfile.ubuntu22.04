@@ -1,0 +1,34 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    debhelper \
+    devscripts \
+    cmake \
+    g++ \
+    qtbase5-dev \
+    qttools5-dev \
+    qttools5-dev-tools \
+    libkf5texteditor-dev \
+    libkf5widgetsaddons-dev \
+    libkf5iconthemes-dev \
+    libkf5archive-dev \
+    libkf5coreaddons-dev \
+    libkf5i18n-dev \
+    libkf5windowsystem-dev \
+    libkf5kio-dev \
+    libkf5parts-dev \
+    extra-cmake-modules \
+    libgl1-mesa-dev \
+    libicu-dev \
+    libarchive-dev \
+    libbotan-2-dev \
+    libgtest-dev \
+    nlohmann-json3-dev \
+    pkg-config \
+    librsvg2-bin \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build

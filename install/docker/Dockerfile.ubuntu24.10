@@ -1,0 +1,31 @@
+FROM ubuntu:oracular
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    debhelper \
+    devscripts \
+    cmake \
+    g++ \
+    qt6-base-dev \
+    qt6-tools-dev \
+    qt6-tools-dev-tools \
+    libkf6texteditor-dev \
+    libkf6widgetsaddons-dev \
+    libkf6iconthemes-dev \
+    libkf6archive-dev \
+    libkf6coreaddons-dev \
+    libkf6i18n-dev \
+    libkf6windowsystem-dev \
+    libkf6kio-dev \
+    libkf6parts-dev \
+    extra-cmake-modules \
+    libgl1-mesa-dev \
+    libicu-dev \
+    libarchive-dev \
+    libbotan-2-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build

@@ -142,3 +142,15 @@ ninja
 ```shell
 sudo make install
 ```
+
+## Building Debian Packages
+
+Pre-built `.deb` packages can be created using containers:
+
+```bash
+cd install
+./build-in-container.sh setup   # One-time: build Docker images
+./build-in-container.sh all     # Build packages for Ubuntu 22.04 and 24.10
+```
+
+See [install/README.md](install/README.md) for details.

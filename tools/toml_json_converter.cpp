@@ -12,7 +12,7 @@ json toml_table_to_json(const toml::table& tbl)
 {
     json j = json::object();
     for (auto&& [k, v] : tbl) {
-        j[k.str()] = toml_node_to_json(v);
+        j[std::string(k.str())] = toml_node_to_json(v);
     }
     return j;
 }

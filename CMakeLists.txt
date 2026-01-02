@@ -44,6 +44,7 @@ if(NOT BOTAN_FOUND)
     pkg_check_modules(BOTAN REQUIRED botan-3)
 endif()
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
+find_package(nlohmann_json 3.2.0 REQUIRED)
 
 set(TOMLPLUSPLUS_INCLUDE_DIR
         ${CMAKE_CURRENT_SOURCE_DIR}/external/tomlplusplus/include
@@ -79,6 +80,7 @@ target_include_directories(toml_json_converter PRIVATE
 
 target_link_libraries(toml_json_converter PRIVATE
         core
+        nlohmann_json::nlohmann_json
 )
 
 add_executable(stub_generator
