@@ -21,6 +21,7 @@ DOCKER_DIR="$SCRIPT_DIR/docker"
 
 IMAGE_QT5="gemini-commander-build:ubuntu24.04"
 IMAGE_QT6="gemini-commander-build:debian-sid"
+IMAGE_UBUNTU2510="gemini-commander-build:ubuntu25.10"
 
 # Detect container runtime
 if command -v podman &> /dev/null; then
@@ -59,6 +60,10 @@ setup_images() {
     $CONTAINER_CMD build -t "$IMAGE_QT6" -f "$DOCKER_DIR/Dockerfile.debian-sid" "$DOCKER_DIR"
 
     echo ""
+    echo "Building Qt6 image (Ubuntu 25.10)..."
+    $CONTAINER_CMD build -t "$IMAGE_UBUNTU2510" -f "$DOCKER_DIR/Dockerfile.ubuntu25.10" "$DOCKER_DIR"
+
+    echo ""
     echo "Images built successfully!"
     echo "You can now run: $0 all"
 }
@@ -68,6 +73,7 @@ clean_images() {
     echo "Removing build images..."
     $CONTAINER_CMD rmi "$IMAGE_QT5" 2>/dev/null || true
     $CONTAINER_CMD rmi "$IMAGE_QT6" 2>/dev/null || true
+    $CONTAINER_CMD rmi "$IMAGE_UBUNTU2510" 2>/dev/null || true
     echo "Done."
 }
 
@@ -116,6 +122,58 @@ build_qt5() {
     if ls "$OUTPUT_DIR"/*ubuntu24.04*.deb 1>/dev/null 2>&1; then
         echo ""
         echo "Qt5 package built successfully!"
+    else
+        echo ""
+        echo "ERROR: Build failed. Check log: $LOG_FILE"
+        return 1
+    fi
+}
+
+build_ubuntu2510() {
+    echo ""
+    echo "=========================================="
+    echo "Building Qt6/KF6 version (Ubuntu 25.10)"
+    echo "=========================================="
+
+    if ! image_exists "$IMAGE_UBUNTU2510"; then
+        echo "Image not found. Building..."
+        $CONTAINER_CMD build -t "$IMAGE_UBUNTU2510" -f "$DOCKER_DIR/Dockerfile.ubuntu25.10" "$DOCKER_DIR"
+    fi
+
+    local LOG_FILE="$LOG_DIR/build-ubuntu2510-$(date +%Y%m%d-%H%M%S).log"
+    echo "Log file: $LOG_FILE"
+
+    $CONTAINER_CMD run --rm \
+        -v "$SOURCE_DIR:/src:ro" \
+        -v "$OUTPUT_DIR:/output" \
+        "$IMAGE_UBUNTU2510" \
+        /bin/bash -c '
+            set -e
+            echo "=== Preparing source ==="
+            cp -r /src /tmp/gemini-commander-build
+            cd /tmp/gemini-commander-build
+            cp -r install/deb/debian .
+
+            echo "=== Building package ==="
+            dpkg-buildpackage -us -uc -b
+
+            echo "=== Copying result ==="
+            # Copy and rename in one step to avoid conflicts
+            for f in /tmp/gemini-commander_*.deb; do
+                if [[ -f "$f" ]]; then
+                    base=$(basename "$f")
+                    newname="${base%.deb}_ubuntu25.10.deb"
+                    cp "$f" "/output/$newname"
+                fi
+            done
+
+            echo "=== Done ==="
+            ls -la /output/*ubuntu25.10*.deb 2>/dev/null || echo "No .deb files found"
+        ' 2>&1 | tee "$LOG_FILE"
+
+    if ls "$OUTPUT_DIR"/*ubuntu25.10*.deb 1>/dev/null 2>&1; then
+        echo ""
+        echo "Ubuntu 25.10 package built successfully!"
     else
         echo ""
         echo "ERROR: Build failed. Check log: $LOG_FILE"
@@ -188,8 +246,9 @@ show_results() {
     ls -lh "$LOG_DIR"/*.log 2>/dev/null | tail -5
     echo ""
     echo "To install on target system:"
-    echo "  sudo apt install ./gemini-commander_*_ubuntu24.04.deb  # For Ubuntu 24.04/Mint 21"
-    echo "  sudo apt install ./gemini-commander_*_debian-sid.deb   # For Debian Sid / Ubuntu 24.10+"
+    echo "  sudo apt install ./gemini-commander_*_ubuntu24.04.deb  # For Ubuntu 24.04 / Mint 22"
+    echo "  sudo apt install ./gemini-commander_*_ubuntu25.10.deb  # For Ubuntu 25.10"
+    echo "  sudo apt install ./gemini-commander_*_debian-sid.deb   # For Debian Sid"
 }
 
 case "${1:-help}" in
@@ -207,19 +266,25 @@ case "${1:-help}" in
         build_qt6
         show_results
         ;;
+    ubuntu2510)
+        build_ubuntu2510
+        show_results
+        ;;
     all)
         build_qt5
         build_qt6
+        build_ubuntu2510
         show_results
         ;;
     *)
-        echo "Usage: $0 {setup|qt5|qt6|all|clean}"
+        echo "Usage: $0 {setup|qt5|qt6|ubuntu2510|all|clean}"
         echo ""
-        echo "  setup  - Build Docker images with dependencies (run once, ~5 min)"
-        echo "  qt5    - Build for Ubuntu 24.04 / Mint 22 (Qt5/KF5)"
-        echo "  qt6    - Build for Debian Sid / Ubuntu 24.10+ (Qt6/KF6)"
-        echo "  all    - Build both versions"
-        echo "  clean  - Remove Docker images"
+        echo "  setup      - Build Docker images with dependencies (run once)"
+        echo "  qt5        - Build for Ubuntu 24.04 / Mint 22 (Qt5/KF5)"
+        echo "  qt6        - Build for Debian Sid (Qt6/KF6)"
+        echo "  ubuntu2510 - Build for Ubuntu 25.10 (Qt6/KF6)"
+        echo "  all        - Build all versions"
+        echo "  clean      - Remove Docker images"
         echo ""
         echo "First run:  $0 setup && $0 all"
         echo "Next runs:  $0 all  (fast, uses cached images)"
