@@ -9,8 +9,13 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source is two levels up from install/deb/
 SOURCE_DIR="${1:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
-VERSION="1.5.0"
 PACKAGE_NAME="gemini-commander"
+# Extract version from CMakeLists.txt
+VERSION=$(sed -n 's/.*project(gemini-commander VERSION \([0-9.]*\).*/\1/p' "$SOURCE_DIR/CMakeLists.txt")
+if [ -z "$VERSION" ]; then
+    echo "ERROR: Could not extract version from CMakeLists.txt"
+    exit 1
+fi
 BUILD_DIR="/tmp/${PACKAGE_NAME}-build"
 
 echo "=========================================="

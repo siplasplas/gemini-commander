@@ -17,8 +17,8 @@ cd install
 ```
 
 Packages will be in `install/output/`:
-- `gemini-commander_1.5.0_amd64_ubuntu24.04.deb` - Qt5/KF5 for Ubuntu 24.04, Mint 22
-- `gemini-commander_1.5.0_amd64_debian-sid.deb` - Qt6/KF6 for Ubuntu 24.10+
+- `gemini-commander_1.5.1_amd64_ubuntu24.04.deb` - Qt5/KF5 for Ubuntu 24.04, Mint 22
+- `gemini-commander_1.5.1_amd64_debian-sid.deb` - Qt6/KF6 for Ubuntu 24.10+
 
 ## Container Build Commands
 

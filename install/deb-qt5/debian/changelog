@@ -1,3 +1,9 @@
+gemini-commander (1.5.1) unstable; urgency=medium
+
+  * Preserve selection when directory watcher reloads panel
+
+ -- Andrzej Borucki <borucki.andrzej@gmail.com>  Mon, 06 Jan 2025 12:00:00 +0100
+
 gemini-commander (1.5.0) unstable; urgency=medium
 
   * Initial Debian package release (Qt5/KF5 version)
