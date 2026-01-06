@@ -80,8 +80,10 @@ void SearchWorker::startSearch()
             if (isFile && !matchesFileSize(info.size()))
                 continue;
 
-            // Text content filter (files only)
-            if (isFile && !m_criteria.containingText.isEmpty()) {
+            // Text content filter (files only, directories cannot contain text)
+            if (!m_criteria.containingText.isEmpty()) {
+                if (isDir)
+                    continue;  // Directories cannot contain text
                 bool textMatches = matchesContainingText(info.absoluteFilePath());
                 if (m_criteria.negateContainingText)
                     textMatches = !textMatches;
@@ -158,6 +160,10 @@ void SearchWorker::startSearch()
 
             // File content filter
             if (!matchesFileContentFilter(info.absoluteFilePath(), info.size()))
+                continue;
+        } else if (isDir) {
+            // Directories cannot contain text - skip them when searching for text content
+            if (!m_criteria.containingText.isEmpty())
                 continue;
         }
 
