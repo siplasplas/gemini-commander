@@ -1780,16 +1780,20 @@ void MainWindow::processPendingDirChanges()
     QSet<QString> paths = m_pendingDirChanges;
     m_pendingDirChanges.clear();
 
-    // Refresh panels showing these directories
+    // Refresh panels showing these directories, preserving selection
     FilePanel* leftPanel = filePanelForSide(Side::Left);
     FilePanel* rightPanel = filePanelForSide(Side::Right);
 
     for (const QString& path : paths) {
         if (leftPanel && leftPanel->currentPath == path && !leftPanel->branchMode) {
+            QString selRelPath = leftPanel->currentRelPath();
             leftPanel->loadDirectory();
+            leftPanel->selectEntryByRelPath(selRelPath);
         }
         if (rightPanel && rightPanel->currentPath == path && !rightPanel->branchMode) {
+            QString selRelPath = rightPanel->currentRelPath();
             rightPanel->loadDirectory();
+            rightPanel->selectEntryByRelPath(selRelPath);
         }
     }
 }
