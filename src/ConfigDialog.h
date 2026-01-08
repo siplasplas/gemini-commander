@@ -114,6 +114,7 @@ private:
     QComboBox* m_leftSortOrder;
     QComboBox* m_rightSortColumn;
     QComboBox* m_rightSortOrder;
+    QCheckBox* m_sortCaseSensitive;
 
     // History page
     QSpinBox* m_maxHistorySize;

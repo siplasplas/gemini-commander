@@ -512,6 +512,9 @@ void ConfigDialog::createPanelsPage()
     rightSortLayout->addWidget(m_rightSortOrder);
     sortLayout->addRow(tr("Right panel:"), rightSortLayout);
 
+    m_sortCaseSensitive = new QCheckBox(tr("Case-sensitive name sorting"), sortGroup);
+    sortLayout->addRow("", m_sortCaseSensitive);
+
     layout->addWidget(sortGroup);
 
     layout->addStretch();
@@ -753,6 +756,8 @@ void ConfigDialog::loadSettings()
     m_initialRightSortColumn = cfg.rightSortColumn();
     m_initialRightSortOrder = cfg.rightSortOrder();
 
+    m_sortCaseSensitive->setChecked(cfg.sortCaseSensitive());
+
     // History page
     m_maxHistorySize->setValue(cfg.maxHistorySize());
     m_maxUnpinnedTabs->setValue(cfg.maxUnpinnedTabs());
@@ -809,6 +814,7 @@ void ConfigDialog::saveSettings()
 
     cfg.setLeftSort(newLeftCol, newLeftOrd);
     cfg.setRightSort(newRightCol, newRightOrd);
+    cfg.setSortCaseSensitive(m_sortCaseSensitive->isChecked());
 
     // Save panel columns
     QStringList leftCols = m_leftColumns->columns();

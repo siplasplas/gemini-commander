@@ -113,6 +113,9 @@ public:
   int rightSortOrder() const { return m_rightSortOrder; }
   void setRightSort(const QString& column, int order) { m_rightSortColumn = column; m_rightSortOrder = order; }
 
+  bool sortCaseSensitive() const { return m_sortCaseSensitive; }
+  void setSortCaseSensitive(bool enabled) { m_sortCaseSensitive = enabled; }
+
   // Panel columns configuration
   QStringList leftPanelColumns() const { return m_leftColumns; }
   QVector<double> leftPanelProportions() const { return m_leftProportions; }
@@ -221,6 +224,7 @@ private:
   int m_leftSortOrder = 1;    // Qt::DescendingOrder
   QString m_rightSortColumn = "Date";
   int m_rightSortOrder = 1;
+  bool m_sortCaseSensitive = false;  // Default: case-insensitive
 
   // Panel columns (initialized from defaultColumns()/defaultProportions())
   QStringList m_leftColumns;

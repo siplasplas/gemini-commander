@@ -448,8 +448,10 @@ void FilePanel::sortEntries() {
         if (aDir != bDir)
             return aDir && !bDir;
 
-        auto lessCI = [](const QString &x, const QString &y) { return x.compare(y, Qt::CaseInsensitive) < 0; };
-        auto greaterCI = [](const QString &x, const QString &y) { return x.compare(y, Qt::CaseInsensitive) > 0; };
+        const bool caseSensitive = Config::instance().sortCaseSensitive();
+        const Qt::CaseSensitivity cs = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+        auto lessCmp = [cs](const QString &x, const QString &y) { return x.compare(y, cs) < 0; };
+        auto greaterCmp = [cs](const QString &x, const QString &y) { return x.compare(y, cs) > 0; };
 
         const bool asc = (sortOrder == Qt::AscendingOrder);
 
@@ -460,7 +462,7 @@ void FilePanel::sortEntries() {
                 na = stripLeadingDot(na);
                 nb = stripLeadingDot(nb);
             }
-            return ascLocal ? lessCI(na, nb) : greaterCI(na, nb);
+            return ascLocal ? lessCmp(na, nb) : greaterCmp(na, nb);
         };
 
         if (sortColumn == "Name") {

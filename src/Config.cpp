@@ -290,6 +290,8 @@ bool Config::load(const QString& path)
                 m_rightSortColumn = QString::fromStdString(*col);
             if (auto ord = panels["right_sort_order"].value<int64_t>())
                 m_rightSortOrder = static_cast<int>(*ord);
+            if (auto cs = panels["sort_case_sensitive"].value<bool>())
+                m_sortCaseSensitive = *cs;
 
             // Left panel columns
             if (panels.contains("left_columns") && panels["left_columns"].is_array()) {
@@ -510,6 +512,7 @@ bool Config::save() const
     panelsTbl.insert("left_sort_order", static_cast<int64_t>(m_leftSortOrder));
     panelsTbl.insert("right_sort_column", m_rightSortColumn.toStdString());
     panelsTbl.insert("right_sort_order", static_cast<int64_t>(m_rightSortOrder));
+    panelsTbl.insert("sort_case_sensitive", m_sortCaseSensitive);
 
     // Left panel columns and proportions
     toml::array leftColsArr, leftPropsArr;
