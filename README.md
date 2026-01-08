@@ -113,7 +113,7 @@ On Ubuntu 24.04 LTS/Mint/Debian/Pop!_OS 24.04 LTS with old KDE Frameworks
 git clone --recursive https://github.com/siplasplas/gemini-commander
 cd gemini-commander 
 mkdir build && cd build
-cmake .. -DUSE_QT5=1
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local -DUSE_QT5=1 ..
 make -j$(nproc)
 ```
 On systems with new KDE Frameworks
@@ -121,7 +121,7 @@ On systems with new KDE Frameworks
 git clone --recursive https://github.com/siplasplas/gemini-commander
 cd gemini-commander 
 mkdir build && cd build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local ..
 make -j$(nproc)
 ```
 
