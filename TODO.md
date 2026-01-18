@@ -1,3 +1,11 @@
+fix:
+  * count directory total size by space, second time not works
+  * viewer F3 get old contenct if changed
+  
+add:
+ * compare files/directories by content 
+ 
+
 # MUST-HAVE (Core File Manager Functionality)
 
 * **Essential editor and viewer features**
