@@ -641,8 +641,6 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
 
     quint64 bytesCopied = 0;
     CopyStats stats;
-    bool statsOk = false;
-    collectCopyStats(currentPath, stats, statsOk);
     QString dstPath = resolveDstPath(currentPath, destInput);
 
     // Treat destination as directory when: ends with '/' OR multiple files
@@ -656,6 +654,33 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     }
 
     QDir srcDir(currentPath);
+
+    // Skip collecting stats for same-filesystem moves (fast rename)
+    bool needStats = !move;
+    if (!needStats) {
+        for (const QString& name : names) {
+            QString srcPath = srcDir.absoluteFilePath(name);
+            QString dstFilePath = destIsDir ? QDir(dstPath).filePath(name) : dstPath;
+            if (!areOnSameFilesystem(srcPath, dstFilePath)) {
+                needStats = true;
+                break;
+            }
+        }
+    }
+    if (needStats) {
+        // Collect stats only for selected items, not entire directory
+        for (const QString& name : names) {
+            QString srcPath = srcDir.absoluteFilePath(name);
+            QFileInfo srcInfo(srcPath);
+            if (srcInfo.isDir()) {
+                bool statsOk = false;
+                collectCopyStats(srcPath, stats, statsOk);
+            } else if (srcInfo.isFile()) {
+                stats.totalFiles++;
+                stats.totalBytes += static_cast<quint64>(srcInfo.size());
+            }
+        }
+    }
     FileOperationProgressDialog progressDlg(QObject::tr("Copy"), static_cast<int>(names.size()), parent);
     progressDlg.show();
     progressDlg.activateWindow();
