@@ -108,13 +108,23 @@ void StringListEditorDialog::onEditChanged(const QString& text)
 
 void StringListEditorDialog::onAddNew()
 {
-    auto* item = new QListWidgetItem(QString());
+    // Seed new entry with the directory of the currently edited path
+    QString current = m_edit->text().trimmed();
+    QString seed;
+    if (!current.isEmpty()) {
+        QString dir = QFileInfo(current).absolutePath();
+        if (!dir.isEmpty() && QFileInfo::exists(dir))
+            seed = dir + "/";
+    }
+
+    auto* item = new QListWidgetItem(seed);
     m_list->addItem(item);
     m_list->setCurrentItem(item);
     m_syncing = true;
-    m_edit->clear();
+    m_edit->setText(seed);
     m_syncing = false;
     m_edit->setFocus();
+    m_edit->setCursorPosition(m_edit->text().length());
     updateButtons();
 }
 
