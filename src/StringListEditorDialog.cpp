@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
+#include <QFileInfo>
 
 StringListEditorDialog::StringListEditorDialog(const QStringList& items,
                                                int selectedIndex,
@@ -134,10 +135,14 @@ void StringListEditorDialog::onDelete()
 
 void StringListEditorDialog::onBrowse()
 {
+    QString startDir = QFileInfo(m_edit->text().trimmed()).absolutePath();
+    if (startDir.isEmpty() || !QFileInfo::exists(startDir))
+        startDir = QString();
+
     QString path = QFileDialog::getOpenFileName(
         this,
         m_options.fileDialogTitle,
-        QString(),
+        startDir,
         m_options.fileFilter);
     if (path.isEmpty())
         return;
