@@ -294,52 +294,59 @@ bool MainWindow::doCompareByContents(QObject *obj, QKeyEvent *keyEvent) {
         // Items are from the same panel; use sort order from getMarkedPaths()
         param1 = currentMarkedPaths[0];
         param2 = currentMarkedPaths[1];
-    } else if (C == 1) {
-        if (N != 1) {
-            QMessageBox::warning(this, tr("Compare by Contents"),
-                tr("Please mark exactly one item in the other panel."));
-            return true;
+    } else if (C == 1 || C == 0) {
+        // Resolve "current item" from the active panel
+        QString currentPath;
+        QString currentName;
+        if (C == 1) {
+            currentPath = currentMarkedPaths[0];
+            currentName = QFileInfo(currentPath).fileName();
+        } else {
+            auto [cursorEntry, cursorRow] = currentPanel->currentEntryRow();
+            if (!cursorEntry) {
+                QMessageBox::warning(this, tr("Compare by Contents"),
+                    tr("No current item in the panel."));
+                return true;
+            }
+            currentPath = cursorEntry->info.absoluteFilePath();
+            currentName = cursorEntry->info.fileName();
         }
-        QFileInfo fi1(currentMarkedPaths[0]);
-        QFileInfo fi2(neighborMarkedPaths[0]);
+
+        // Resolve "neighbor item"
+        QString neighborPath;
+        if (N > 1) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("Too many items marked in the other panel."));
+            return true;
+        } else if (N == 1) {
+            neighborPath = neighborMarkedPaths[0];
+        } else { // N == 0 — find same name in neighbor panel
+            for (const auto& entry : neighborPanel->entries) {
+                if (entry.info.fileName() == currentName) {
+                    neighborPath = entry.info.absoluteFilePath();
+                    break;
+                }
+            }
+            if (neighborPath.isEmpty()) {
+                QMessageBox::warning(this, tr("Compare by Contents"),
+                    tr("No item named \"%1\" found in the other panel.").arg(currentName));
+                return true;
+            }
+        }
+
+        QFileInfo fi1(currentPath);
+        QFileInfo fi2(neighborPath);
         if (fi1.isDir() != fi2.isDir()) {
             QMessageBox::warning(this, tr("Compare by Contents"),
                 tr("Both items must be either files or directories."));
             return true;
         }
         if (currentPanel == leftPanel) {
-            param1 = currentMarkedPaths[0];
-            param2 = neighborMarkedPaths[0];
+            param1 = currentPath;
+            param2 = neighborPath;
         } else {
-            param1 = neighborMarkedPaths[0];
-            param2 = currentMarkedPaths[0];
-        }
-    } else { // C == 0
-        if (N != 1) {
-            QMessageBox::warning(this, tr("Compare by Contents"),
-                tr("Please mark exactly one item in the other panel."));
-            return true;
-        }
-        auto [cursorEntry, cursorRow] = currentPanel->currentEntryRow();
-        if (!cursorEntry) {
-            QMessageBox::warning(this, tr("Compare by Contents"),
-                tr("No current item in the panel."));
-            return true;
-        }
-        QString cursorPath = cursorEntry->info.absoluteFilePath();
-        QFileInfo fi1(cursorPath);
-        QFileInfo fi2(neighborMarkedPaths[0]);
-        if (fi1.isDir() != fi2.isDir()) {
-            QMessageBox::warning(this, tr("Compare by Contents"),
-                tr("Both items must be either files or directories."));
-            return true;
-        }
-        if (currentPanel == leftPanel) {
-            param1 = cursorPath;
-            param2 = neighborMarkedPaths[0];
-        } else {
-            param1 = neighborMarkedPaths[0];
-            param2 = cursorPath;
+            param1 = neighborPath;
+            param2 = currentPath;
         }
     }
 
