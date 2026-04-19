@@ -148,18 +148,15 @@ void StringListEditorDialog::onBrowse()
         return;
 
     auto* item = m_list->currentItem();
-    if (item) {
-        // Update existing selection
-        m_edit->setText(path);  // triggers onEditChanged → updates item
-    } else {
-        // No selection → add new item
-        auto* newItem = new QListWidgetItem(path);
-        m_list->addItem(newItem);
-        m_list->setCurrentItem(newItem);
-        m_syncing = true;
-        m_edit->setText(path);
-        m_syncing = false;
+    if (!item) {
+        item = new QListWidgetItem(QString());
+        m_list->addItem(item);
+        m_list->setCurrentItem(item);
     }
+    item->setText(path);
+    m_syncing = true;
+    m_edit->setText(path);
+    m_syncing = false;
     updateButtons();
 }
 
