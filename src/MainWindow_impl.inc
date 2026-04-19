@@ -1138,6 +1138,23 @@ bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 
+    auto* leftPane = qobject_cast<FilePaneWidget*>(m_leftTabs->currentWidget());
+    auto* rightPane = qobject_cast<FilePaneWidget*>(m_rightTabs->currentWidget());
+    if (!leftPane || !rightPane)
+        return false;
+
+    QString leftPath = leftPane->currentPath();
+    QString rightPath = rightPane->currentPath();
+    leftPane->setCurrentPath(rightPath);
+    rightPane->setCurrentPath(leftPath);
+
+    return false;
+}
+
+bool MainWindow::doSwapPanelGroups(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
     auto* splitter = qobject_cast<QSplitter*>(m_leftTabs->parentWidget());
     if (!splitter)
         return false;

@@ -31,6 +31,7 @@
     Q_INVOKABLE bool doClearAndReturnToPanel(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSearchGlobal(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSwapPanels(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doSwapPanelGroups(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doFollowDirFromLeft(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doFollowDirFromRight(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSwitchSide(QObject *obj, QKeyEvent *keyEvent);

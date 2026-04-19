@@ -115,6 +115,7 @@ keys = [
     { key = "Alt+F7",              handler = "doSearchGlobal" },
 
     { key = "Ctrl+U",              handler = "doSwapPanels" },
+    { key = "Shift+Ctrl+U",        handler = "doSwapPanelGroups" },
 ]
 
 # CommandLine - command bar at the bottom
