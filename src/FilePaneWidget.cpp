@@ -122,6 +122,14 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
     setCurrentPath(m_filePanel->currentPath);
 }
 
+void FilePaneWidget::setCurrentPathRaw(const QString& path)
+{
+    m_pathEdit->setText(path);
+    if (m_filePanel->currentPath != path) {
+        m_filePanel->currentPath = path;
+    }
+}
+
 void FilePaneWidget::setCurrentPath(const QString& path)
 {
     m_pathEdit->setText(path);

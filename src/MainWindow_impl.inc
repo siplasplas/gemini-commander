@@ -1134,19 +1134,39 @@ bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+//todo: not works yet
 bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 
-    auto* leftPane = qobject_cast<FilePaneWidget*>(m_leftTabs->currentWidget());
-    auto* rightPane = qobject_cast<FilePaneWidget*>(m_rightTabs->currentWidget());
+    int leftIdx  = m_leftTabs->currentIndex();
+    int rightIdx = m_rightTabs->currentIndex();
+    if (leftIdx < 0 || rightIdx < 0)
+        return false;
+
+    auto* leftPane  = qobject_cast<FilePaneWidget*>(m_leftTabs->widget(leftIdx));
+    auto* rightPane = qobject_cast<FilePaneWidget*>(m_rightTabs->widget(rightIdx));
     if (!leftPane || !rightPane)
         return false;
 
-    QString leftPath = leftPane->currentPath();
-    QString rightPath = rightPane->currentPath();
-    leftPane->setCurrentPath(rightPath);
-    rightPane->setCurrentPath(leftPath);
+    QString leftText  = m_leftTabs->tabText(leftIdx);
+    QString rightText = m_rightTabs->tabText(rightIdx);
+    bool leftPinned   = m_leftTabs->isTabPinned(leftIdx);
+    bool rightPinned  = m_rightTabs->isTabPinned(rightIdx);
+
+    m_leftTabs->removeTab(leftIdx);
+    m_rightTabs->removeTab(rightIdx);
+
+    m_leftTabs->insertTab(leftIdx, rightPane, rightText);
+    m_rightTabs->insertTab(rightIdx, leftPane, leftText);
+
+    m_leftTabs->setTabPinned(leftIdx, rightPinned);
+    m_rightTabs->setTabPinned(rightIdx, leftPinned);
+
+    m_leftTabs->setCurrentIndex(leftIdx);
+    m_rightTabs->setCurrentIndex(rightIdx);
+
+    m_activeSide = opposite(m_activeSide);
 
     return false;
 }

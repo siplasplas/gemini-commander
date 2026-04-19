@@ -26,6 +26,7 @@ public:
   ~FilePaneWidget() override;
 
   FilePanel* filePanel() const { return m_filePanel; }
+  void setFilePanel(FilePanel* filePanel) { m_filePanel = filePanel; }
   void setSide(Side side) { m_side = side; m_filePanel->setSide(side); }
   QLineEdit* pathEdit() const { return m_pathEdit; }
 
@@ -35,6 +36,7 @@ public:
   bool isQuickViewActive() const { return m_quickViewState != QuickViewState::Normal; }
   QuickViewState quickViewState() const { return m_quickViewState; }
 
+  void setCurrentPathRaw(const QString& path);
   void setCurrentPath(const QString& path);
   QString currentPath() const;
 
