@@ -1137,7 +1137,28 @@ bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    qDebug() << "handler: doSwapPanels";
+
+    auto* splitter = qobject_cast<QSplitter*>(m_leftTabs->parentWidget());
+    if (!splitter)
+        return false;
+
+    QList<int> sizes = splitter->sizes();
+
+    // Move right tabs to position 0 — left tabs shift to position 1
+    splitter->insertWidget(0, m_rightTabs);
+    qSwap(m_leftTabs, m_rightTabs);
+
+    splitter->setSizes(sizes);
+
+    // Update Side stored in every pane of both tab widgets
+    for (auto* tabs : {m_leftTabs, m_rightTabs}) {
+        Side newSide = (tabs == m_leftTabs) ? Side::Left : Side::Right;
+        for (int i = 0; i < tabs->count(); ++i) {
+            if (auto* pane = qobject_cast<FilePaneWidget*>(tabs->widget(i)))
+                pane->setSide(newSide);
+        }
+    }
+
     return false;
 }
 

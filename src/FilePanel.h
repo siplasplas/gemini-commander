@@ -165,6 +165,7 @@ public:
 
     std::pair<PanelEntry*, int> currentEntryRow();
     Side side() {return m_side;}
+    void setSide(Side side) { m_side = side; }
     void feedSearchResults(const QVector<SearchResult>& results, const QString& searchPath);
 
     // Branch mode incremental updates (avoid full reload)

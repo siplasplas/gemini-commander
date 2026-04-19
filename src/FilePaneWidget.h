@@ -26,6 +26,7 @@ public:
   ~FilePaneWidget() override;
 
   FilePanel* filePanel() const { return m_filePanel; }
+  void setSide(Side side) { m_side = side; m_filePanel->setSide(side); }
   QLineEdit* pathEdit() const { return m_pathEdit; }
 
   // Quick View methods
