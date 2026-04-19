@@ -257,6 +257,7 @@ void ConfigDialog::setupUi()
     m_categoryList->addItem(tr("Panels"));
     m_categoryList->addItem(tr("History"));
     m_categoryList->addItem(tr("General"));
+    m_categoryList->addItem(tr("Comparer"));
     m_categoryList->setCurrentRow(0);
 
     contentLayout->addWidget(m_categoryList);
@@ -268,6 +269,7 @@ void ConfigDialog::setupUi()
     createPanelsPage();
     createHistoryPage();
     createGeneralPage();
+    createComparerPage();
 
     contentLayout->addWidget(m_pagesStack, 1);
 
@@ -620,33 +622,6 @@ void ConfigDialog::createGeneralPage()
 
     layout->addWidget(behaviorGroup);
 
-    // Compare directories settings
-    auto* compareGroup = new QGroupBox(tr("Compare Directories"), page);
-    auto* compareLayout = new QVBoxLayout(compareGroup);
-
-    m_compareIgnoreTime = new QCheckBox(tr("Ignore modification time"), compareGroup);
-    m_compareIgnoreSize = new QCheckBox(tr("Ignore file size"), compareGroup);
-    compareLayout->addWidget(m_compareIgnoreTime);
-    compareLayout->addWidget(m_compareIgnoreSize);
-
-    auto* toolFormLayout = new QFormLayout();
-    auto* toolRow = new QHBoxLayout();
-    m_compareToolPath = new QLineEdit(compareGroup);
-    m_compareToolPath->setPlaceholderText(tr("/usr/bin/meld"));
-    m_compareToolPathBrowse = new QPushButton(tr("Browse..."), compareGroup);
-    toolRow->addWidget(m_compareToolPath);
-    toolRow->addWidget(m_compareToolPathBrowse);
-    toolFormLayout->addRow(tr("Compare tool (\"Compare by contents\"):"), toolRow);
-    compareLayout->addLayout(toolFormLayout);
-
-    connect(m_compareToolPathBrowse, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, tr("Select Compare Tool"), "/usr/bin");
-        if (!path.isEmpty())
-            m_compareToolPath->setText(path);
-    });
-
-    layout->addWidget(compareGroup);
-
     // Quick View threshold for KTextEditor
     auto* viewerGroup = new QGroupBox(tr("Quick View (Ctrl+Q)"), page);
     auto* viewerLayout = new QFormLayout(viewerGroup);
@@ -714,6 +689,78 @@ void ConfigDialog::createGeneralPage()
 
     layout->addWidget(toolbarGroup);
     layout->addStretch();
+
+    m_pagesStack->addWidget(page);
+}
+
+void ConfigDialog::createComparerPage()
+{
+    auto* page = new QWidget();
+    auto* layout = new QVBoxLayout(page);
+
+    // Compare directories options
+    auto* dirGroup = new QGroupBox(tr("Compare Directories"), page);
+    auto* dirLayout = new QVBoxLayout(dirGroup);
+
+    m_compareIgnoreTime = new QCheckBox(tr("Ignore modification time"), dirGroup);
+    m_compareIgnoreSize = new QCheckBox(tr("Ignore file size"), dirGroup);
+    dirLayout->addWidget(m_compareIgnoreTime);
+    dirLayout->addWidget(m_compareIgnoreSize);
+
+    layout->addWidget(dirGroup);
+
+    // Compare tool selection
+    auto* toolGroup = new QGroupBox(tr("Compare Tool  (Files \u2192 Compare by contents)"), page);
+    auto* toolLayout = new QVBoxLayout(toolGroup);
+
+    // Combobox — active tool
+    m_compareToolCombo = new QComboBox(toolGroup);
+    toolLayout->addWidget(m_compareToolCombo);
+
+    // Path edit + Browse on one line
+    auto* editRow = new QHBoxLayout();
+    m_compareToolEdit = new QLineEdit(toolGroup);
+    m_compareToolEdit->setPlaceholderText("meld");
+    m_compareToolBrowse = new QPushButton(tr("Browse..."), toolGroup);
+    editRow->addWidget(m_compareToolEdit, 1);
+    editRow->addWidget(m_compareToolBrowse);
+    toolLayout->addLayout(editRow);
+
+    // Add button on its own line, right-aligned
+    auto* addRow = new QHBoxLayout();
+    m_compareToolAdd = new QPushButton(tr("Add to list"), toolGroup);
+    addRow->addStretch();
+    addRow->addWidget(m_compareToolAdd);
+    toolLayout->addLayout(addRow);
+
+    layout->addWidget(toolGroup);
+    layout->addStretch();
+
+    // Combobox selection → fill edit
+    connect(m_compareToolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int idx) {
+        m_compareToolEdit->setText(m_compareToolCombo->itemText(idx));
+    });
+
+    // Browse → fill edit (does not add to list automatically)
+    connect(m_compareToolBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, tr("Select Compare Tool"), "/usr/bin");
+        if (!path.isEmpty())
+            m_compareToolEdit->setText(path);
+    });
+
+    // Add → insert into combobox if new, then select
+    connect(m_compareToolAdd, &QPushButton::clicked, this, [this]() {
+        QString tool = m_compareToolEdit->text().trimmed();
+        if (tool.isEmpty())
+            return;
+        int existing = m_compareToolCombo->findText(tool);
+        if (existing < 0) {
+            m_compareToolCombo->addItem(tool);
+            existing = m_compareToolCombo->count() - 1;
+        }
+        m_compareToolCombo->setCurrentIndex(existing);
+    });
 
     m_pagesStack->addWidget(page);
 }
@@ -791,10 +838,19 @@ void ConfigDialog::loadSettings()
     if (storageSizeFormatIdx >= 0)
         m_storageSizeFormat->setCurrentIndex(storageSizeFormatIdx);
 
-    // Compare directories settings
+    // Comparer page
     m_compareIgnoreTime->setChecked(cfg.compareIgnoreTime());
     m_compareIgnoreSize->setChecked(cfg.compareIgnoreSize());
-    m_compareToolPath->setText(cfg.compareToolPath());
+
+    m_compareToolCombo->clear();
+    QStringList tools = cfg.compareTools();
+    if (tools.isEmpty())
+        tools = {"meld", "kdiff3", "kompare"};
+    for (const QString& t : tools)
+        m_compareToolCombo->addItem(t);
+    int toolIdx = qBound(0, cfg.compareToolIndex(), m_compareToolCombo->count() - 1);
+    m_compareToolCombo->setCurrentIndex(toolIdx);
+    m_compareToolEdit->setText(m_compareToolCombo->currentText());
 
     // KTE threshold
     m_kteThreshold->setText(QString::number(cfg.kteThresholdMB(), 'f', 3));
@@ -871,10 +927,14 @@ void ConfigDialog::saveSettings()
     int storageSizeFormatValue = m_storageSizeFormat->currentData().toInt();
     cfg.setStorageSizeFormat(static_cast<SizeFormat::SizeKind>(storageSizeFormatValue));
 
-    // Compare directories settings
+    // Comparer page
     cfg.setCompareIgnoreTime(m_compareIgnoreTime->isChecked());
     cfg.setCompareIgnoreSize(m_compareIgnoreSize->isChecked());
-    cfg.setCompareToolPath(m_compareToolPath->text().trimmed());
+    QStringList tools;
+    for (int i = 0; i < m_compareToolCombo->count(); ++i)
+        tools << m_compareToolCombo->itemText(i);
+    cfg.setCompareTools(tools);
+    cfg.setCompareToolIndex(m_compareToolCombo->currentIndex());
 
     // KTE threshold
     bool ok;

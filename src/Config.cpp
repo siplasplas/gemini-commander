@@ -136,8 +136,22 @@ bool Config::load(const QString& path)
                 m_compareIgnoreTime = *ignoreTime;
             if (auto ignoreSize = general["compare_ignore_size"].value<bool>())
                 m_compareIgnoreSize = *ignoreSize;
-            if (auto toolPath = general["compare_tool_path"].value<std::string>())
-                m_compareToolPath = QString::fromStdString(*toolPath);
+            // Migrate legacy single-path key
+            if (auto toolPath = general["compare_tool_path"].value<std::string>()) {
+                QString p = QString::fromStdString(*toolPath);
+                if (!p.isEmpty() && !m_compareTools.contains(p))
+                    m_compareTools.append(p);
+            }
+            if (tbl["general"].as_table()->contains("compare_tools")) {
+                for (const auto& node : *(*tbl["general"].as_table())["compare_tools"].as_array()) {
+                    if (auto s = node.value<std::string>()) {
+                        QString t = QString::fromStdString(*s);
+                        if (!t.isEmpty()) m_compareTools.append(t);
+                    }
+                }
+            }
+            if (auto idx = general["compare_tool_index"].value<int64_t>())
+                m_compareToolIndex = static_cast<int>(*idx);
             if (auto kteThreshold = general["kte_threshold_mb"].value<double>())
                 m_kteThresholdMB = *kteThreshold;
             if (auto copyMode = general["copy_mode"].value<std::string_view>()) {
@@ -434,7 +448,11 @@ bool Config::save() const
     generalTbl.insert("confirm_exit", m_confirmExit);
     generalTbl.insert("compare_ignore_time", m_compareIgnoreTime);
     generalTbl.insert("compare_ignore_size", m_compareIgnoreSize);
-    generalTbl.insert("compare_tool_path", m_compareToolPath.toStdString());
+    toml::array toolsArr;
+    for (const QString& t : m_compareTools)
+        toolsArr.push_back(t.toStdString());
+    generalTbl.insert("compare_tools", toolsArr);
+    generalTbl.insert("compare_tool_index", static_cast<int64_t>(m_compareToolIndex));
     generalTbl.insert("kte_threshold_mb", m_kteThresholdMB);
     const char* copyModeStr = "chunked_sha";
     switch (m_copyMode) {

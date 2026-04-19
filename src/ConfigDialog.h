@@ -62,6 +62,7 @@ private:
     void createPanelsPage();
     void createHistoryPage();
     void createGeneralPage();
+    void createComparerPage();
 
     void loadSettings();
     void saveSettings();
@@ -126,10 +127,6 @@ private:
     QPushButton* m_resetToolbarBtn;
     QComboBox* m_sizeFormat;
     QComboBox* m_storageSizeFormat;
-    QCheckBox* m_compareIgnoreTime;
-    QCheckBox* m_compareIgnoreSize;
-    QLineEdit* m_compareToolPath;
-    QPushButton* m_compareToolPathBrowse;
     QLineEdit* m_kteThreshold;
     QLabel* m_kteThresholdInfo;
 
@@ -137,4 +134,12 @@ private:
     QComboBox* m_copyMode;
     QSpinBox* m_largeFileThreshold;
     QSpinBox* m_copyChunkSize;
+
+    // Comparer page
+    QCheckBox* m_compareIgnoreTime;
+    QCheckBox* m_compareIgnoreSize;
+    QComboBox* m_compareToolCombo;
+    QLineEdit* m_compareToolEdit;
+    QPushButton* m_compareToolBrowse;
+    QPushButton* m_compareToolAdd;
 };
