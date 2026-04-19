@@ -5,6 +5,7 @@
 #include "PackDialog.h"
 #include "MultiRenameDialog.h"
 #include "DistroInfo.h"
+#include "ChmodDialog.h"
 
 #include <QApplication>
 #include <QInputDialog>
@@ -215,6 +216,34 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
             tr("No differences found."));
     }
 
+    return true;
+}
+
+bool MainWindow::doChangeAttributes(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return true;
+
+    QStringList paths;
+    if (panel->hasMarkedEntries()) {
+        paths = panel->getMarkedPaths();
+    } else {
+        auto [entry, row] = panel->currentEntryRow();
+        if (entry && row != 0)  // skip [..]
+            paths << entry->info.absoluteFilePath();
+    }
+
+    if (paths.isEmpty())
+        return true;
+
+    ChmodDialog dlg(paths, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        dlg.applyChanges();
+        panel->loadDirectory();
+    }
     return true;
 }
 

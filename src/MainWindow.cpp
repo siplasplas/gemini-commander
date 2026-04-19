@@ -677,6 +677,12 @@ void MainWindow::setupUi() {
     });
     fileMenu->addAction(compareContentsAction);
 
+    QAction* chmodAction = new QAction(tr("Change attributes..."), this);
+    connect(chmodAction, &QAction::triggered, this, [this]() {
+        doChangeAttributes(nullptr, nullptr);
+    });
+    fileMenu->addAction(chmodAction);
+
     fileMenu->addSeparator();
 
     QAction* quitAction = new QAction(tr("Quit"), this);

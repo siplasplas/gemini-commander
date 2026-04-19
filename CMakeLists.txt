@@ -108,6 +108,8 @@ add_executable(${PROJECT_NAME}
         src/DistroInfo.h
         src/DistroInfoDialog.cpp
         src/DistroInfoDialog.h
+        src/ChmodDialog.cpp
+        src/ChmodDialog.h
         src/PackDialog.cpp
         src/PackDialog.h
         src/MultiRenameDialog.cpp
