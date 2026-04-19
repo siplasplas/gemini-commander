@@ -251,10 +251,24 @@ bool MainWindow::doCompareByContents(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 
-    QString toolPath = Config::instance().compareToolPath();
+    QString toolPath = Config::instance().compareToolPath().trimmed();
     if (toolPath.isEmpty()) {
         QMessageBox::warning(this, tr("Compare by Contents"),
-            tr("No compare tool configured. Please set the path in Configuration \u2192 Settings \u2192 Compare Directories."));
+            tr("No compare tool configured. Please set the path in Configuration \u2192 Settings \u2192 Comparer."));
+        return true;
+    }
+
+    // Resolve tool: bare name → search PATH; path with separator → check directly
+    QString resolvedTool;
+    if (toolPath.contains('/') || toolPath.contains('\\')) {
+        if (QFileInfo(toolPath).isExecutable())
+            resolvedTool = toolPath;
+    } else {
+        resolvedTool = QStandardPaths::findExecutable(toolPath);
+    }
+    if (resolvedTool.isEmpty()) {
+        QMessageBox::warning(this, tr("Compare by Contents"),
+            tr("Compare tool not found: %1").arg(toolPath));
         return true;
     }
 
@@ -350,7 +364,7 @@ bool MainWindow::doCompareByContents(QObject *obj, QKeyEvent *keyEvent) {
         }
     }
 
-    QProcess::startDetached(toolPath, {param1, param2});
+    QProcess::startDetached(resolvedTool, {param1, param2});
     return true;
 }
 
