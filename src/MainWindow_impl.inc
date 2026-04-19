@@ -1148,14 +1148,13 @@ bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     if (!leftPane || !rightPane)
         return false;
 
+    m_suppressFocusIn = true;
     m_leftTabs->swapExternal(m_rightTabs, leftIdx, rightIdx);
-
     leftPane->setSide(Side::Right);
     rightPane->setSide(Side::Left);
 
     m_activeSide = opposite(m_activeSide);
 
-    m_suppressFocusIn = true;
     if (auto* panel = currentFilePanel()) {
         panel->setFocus();
         panel->styleActive();
