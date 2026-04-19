@@ -172,6 +172,10 @@ public:
   bool compareIgnoreSize() const { return m_compareIgnoreSize; }
   void setCompareIgnoreSize(bool ignore) { m_compareIgnoreSize = ignore; }
 
+  // Compare by contents tool path
+  QString compareToolPath() const { return m_compareToolPath; }
+  void setCompareToolPath(const QString& path) { m_compareToolPath = path; }
+
   // KTextEditor threshold (in MB, decimal) - files smaller than this use KTextEditor
   double kteThresholdMB() const { return m_kteThresholdMB; }
   void setKteThresholdMB(double mb) { m_kteThresholdMB = mb; }
@@ -249,6 +253,7 @@ private:
   // Compare directories settings
   bool m_compareIgnoreTime = false;
   bool m_compareIgnoreSize = false;
+  QString m_compareToolPath;
 
   // KTextEditor threshold in MB (decimal) - default 1.0 MB
   double m_kteThresholdMB = 1.0;

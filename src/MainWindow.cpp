@@ -614,7 +614,7 @@ void MainWindow::setupUi() {
 
     setCentralWidget(centralWidget);
 
-    QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    QMenu* fileMenu = menuBar()->addMenu(tr("&Files"));
     QMenu* markMenu = menuBar()->addMenu(tr("&Mark"));
     QMenu* commandsMenu = menuBar()->addMenu(tr("&Commands"));
     QMenu* navigateMenu = menuBar()->addMenu(tr("&Navigate"));
@@ -670,6 +670,12 @@ void MainWindow::setupUi() {
     fileInfoAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
     connect(fileInfoAction, &QAction::triggered, this, &MainWindow::showFileInfo);
     fileMenu->addAction(fileInfoAction);
+
+    QAction* compareContentsAction = new QAction(tr("Compare by contents"), this);
+    connect(compareContentsAction, &QAction::triggered, this, [this]() {
+        doCompareByContents(nullptr, nullptr);
+    });
+    fileMenu->addAction(compareContentsAction);
 
     fileMenu->addSeparator();
 

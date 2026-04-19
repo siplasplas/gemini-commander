@@ -128,6 +128,8 @@ private:
     QComboBox* m_storageSizeFormat;
     QCheckBox* m_compareIgnoreTime;
     QCheckBox* m_compareIgnoreSize;
+    QLineEdit* m_compareToolPath;
+    QPushButton* m_compareToolPathBrowse;
     QLineEdit* m_kteThreshold;
     QLabel* m_kteThresholdInfo;
 

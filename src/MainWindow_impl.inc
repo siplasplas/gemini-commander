@@ -218,6 +218,106 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+bool MainWindow::doCompareByContents(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+
+    QString toolPath = Config::instance().compareToolPath();
+    if (toolPath.isEmpty()) {
+        QMessageBox::warning(this, tr("Compare by Contents"),
+            tr("No compare tool configured. Please set the path in Configuration \u2192 Settings \u2192 Compare Directories."));
+        return true;
+    }
+
+    FilePanel* currentPanel = currentFilePanel();
+    FilePanel* neighborPanel = oppositeFilePanel();
+    if (!currentPanel || !neighborPanel)
+        return true;
+
+    FilePanel* leftPanel = filePanelForSide(Side::Left);
+
+    QStringList currentMarkedPaths = currentPanel->getMarkedPaths();
+    QStringList neighborMarkedPaths = neighborPanel->getMarkedPaths();
+    int C = currentMarkedPaths.size();
+    int N = neighborMarkedPaths.size();
+
+    QString param1, param2;
+
+    if (C > 2) {
+        QMessageBox::warning(this, tr("Compare by Contents"),
+            tr("Too many items marked in the current panel (max 2)."));
+        return true;
+    }
+
+    if (C == 2) {
+        if (N > 0) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("When 2 items are marked in the current panel, the other panel must have nothing marked."));
+            return true;
+        }
+        QFileInfo fi1(currentMarkedPaths[0]);
+        QFileInfo fi2(currentMarkedPaths[1]);
+        if (fi1.isDir() != fi2.isDir()) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("Both items must be either files or directories."));
+            return true;
+        }
+        // Items are from the same panel; use sort order from getMarkedPaths()
+        param1 = currentMarkedPaths[0];
+        param2 = currentMarkedPaths[1];
+    } else if (C == 1) {
+        if (N != 1) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("Please mark exactly one item in the other panel."));
+            return true;
+        }
+        QFileInfo fi1(currentMarkedPaths[0]);
+        QFileInfo fi2(neighborMarkedPaths[0]);
+        if (fi1.isDir() != fi2.isDir()) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("Both items must be either files or directories."));
+            return true;
+        }
+        if (currentPanel == leftPanel) {
+            param1 = currentMarkedPaths[0];
+            param2 = neighborMarkedPaths[0];
+        } else {
+            param1 = neighborMarkedPaths[0];
+            param2 = currentMarkedPaths[0];
+        }
+    } else { // C == 0
+        if (N != 1) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("Please mark exactly one item in the other panel."));
+            return true;
+        }
+        auto [cursorEntry, cursorRow] = currentPanel->currentEntryRow();
+        if (!cursorEntry) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("No current item in the panel."));
+            return true;
+        }
+        QString cursorPath = cursorEntry->info.absoluteFilePath();
+        QFileInfo fi1(cursorPath);
+        QFileInfo fi2(neighborMarkedPaths[0]);
+        if (fi1.isDir() != fi2.isDir()) {
+            QMessageBox::warning(this, tr("Compare by Contents"),
+                tr("Both items must be either files or directories."));
+            return true;
+        }
+        if (currentPanel == leftPanel) {
+            param1 = cursorPath;
+            param2 = neighborMarkedPaths[0];
+        } else {
+            param1 = neighborMarkedPaths[0];
+            param2 = cursorPath;
+        }
+    }
+
+    QProcess::startDetached(toolPath, {param1, param2});
+    return true;
+}
+
 bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);

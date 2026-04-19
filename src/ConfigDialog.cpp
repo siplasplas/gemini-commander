@@ -629,6 +629,22 @@ void ConfigDialog::createGeneralPage()
     compareLayout->addWidget(m_compareIgnoreTime);
     compareLayout->addWidget(m_compareIgnoreSize);
 
+    auto* toolFormLayout = new QFormLayout();
+    auto* toolRow = new QHBoxLayout();
+    m_compareToolPath = new QLineEdit(compareGroup);
+    m_compareToolPath->setPlaceholderText(tr("/usr/bin/meld"));
+    m_compareToolPathBrowse = new QPushButton(tr("Browse..."), compareGroup);
+    toolRow->addWidget(m_compareToolPath);
+    toolRow->addWidget(m_compareToolPathBrowse);
+    toolFormLayout->addRow(tr("Compare tool (\"Compare by contents\"):"), toolRow);
+    compareLayout->addLayout(toolFormLayout);
+
+    connect(m_compareToolPathBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, tr("Select Compare Tool"), "/usr/bin");
+        if (!path.isEmpty())
+            m_compareToolPath->setText(path);
+    });
+
     layout->addWidget(compareGroup);
 
     // Quick View threshold for KTextEditor
@@ -778,6 +794,7 @@ void ConfigDialog::loadSettings()
     // Compare directories settings
     m_compareIgnoreTime->setChecked(cfg.compareIgnoreTime());
     m_compareIgnoreSize->setChecked(cfg.compareIgnoreSize());
+    m_compareToolPath->setText(cfg.compareToolPath());
 
     // KTE threshold
     m_kteThreshold->setText(QString::number(cfg.kteThresholdMB(), 'f', 3));
@@ -857,6 +874,7 @@ void ConfigDialog::saveSettings()
     // Compare directories settings
     cfg.setCompareIgnoreTime(m_compareIgnoreTime->isChecked());
     cfg.setCompareIgnoreSize(m_compareIgnoreSize->isChecked());
+    cfg.setCompareToolPath(m_compareToolPath->text().trimmed());
 
     // KTE threshold
     bool ok;

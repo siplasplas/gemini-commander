@@ -3,6 +3,7 @@
     Q_INVOKABLE bool doActivate(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doAddTab(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCompareDirectories(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doCompareByContents(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCopy(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCopyInPlace(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doCurrentDirToCommandLine(QObject *obj, QKeyEvent *keyEvent);
