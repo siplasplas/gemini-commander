@@ -829,13 +829,11 @@ void ConfigDialog::loadSettings()
     m_compareIgnoreSize->setChecked(cfg.compareIgnoreSize());
 
     m_compareToolCombo->clear();
-    QStringList tools = cfg.compareTools();
-    if (tools.isEmpty())
-        tools = {"meld", "kdiff3", "kompare"};
-    for (const QString& t : tools)
+    for (const QString& t : cfg.compareTools())
         m_compareToolCombo->addItem(t);
     int toolIdx = qBound(0, cfg.compareToolIndex(), m_compareToolCombo->count() - 1);
-    m_compareToolCombo->setCurrentIndex(toolIdx);
+    if (m_compareToolCombo->count() > 0)
+        m_compareToolCombo->setCurrentIndex(toolIdx);
 
     // KTE threshold
     m_kteThreshold->setText(QString::number(cfg.kteThresholdMB(), 'f', 3));

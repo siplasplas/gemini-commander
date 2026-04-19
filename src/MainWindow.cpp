@@ -68,6 +68,26 @@ MainWindow::MainWindow(QWidget *parent)
     Config::instance().setConfigPath(cfg);
 
 #ifndef _WIN32
+    // First-run: populate compare tools list by scanning standard binary dirs
+    if (Config::instance().compareTools().isEmpty()) {
+        const QStringList candidates = {"bcompare", "diffmerge", "meld", "kdiff3", "kompare"};
+        const QStringList dirs = {"/usr/bin", "/usr/local/bin"};
+        QStringList found;
+        for (const QString& dir : dirs) {
+            for (const QString& name : candidates) {
+                QString full = dir + "/" + name;
+                if (QFileInfo(full).isExecutable() && !found.contains(full))
+                    found << full;
+            }
+        }
+        if (!found.isEmpty()) {
+            Config::instance().setCompareTools(found);
+            Config::instance().setCompareToolIndex(0);
+        }
+    }
+#endif
+
+#ifndef _WIN32
     // Initialize UDisks2 BEFORE setupUi() so mounts toolbar can be populated
     m_udisksManager = new UDisksDeviceManager(this);
 

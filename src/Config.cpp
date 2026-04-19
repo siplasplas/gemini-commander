@@ -117,6 +117,8 @@ bool Config::load(const QString& path)
     m_leftTabIndex = 0;
     m_rightTabDirs.clear();
     m_rightTabIndex = 0;
+    m_compareTools.clear();
+    m_compareToolIndex = 0;
 
     QFile f(path);
     if (!f.exists()) {
