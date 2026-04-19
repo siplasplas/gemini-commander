@@ -139,7 +139,5 @@ private:
     QCheckBox* m_compareIgnoreTime;
     QCheckBox* m_compareIgnoreSize;
     QComboBox* m_compareToolCombo;
-    QLineEdit* m_compareToolEdit;
-    QPushButton* m_compareToolBrowse;
-    QPushButton* m_compareToolAdd;
+    QPushButton* m_editToolListBtn;
 };

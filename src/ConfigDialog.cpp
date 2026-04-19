@@ -1,6 +1,7 @@
 #include "ConfigDialog.h"
 #include "Config.h"
 #include "SizeFormat.h"
+#include "StringListEditorDialog.h"
 
 #ifdef Q_OS_LINUX
 #include <QFile>
@@ -713,53 +714,38 @@ void ConfigDialog::createComparerPage()
     auto* toolGroup = new QGroupBox(tr("Compare Tool  (Files \u2192 Compare by contents)"), page);
     auto* toolLayout = new QVBoxLayout(toolGroup);
 
-    // Combobox — active tool
+    auto* comboRow = new QHBoxLayout();
     m_compareToolCombo = new QComboBox(toolGroup);
-    toolLayout->addWidget(m_compareToolCombo);
-
-    // Path edit + Browse on one line
-    auto* editRow = new QHBoxLayout();
-    m_compareToolEdit = new QLineEdit(toolGroup);
-    m_compareToolEdit->setPlaceholderText("meld");
-    m_compareToolBrowse = new QPushButton(tr("Browse..."), toolGroup);
-    editRow->addWidget(m_compareToolEdit, 1);
-    editRow->addWidget(m_compareToolBrowse);
-    toolLayout->addLayout(editRow);
-
-    // Add button on its own line, right-aligned
-    auto* addRow = new QHBoxLayout();
-    m_compareToolAdd = new QPushButton(tr("Add to list"), toolGroup);
-    addRow->addStretch();
-    addRow->addWidget(m_compareToolAdd);
-    toolLayout->addLayout(addRow);
+    m_editToolListBtn  = new QPushButton(tr("Edit list\u2026"), toolGroup);
+    comboRow->addWidget(m_compareToolCombo, 1);
+    comboRow->addWidget(m_editToolListBtn);
+    toolLayout->addLayout(comboRow);
 
     layout->addWidget(toolGroup);
     layout->addStretch();
 
-    // Combobox selection → fill edit
-    connect(m_compareToolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, [this](int idx) {
-        m_compareToolEdit->setText(m_compareToolCombo->itemText(idx));
-    });
+    connect(m_editToolListBtn, &QPushButton::clicked, this, [this]() {
+        QStringList current;
+        for (int i = 0; i < m_compareToolCombo->count(); ++i)
+            current << m_compareToolCombo->itemText(i);
 
-    // Browse → fill edit (does not add to list automatically)
-    connect(m_compareToolBrowse, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, tr("Select Compare Tool"), "/usr/bin");
-        if (!path.isEmpty())
-            m_compareToolEdit->setText(path);
-    });
+        StringListEditorDialog::Options opts;
+        opts.title          = tr("Edit Compare Tools");
+        opts.allowFileOpen  = true;
+        opts.fileDialogTitle = tr("Select Compare Tool");
 
-    // Add → insert into combobox if new, then select
-    connect(m_compareToolAdd, &QPushButton::clicked, this, [this]() {
-        QString tool = m_compareToolEdit->text().trimmed();
-        if (tool.isEmpty())
+        StringListEditorDialog dlg(current, m_compareToolCombo->currentIndex(), opts, this);
+        if (dlg.exec() != QDialog::Accepted)
             return;
-        int existing = m_compareToolCombo->findText(tool);
-        if (existing < 0) {
-            m_compareToolCombo->addItem(tool);
-            existing = m_compareToolCombo->count() - 1;
-        }
-        m_compareToolCombo->setCurrentIndex(existing);
+
+        QStringList updated = dlg.items();
+        m_compareToolCombo->clear();
+        for (const QString& t : updated)
+            m_compareToolCombo->addItem(t);
+
+        int sel = qBound(0, dlg.selectedIndex(), m_compareToolCombo->count() - 1);
+        if (m_compareToolCombo->count() > 0)
+            m_compareToolCombo->setCurrentIndex(sel);
     });
 
     m_pagesStack->addWidget(page);
@@ -850,7 +836,6 @@ void ConfigDialog::loadSettings()
         m_compareToolCombo->addItem(t);
     int toolIdx = qBound(0, cfg.compareToolIndex(), m_compareToolCombo->count() - 1);
     m_compareToolCombo->setCurrentIndex(toolIdx);
-    m_compareToolEdit->setText(m_compareToolCombo->currentText());
 
     // KTE threshold
     m_kteThreshold->setText(QString::number(cfg.kteThresholdMB(), 'f', 3));
