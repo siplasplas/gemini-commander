@@ -175,6 +175,20 @@ void MruTabWidget::keyPressEvent(QKeyEvent *event)
                 return;
             }
 
+            // Sequential mode: simple next/prev tab cycling
+            if (m_sequentialTabSwitching) {
+                bool forward = (event->key() == Qt::Key_Tab) && !(event->modifiers() & Qt::ShiftModifier);
+                int newIndex = currentIndex() + (forward ? 1 : -1);
+                if (newIndex >= count())
+                    newIndex = 0;
+                else if (newIndex < 0)
+                    newIndex = count() - 1;
+                setCurrentIndex(newIndex);
+                event->accept();
+                return;
+            }
+
+            // MRU mode with popup
             // If Ctrl was *not* pressed before -> start timer
             if (!m_ctrlHeld) {
                 m_ctrlHeld = true;
@@ -314,6 +328,8 @@ void MruTabWidget::tabRemoved(int index)
         updateCloseButtonVisibility();
     });
     // No need to call QTabWidget::tabRemoved(index) - the signal handles it
+
+    emit tabCountChanged(count());
 }
 
 void MruTabWidget::tabInserted(int index) {
@@ -341,6 +357,8 @@ void MruTabWidget::tabInserted(int index) {
         enforceTabLimit();
     });
     // No need to call QTabWidget::tabInserted(index)
+
+    emit tabCountChanged(count());
 }
 
 /**
@@ -353,11 +371,74 @@ void MruTabWidget::tabInserted(int index) {
  * - Tab bar hover events
  * - MRU popup keyboard navigation
  */
+bool MruTabWidget::handleCtrlTabEvent(QKeyEvent *keyEvent)
+{
+    if (keyEvent->type() == QEvent::KeyPress &&
+        (keyEvent->modifiers() & Qt::ControlModifier) &&
+        (keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab)) {
+
+        if (count() < 2) return false;
+
+        // Sequential mode: simple next/prev tab cycling
+        if (m_sequentialTabSwitching) {
+            bool forward = (keyEvent->key() == Qt::Key_Tab) && !(keyEvent->modifiers() & Qt::ShiftModifier);
+            int newIndex = currentIndex() + (forward ? 1 : -1);
+            if (newIndex >= count())
+                newIndex = 0;
+            else if (newIndex < 0)
+                newIndex = count() - 1;
+            setCurrentIndex(newIndex);
+            return true;
+        }
+
+        // MRU mode with popup
+        if (!m_ctrlHeld) {
+            m_ctrlHeld = true;
+            m_expectingPopup = true;
+            m_shiftHeldOnTabPress = (keyEvent->modifiers() & Qt::ShiftModifier);
+            m_ctrlTabTimer.start();
+        } else if (m_mruPopup) {
+            bool forward = (keyEvent->key() == Qt::Key_Tab) && !(keyEvent->modifiers() & Qt::ShiftModifier);
+            cycleMruPopup(forward);
+        } else {
+            if (m_ctrlTabTimer.isActive()) {
+                m_ctrlTabTimer.stop();
+                m_expectingPopup = false;
+                showMruPopup();
+            } else if (!m_expectingPopup) {
+                showMruPopup();
+            }
+        }
+        return true;
+    }
+
+    // In sequential mode, Ctrl release doesn't need special handling
+    if (m_sequentialTabSwitching)
+        return false;
+
+    if (keyEvent->type() == QEvent::KeyRelease && keyEvent->key() == Qt::Key_Control && m_ctrlHeld) {
+        m_ctrlHeld = false;
+        m_expectingPopup = false;
+
+        if (m_ctrlTabTimer.isActive()) {
+            m_ctrlTabTimer.stop();
+            performDirectSwitch();
+        } else if (m_mruPopup) {
+            activateSelectedMruTab();
+            hideMruPopup();
+        }
+        return true;
+    }
+
+    return false;
+}
+
 bool MruTabWidget::eventFilter(QObject *watched, QEvent *event)
 {
-    // Debug: Log all events coming to the filter for watched objects
-    // Only log for tabBar or listWidget to avoid excessive output
-    if (watched == tabBar() || watched == m_mruListWidget) {
+    // Handle Ctrl+Tab forwarded from EditorFrame
+    if (watched == this && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
+        if (handleCtrlTabEvent(static_cast<QKeyEvent*>(event)))
+            return true;
     }
 
     // --- Filtering events for QTabBar ---

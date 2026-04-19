@@ -35,6 +35,7 @@ signals:
     void tabContextMenuRequested(int tabIndex, QMenu* menu);
     void tabAboutToClose(int index, bool askPin, bool &allow_close);
     void actionsBeforeTabClose(int index);
+    void tabCountChanged(int count);
 public:
     /**
      * @brief Constructs an MRU-enabled tab widget
@@ -93,6 +94,13 @@ public:
     void closeTabsToRight(int fromIndex);
     void setPinIconUri(QString iconUri) { m_pinIconUri = iconUri; }
 
+    /// @brief Sets tab switching mode (false = MRU popup, true = sequential)
+    void setSequentialTabSwitching(bool sequential) { m_sequentialTabSwitching = sequential; }
+    bool sequentialTabSwitching() const { return m_sequentialTabSwitching; }
+
+    // The event filter method
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 protected:
     // Override key event handlers
     void keyPressEvent(QKeyEvent *event) override;
@@ -109,9 +117,6 @@ protected:
     // Override resize event to handle geometry changes
     void resizeEvent(QResizeEvent *event) override;
 
-    // The event filter method
-    bool eventFilter(QObject *watched, QEvent *event) override;
-
 private slots:
     void onCurrentChanged(int index);
     void handleCtrlTabTimeout();
@@ -127,6 +132,7 @@ private:
 
     void onTabContextMenuRequested(const QPoint& pos);
     void updateTabButton(int index);
+    bool handleCtrlTabEvent(QKeyEvent *keyEvent);
 
     void installTabBarEventFilter();
     void removeTabBarEventFilter();
@@ -159,6 +165,7 @@ private:
     QVector<bool> m_pinnedTabs;
     int m_tabLimit = 0;
     int m_minimalTabCount = 0;
+    bool m_sequentialTabSwitching = false;
 };
 
 #endif // MRUTABWIDGET_H
