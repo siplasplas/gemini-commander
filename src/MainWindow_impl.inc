@@ -1146,7 +1146,9 @@ bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     QString leftPath = leftPane->currentPath();
     QString rightPath = rightPane->currentPath();
     leftPane->setCurrentPath(rightPath);
+    leftPane->setSide(Side::Right);
     rightPane->setCurrentPath(leftPath);
+    rightPane->setSide(Side::Left);
 
     return false;
 }
