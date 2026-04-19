@@ -1134,7 +1134,6 @@ bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
-//todo: not works yet
 bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -1149,26 +1148,21 @@ bool MainWindow::doSwapPanels(QObject *obj, QKeyEvent *keyEvent) {
     if (!leftPane || !rightPane)
         return false;
 
-    QString leftText  = m_leftTabs->tabText(leftIdx);
-    QString rightText = m_rightTabs->tabText(rightIdx);
-    bool leftPinned   = m_leftTabs->isTabPinned(leftIdx);
-    bool rightPinned  = m_rightTabs->isTabPinned(rightIdx);
+    m_leftTabs->swapExternal(m_rightTabs, leftIdx, rightIdx);
 
-    m_leftTabs->removeTab(leftIdx);
-    m_rightTabs->removeTab(rightIdx);
-
-    m_leftTabs->insertTab(leftIdx, rightPane, rightText);
-    m_rightTabs->insertTab(rightIdx, leftPane, leftText);
-
-    m_leftTabs->setTabPinned(leftIdx, rightPinned);
-    m_rightTabs->setTabPinned(rightIdx, leftPinned);
-
-    m_leftTabs->setCurrentIndex(leftIdx);
-    m_rightTabs->setCurrentIndex(rightIdx);
+    leftPane->setSide(Side::Right);
+    rightPane->setSide(Side::Left);
 
     m_activeSide = opposite(m_activeSide);
 
-    return false;
+    m_suppressFocusIn = true;
+    if (auto* panel = currentFilePanel()) {
+        panel->setFocus();
+        panel->styleActive();
+    }
+    m_suppressFocusIn = false;
+
+    return true;
 }
 
 bool MainWindow::doSwapPanelGroups(QObject *obj, QKeyEvent *keyEvent) {

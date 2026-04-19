@@ -94,6 +94,9 @@ public:
     void closeTabsToRight(int fromIndex);
     void setPinIconUri(QString iconUri) { m_pinIconUri = iconUri; }
 
+    void swapTabs(int a, int b);
+    void swapExternal(MruTabWidget* other, int thisIndex, int otherIndex);
+
     /// @brief Sets tab switching mode (false = MRU popup, true = sequential)
     void setSequentialTabSwitching(bool sequential) { m_sequentialTabSwitching = sequential; }
     bool sequentialTabSwitching() const { return m_sequentialTabSwitching; }

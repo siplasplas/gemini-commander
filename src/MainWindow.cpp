@@ -1026,6 +1026,9 @@ Side MainWindow::opposite(Side side){
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     // Keyboard events are handled by KeyRouter - only focus events here
+    if (event->type() == QEvent::FocusIn && m_suppressFocusIn)
+        return QMainWindow::eventFilter(obj, event);
+
     if (event->type() == QEvent::FocusIn) {
         // Handle command line edit focus
         if (obj == commandLineEdit) {

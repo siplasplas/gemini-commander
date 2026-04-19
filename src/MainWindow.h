@@ -49,6 +49,7 @@ private:
     MruTabWidget* m_leftTabs;
     MruTabWidget* m_rightTabs;
     Side m_activeSide = Side::Left;
+    bool m_suppressFocusIn = false;
     MruTabWidget* tabsForSide(Side side) const;
     void goToNextTab(MruTabWidget *tabWidget);
     void goToPreviousTab(MruTabWidget *tabWidget);

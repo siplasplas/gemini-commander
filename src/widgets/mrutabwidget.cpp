@@ -1019,6 +1019,92 @@ int MruTabWidget::enforceTabLimit()
 }
 
 
+void MruTabWidget::swapTabs(int a, int b)
+{
+    if (a == b || a < 0 || b < 0 || a >= count() || b >= count())
+        return;
+
+    if (a > b) std::swap(a, b);
+
+    // Visual swap via two moveTab calls (no tabInserted/tabRemoved triggered)
+    tabBar()->moveTab(a, b);
+    tabBar()->moveTab(b - 1, a);
+
+    // Update MRU order: only a and b swap, all other indices unchanged
+    for (int& idx : m_mruOrder) {
+        if (idx == a) idx = b;
+        else if (idx == b) idx = a;
+    }
+
+    // Update pinned state
+    if (a < m_pinnedTabs.size() && b < m_pinnedTabs.size())
+        std::swap(m_pinnedTabs[a], m_pinnedTabs[b]);
+
+    updateTabButton(a);
+    updateTabButton(b);
+    QTimer::singleShot(0, this, [this]() {
+        mapCloseButtonsToTabs();
+        updateCloseButtonVisibility();
+    });
+}
+
+void MruTabWidget::swapExternal(MruTabWidget* other, int thisIndex, int otherIndex)
+{
+    if (!other || thisIndex < 0 || otherIndex < 0
+            || thisIndex >= count() || otherIndex >= other->count())
+        return;
+
+    QWidget* thisWidget  = widget(thisIndex);
+    QWidget* otherWidget = other->widget(otherIndex);
+    QString  thisText    = tabText(thisIndex);
+    QString  otherText   = other->tabText(otherIndex);
+    QIcon    thisIcon    = tabIcon(thisIndex);
+    QIcon    otherIcon   = other->tabIcon(otherIndex);
+    bool     thisPinned  = isTabPinned(thisIndex);
+    bool     otherPinned = other->isTabPinned(otherIndex);
+
+    // Block currentChanged and tabCountChanged during structural changes
+    QSignalBlocker b1(this), b2(other);
+
+    removeTab(thisIndex);
+    other->removeTab(otherIndex);
+
+    insertTab(thisIndex, otherWidget, otherText);
+    setTabIcon(thisIndex, otherIcon);
+    other->insertTab(otherIndex, thisWidget, thisText);
+    other->setTabIcon(otherIndex, thisIcon);
+
+    setCurrentIndex(thisIndex);
+    other->setCurrentIndex(otherIndex);
+
+    setCurrentWidget(otherWidget);
+    other->setCurrentWidget(thisWidget);
+
+    // Unblock before pinning — setTabPinned may call enforceTabLimit which needs signals
+    b1.unblock();
+    b2.unblock();
+
+    if (otherPinned) setTabPinned(thisIndex, true);
+    if (thisPinned)  other->setTabPinned(otherIndex, true);
+
+    // If this lost a pinned and gained an unpinned, unpinned count may exceed limit.
+    // Pin the newly inserted tab instead of risking enforceTabLimit closing something.
+    if (thisPinned && !otherPinned && m_tabLimit > 0) {
+        if (count() - pinnedTabCount() > m_tabLimit)
+            setTabPinned(thisIndex, true);
+    }
+
+    // Symmetric: other lost a pinned and gained an unpinned
+    if (otherPinned && !thisPinned && other->m_tabLimit > 0) {
+        if (other->count() - other->pinnedTabCount() > other->m_tabLimit)
+            other->setTabPinned(otherIndex, true);
+    }
+
+    // Restore currentChanged state
+    onCurrentChanged(currentIndex());
+    other->onCurrentChanged(other->currentIndex());
+}
+
 void MruTabWidget::setTabPinned(int tabIndex, bool pinned)
 {
     if (tabIndex < 0 || tabIndex >= count()) return;
