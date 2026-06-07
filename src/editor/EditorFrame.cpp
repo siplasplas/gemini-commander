@@ -236,6 +236,7 @@ void EditorFrame::openFile(const QString& fileName)
     m_editorTabWidget->setCurrentIndex(finalIndex);
     // Ctrl+Tab popup shows the last two path components (e.g. dir1/file.txt)
     m_editorTabWidget->setTabPopupText(finalIndex, qLastPathComponents(newEditor->filePath()));
+    refreshTabTitleOnPathChange(newEditor);
     auto view = qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view();
     ObjectRegistry::add(view, "Editor");
 
@@ -285,6 +286,7 @@ void EditorFrame::onNewFileTriggered()
     m_editorTabWidget->setCurrentIndex(finalIndex);
     // Untitled document has no path, so the popup just mirrors the tab title
     m_editorTabWidget->setTabPopupText(finalIndex, tabTitle);
+    refreshTabTitleOnPathChange(newEditor);
     auto view = newEditor->view();
     ObjectRegistry::add(view, "Editor");
 
@@ -439,6 +441,22 @@ int EditorFrame::findTabByPath(const QString& filePath)
         }
     }
     return -1;
+}
+
+// Keep an editor tab's title and Ctrl+Tab popup in sync with the document
+// path, which changes on Save As.
+void EditorFrame::refreshTabTitleOnPathChange(Editor* editor)
+{
+    connect(editor, &Editor::filePathChanged, this, [this, editor]() {
+        int idx = m_editorTabWidget->indexOf(editor);
+        if (idx < 0)
+            return;
+        const QString path = editor->filePath();
+        m_editorTabWidget->setTabText(idx, generateUniqueTabTitle(path));
+        m_editorTabWidget->setTabPopupText(
+            idx, path.isEmpty() ? m_editorTabWidget->tabText(idx)
+                                : qLastPathComponents(path));
+    });
 }
 
 // generateUniqueTabTitle (MODIFIED to check Editor's document URL/path)

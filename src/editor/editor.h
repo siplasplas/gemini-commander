@@ -22,6 +22,8 @@ class Editor : public BaseViewer {
 
 signals:
     void configFileSaved();
+    /// Emitted when the document's URL changes (e.g. after Save As).
+    void filePathChanged();
 
 public:
     /**

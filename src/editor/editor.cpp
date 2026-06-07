@@ -69,6 +69,15 @@ Editor::Editor(KTextEditor::Document *doc, QWidget *parent) :
 
     // Set object name for debugging/identification
     setObjectName(m_filePath);
+
+    // Keep our path in sync when the document URL changes (e.g. Save As),
+    // so the tab title/popup can be refreshed.
+    connect(m_document, &KTextEditor::Document::documentUrlChanged, this,
+            [this](KTextEditor::Document* doc) {
+                m_filePath = doc->url().toLocalFile();
+                setObjectName(m_filePath);
+                emit filePathChanged();
+            });
 }
 
 /**

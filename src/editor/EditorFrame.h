@@ -91,6 +91,7 @@ private:
     void viewFileInEditor(const QString& filePath);
     int findTabByPath(const QString& filePath);
     QString generateUniqueTabTitle(const QString& filePath);
+    void refreshTabTitleOnPathChange(Editor* editor);
     void createActions();
     void saveGeometryToConfig();
 
