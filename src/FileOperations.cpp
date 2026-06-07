@@ -730,6 +730,33 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             if (progressDlg.wasCanceled())
                 break;
 
+            // QFile::rename never overwrites: if the target exists we must
+            // ask (honoring Yes/No/YesToAll/NoToAll/Abort) and remove it first,
+            // otherwise rename fails and the batch stalls on the first conflict.
+            if (QFileInfo::exists(dstFilePath)) {
+                QMessageBox::Button reply;
+                switch (askPolice) {
+                    case QMessageBox::Yes:
+                    case QMessageBox::No:
+                        reply = names.size() > 1 ? askOverwriteMulti(&progressDlg, dstFilePath)
+                                                 : askOverwriteSingle(&progressDlg, dstFilePath);
+                        break;
+                    default:
+                        reply = askPolice;
+                }
+                if (reply == QMessageBox::Abort)
+                    break;
+                if (reply == QMessageBox::NoToAll) {
+                    askPolice = QMessageBox::NoToAll;
+                    continue;
+                }
+                if (reply == QMessageBox::No)
+                    continue;
+                if (reply == QMessageBox::YesToAll)
+                    askPolice = QMessageBox::YesToAll;
+                removeExisting(dstFilePath);
+            }
+
             QFile file(srcPath);
             if (!file.rename(dstFilePath)) {
                 QMessageBox::warning(parent, QObject::tr("Error"),
