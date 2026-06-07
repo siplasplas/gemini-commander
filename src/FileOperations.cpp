@@ -398,6 +398,14 @@ QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &
     QFileInfo dstInfo(dstPath);
     QMessageBox::Button result = QMessageBox::Yes;
     if (dstInfo.exists()) {
+        // Never offer to overwrite a directory with a same-named file:
+        // wiping a whole target tree to drop a single file is too dangerous.
+        if (dstInfo.isDir()) {
+            QMessageBox::warning(parent, QObject::tr("Error"),
+                QObject::tr("Cannot copy '%1': a directory with the same name "
+                            "already exists at the destination.").arg(dstInfo.fileName()));
+            return QMessageBox::No;
+        }
         QMessageBox::Button reply;
         switch (askPolice) {
             case QMessageBox::Yes:
