@@ -475,17 +475,8 @@ void MainWindow::setupUi() {
     m_leftTabs->setMinimalTabCount(1);
     m_rightTabs->setMinimalTabCount(1);
 
-    auto tuneTabBar = [](MruTabWidget* tabs) {
-        QTabBar* bar = tabs->tabBar();
-        QFontMetrics fm(bar->font());
-        int h = fm.height() + 4; // smaller than default
-        bar->setStyleSheet(QStringLiteral(
-            "QTabBar::tab { "
-            "  height: %1px; "
-            "}").arg(h));
-    };
-    tuneTabBar(m_leftTabs);
-    tuneTabBar(m_rightTabs);
+    // Keep the native tab style: a QTabBar::tab stylesheet would drop the
+    // selected-tab highlight and the top border, so we no longer override it.
 
     splitter->addWidget(m_leftTabs);
     splitter->addWidget(m_rightTabs);
