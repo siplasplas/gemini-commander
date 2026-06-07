@@ -38,6 +38,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets DBus Concurrent)
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
+# MruTabWidget and other shared widgets come from the qt-extra library
+# (source: /home/andrzej/wazne/gitmy/qt-extra), installed to the system.
+# See README "Building" for how to build and install it first.
+find_package(qt-extra REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(BOTAN botan-2)
 if(NOT BOTAN_FOUND)
@@ -126,7 +130,6 @@ add_executable(${PROJECT_NAME}
         src/editor/EditorFrame.cpp
         src/editor/EditorFrame.h
         src/editor/mainheader.cpp
-        src/widgets/mrutabwidget.cpp
         src/widgets/SizeCalculationWidget.cpp
         src/utils/Ev.cpp
         src/editor/BaseViewer.cpp
@@ -199,6 +202,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         KF${KF_MAJOR_VERSION}::KIOFileWidgets
         KF${KF_MAJOR_VERSION}::KIOWidgets
         KF${KF_MAJOR_VERSION}::Parts
+        qt-extra
         ICU::uc ICU::i18n
         ${LIBARCHIVE_LIBRARIES}
  )

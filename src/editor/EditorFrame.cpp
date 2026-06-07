@@ -30,7 +30,7 @@
 
 #include "EditorFrame.h"
 #include "editor.h"
-#include "../widgets/mrutabwidget.h"
+#include <mrutabwidget.h>
 #include "keys/ObjectRegistry.h"
 
 // Helper function to get KTextEditor::EditorFrame (can be nullptr if not embedded)

@@ -4,7 +4,7 @@
 #include "ConfigDialog.h"
 #include "FilePaneWidget.h"
 #include "FilePanel.h"
-#include "widgets/mrutabwidget.h"
+#include <mrutabwidget.h>
 
 #include "editor/EditorFrame.h"
 #include "editor/editor.h"
