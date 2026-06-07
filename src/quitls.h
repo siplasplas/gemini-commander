@@ -15,6 +15,11 @@ bool isDarkTheme();
 
 QString qEscapePathForShell(const QString& path);
 
+// Return the last `count` components of a path joined with '/'.
+// Used for tab popup text, e.g. "/home/a/dir3/dir4" with count=2 -> "dir3/dir4".
+// Root "/" returns "/"; paths with fewer components return what's available.
+QString qLastPathComponents(const QString& path, int count = 2);
+
 // Split filename into base name and extension
 // Handles hidden files like ".gitignore" correctly:
 // - ".gitignore" -> {".gitignore", ""}

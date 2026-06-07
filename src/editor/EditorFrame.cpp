@@ -12,6 +12,7 @@
 #include <qxfiledialog.h>
 #include <QFileInfo>
 #include <QMessageBox>
+#include "../quitls.h"
 #include <QInputDialog>
 #include <QShortcut>
 #include <QClipboard>
@@ -231,7 +232,10 @@ void EditorFrame::openFile(const QString& fileName)
     QString tabTitle = generateUniqueTabTitle(newEditor->filePath());
     int newIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
     int removedCount = m_editorTabWidget->enforceTabLimit();
-    m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
+    int finalIndex = newIndex - removedCount;
+    m_editorTabWidget->setCurrentIndex(finalIndex);
+    // Ctrl+Tab popup shows the last two path components (e.g. dir1/file.txt)
+    m_editorTabWidget->setTabPopupText(finalIndex, qLastPathComponents(newEditor->filePath()));
     auto view = qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view();
     ObjectRegistry::add(view, "Editor");
 
@@ -277,7 +281,10 @@ void EditorFrame::onNewFileTriggered()
     QString tabTitle = generateUniqueTabTitle(QString());
     int newIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
     int removedCount = m_editorTabWidget->enforceTabLimit();
-    m_editorTabWidget->setCurrentIndex(newIndex - removedCount);
+    int finalIndex = newIndex - removedCount;
+    m_editorTabWidget->setCurrentIndex(finalIndex);
+    // Untitled document has no path, so the popup just mirrors the tab title
+    m_editorTabWidget->setTabPopupText(finalIndex, tabTitle);
     auto view = newEditor->view();
     ObjectRegistry::add(view, "Editor");
 

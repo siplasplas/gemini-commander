@@ -13,6 +13,7 @@
 #include <QMenu>
 #include <QEvent>
 #include <QTabWidget>
+#include <mrutabwidget.h>
 
 #include "keys/ObjectRegistry.h"
 #include "quitls.h"
@@ -168,6 +169,9 @@ void FilePaneWidget::onDirectoryChanged(const QString& path)
                     title = path;
             }
             tabWidget->setTabText(tabIndex, title);
+            // Ctrl+Tab popup shows the last two path components (e.g. dir3/dir4)
+            if (auto* mruTabs = qobject_cast<MruTabWidget*>(tabWidget))
+                mruTabs->setTabPopupText(tabIndex, qLastPathComponents(path));
         }
     }
 }

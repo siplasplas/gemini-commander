@@ -529,7 +529,10 @@ void MainWindow::setupUi() {
             pane->filePanel()->currentPath = dir;
 
             QString title = tabTitleFromPath(dir);
-            tabWidget->addTab(pane, title);
+            int newTabIndex = tabWidget->addTab(pane, title);
+            // Ctrl+Tab popup shows the last two path components (e.g. dir3/dir4)
+            if (auto* mruTabs = qobject_cast<MruTabWidget*>(tabWidget))
+                mruTabs->setTabPopupText(newTabIndex, qLastPathComponents(dir));
 
             // Connect favorites button signal
             connect(pane, &FilePaneWidget::favoritesRequested, this, [this, pane](const QPoint& pos) {

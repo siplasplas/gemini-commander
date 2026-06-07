@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QString>
+#include <QStringList>
 #include <QApplication>
 #include <QPalette>
 
@@ -32,6 +33,14 @@ bool isDarkTheme() {
 
 QString qEscapePathForShell(const QString& path) {
     return QString::fromStdString(utils::escapePathForShell(path.toStdString()));
+}
+
+QString qLastPathComponents(const QString& path, int count) {
+    const QStringList parts = path.split('/', Qt::SkipEmptyParts);
+    if (parts.isEmpty())
+        return QStringLiteral("/");
+    const int start = qMax(0, parts.size() - count);
+    return QStringList(parts.mid(start)).join('/');
 }
 
 QPair<QString, QString> splitFileName(const QFileInfo& info)
