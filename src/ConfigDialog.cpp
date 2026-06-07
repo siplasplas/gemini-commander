@@ -15,7 +15,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QGuiApplication>
-#include <QFileDialog>
+#include <qxfiledialog.h>
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QMenu>
@@ -524,7 +524,7 @@ void ConfigDialog::createPanelsPage()
 
     // Browse button connections
     connect(leftBrowseBtn, &QPushButton::clicked, this, [this]() {
-        QString dir = QFileDialog::getExistingDirectory(
+        QString dir = QxFileDialog::getExistingDirectory(
             this, tr("Select Left Panel Start Directory"),
             m_leftPanelStartDir->text());
         if (!dir.isEmpty())
@@ -532,7 +532,7 @@ void ConfigDialog::createPanelsPage()
     });
 
     connect(rightBrowseBtn, &QPushButton::clicked, this, [this]() {
-        QString dir = QFileDialog::getExistingDirectory(
+        QString dir = QxFileDialog::getExistingDirectory(
             this, tr("Select Right Panel Start Directory"),
             m_rightPanelStartDir->text());
         if (!dir.isEmpty())

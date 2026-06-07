@@ -33,7 +33,6 @@
 #include <QMessageBox>
 #include <QGuiApplication>
 #include <QStorageInfo>
-#include <QFileDialog>
 #include <QToolButton>
 #include <QFile>
 #include <QTextStream>

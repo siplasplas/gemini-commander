@@ -5,7 +5,9 @@
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QGroupBox>
-#include <QFileDialog>
+#include <qxfiledialog.h>
+#include <QFileInfo>
+#include <QDir>
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QDesktopServices>
@@ -449,11 +451,10 @@ void SearchDialog::createStandardTab()
 
     // Browse button connection
     connect(m_browseButton, &QPushButton::clicked, this, [this]() {
-        QString dir = QFileDialog::getExistingDirectory(
+        QString dir = QxFileDialog::getExistingDirectory(
             this,
             tr("Select Directory"),
-            m_searchInEdit->text(),
-            QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
+            m_searchInEdit->text()
         );
         if (!dir.isEmpty())
             m_searchInEdit->setText(dir);

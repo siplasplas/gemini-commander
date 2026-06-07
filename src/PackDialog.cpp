@@ -5,7 +5,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
-#include <QFileDialog>
+#include <qxfiledialog.h>
 #include <QFileInfo>
 
 PackDialog::PackDialog(const QString& defaultName,
@@ -135,7 +135,7 @@ void PackDialog::onPackerChanged(int index)
 
 void PackDialog::onBrowseDestination()
 {
-    QString dir = QFileDialog::getExistingDirectory(
+    QString dir = QxFileDialog::getExistingDirectory(
         this,
         tr("Select Destination Directory"),
         m_destinationEdit->text());

@@ -9,7 +9,8 @@
 #include <QString>
 #include <QDebug>
 #include <QtGlobal>
-#include <QFileDialog>
+#include <qxfiledialog.h>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QShortcut>
@@ -304,20 +305,16 @@ void EditorFrame::onNewFileTriggered()
  */
 void EditorFrame::onOpenFileTriggered()
 {
-    QStringList fileNames = QFileDialog::getOpenFileNames(this,
-                                                          tr("Open File(s)"),
-                                                          QString(),
-                                                          tr(
-                                                              "All Files (*.*);;Text Files (*.txt);;C++ Files (*.cpp *.h)"),
-                                                          nullptr,
-                                                          QFileDialog::DontUseNativeDialog);
+    QString fileName = QxFileDialog::getOpenFileName(this,
+                                                     tr("Open File"),
+                                                     QString(),
+                                                     tr("All Files (*.*);;Text Files (*.txt);;C++ Files (*.cpp *.h)"));
 
-    if (fileNames.isEmpty())
+    if (fileName.isEmpty())
     {
         return;
     }
-    for (const QString& fileName : fileNames)
-        openFile(fileName);
+    openFile(fileName);
 }
 
 void EditorFrame::onCloseCurrentTabTriggered()

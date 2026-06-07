@@ -2,7 +2,7 @@
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QFileDialog>
+#include <qxfiledialog.h>
 #include <QFileInfo>
 
 StringListEditorDialog::StringListEditorDialog(const QStringList& items,
@@ -149,7 +149,7 @@ void StringListEditorDialog::onBrowse()
     if (startDir.isEmpty() || !QFileInfo::exists(startDir))
         startDir = QString();
 
-    QString path = QFileDialog::getOpenFileName(
+    QString path = QxFileDialog::getOpenFileName(
         this,
         m_options.fileDialogTitle,
         startDir,
