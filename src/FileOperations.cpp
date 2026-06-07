@@ -734,6 +734,14 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             // ask (honoring Yes/No/YesToAll/NoToAll/Abort) and remove it first,
             // otherwise rename fails and the batch stalls on the first conflict.
             if (QFileInfo::exists(dstFilePath)) {
+                // Never offer to overwrite a directory with a same-named file:
+                // wiping a whole target tree to drop a single file is too dangerous.
+                if (srcInfo.isFile() && QFileInfo(dstFilePath).isDir()) {
+                    QMessageBox::warning(parent, QObject::tr("Error"),
+                        QObject::tr("Cannot move '%1': a directory with the same name "
+                                    "already exists at the destination.").arg(name));
+                    continue;
+                }
                 QMessageBox::Button reply;
                 switch (askPolice) {
                     case QMessageBox::Yes:
