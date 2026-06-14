@@ -92,6 +92,7 @@ private:
     QAction *m_insertTimeAction;
     QAction *m_insertBothAction;
 
+    void updateWindowTitle();
     void viewFileInEditor(const QString& filePath);
     int findTabByPath(const QString& filePath);
     QString generateUniqueTabTitle(const QString& filePath);

@@ -72,6 +72,8 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::tabAboutToClose);
     connect(m_editorTabWidget, &MruTabWidget::tabContextMenuRequested,
             this, &EditorFrame::extendTabContextMenu);
+    connect(m_editorTabWidget, &MruTabWidget::currentChanged,
+            this, [this](int) { updateWindowTitle(); });
 
     createActions();
     m_mainHeader->setupMenus(m_newFileAction, m_openFileAction, m_closeAction,
@@ -455,6 +457,18 @@ int EditorFrame::findTabByPath(const QString& filePath)
 
 // Keep an editor tab's title and Ctrl+Tab popup in sync with the document
 // path, which changes on Save As.
+void EditorFrame::updateWindowTitle()
+{
+    Editor* editor = currentEditor();
+    if (!editor) {
+        setWindowTitle(QString());
+        return;
+    }
+    const QString path = editor->filePath();
+    setWindowTitle(path.isEmpty() ? m_editorTabWidget->tabText(m_editorTabWidget->currentIndex())
+                                  : path);
+}
+
 void EditorFrame::refreshTabTitleOnPathChange(Editor* editor)
 {
     connect(editor, &Editor::filePathChanged, this, [this, editor]() {
@@ -466,6 +480,8 @@ void EditorFrame::refreshTabTitleOnPathChange(Editor* editor)
         m_editorTabWidget->setTabPopupText(
             idx, path.isEmpty() ? m_editorTabWidget->tabText(idx)
                                 : qLastPathComponents(path));
+        if (m_editorTabWidget->currentIndex() == idx)
+            updateWindowTitle();
     });
 }
 
