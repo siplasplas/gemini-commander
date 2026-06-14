@@ -1038,8 +1038,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         // briefly lands focus on the path edit - must not select the text.
         const Qt::FocusReason focusReason = static_cast<QFocusEvent*>(event)->reason();
         const bool deliberateFocus = focusReason == Qt::MouseFocusReason
-                                  || focusReason == Qt::TabFocusReason
-                                  || focusReason == Qt::BacktabFocusReason
                                   || focusReason == Qt::ShortcutFocusReason;
 
         // Handle command line edit focus

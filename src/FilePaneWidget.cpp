@@ -33,6 +33,13 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
 
     m_pathEdit = new QLineEdit(this);
     m_pathEdit->setStyleSheet("QLineEdit { background-color: white; }");
+    // Click-only focus: keep the path edit out of the page's tab-focus chain so
+    // that switching panel tabs (which auto-focuses the first focusable child)
+    // lands focus on the file list, not here - otherwise the path text gets
+    // select-all'd on every tab change. A deliberate mouse click still focuses
+    // and selects it for editing.
+    m_pathEdit->setFocusPolicy(Qt::ClickFocus);
+    // Revert uncommitted path edits when focus leaves the field (see eventFilter).
     m_pathEdit->installEventFilter(this);
     ObjectRegistry::add(m_pathEdit, "PathEdit");
     QFontMetrics fm(m_pathEdit->font());
