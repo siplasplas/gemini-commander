@@ -132,6 +132,7 @@ void FileOperationProgressDialog::setTotals(quint64 totalFiles, quint64 totalByt
     m_totalFiles = totalFiles;
     m_totalBytes = totalBytes;
     m_bytesDone = 0;
+    m_transferredBytes = 0;
     m_fileIndex = 0;
     m_curFileBytes = 0;
     m_curFileSize = 0;
@@ -196,17 +197,19 @@ void FileOperationProgressDialog::refreshBars(bool force)
                                 .arg(formatBytes(static_cast<qint64>(doneNow)))
                                 .arg(formatBytes(static_cast<qint64>(m_totalBytes))));
 
-    // Speed and ETA, based on the transfer clock (overwrite-prompt time excluded).
-    // Only meaningful when we are weighing the operation by bytes.
+    // Speed and ETA, based on the transfer clock (overwrite-prompt time excluded)
+    // and on bytes actually written - skipped files advance the bar but must not
+    // count toward speed, otherwise resuming a copy (walking past skipped files)
+    // shows a wildly inflated rate. Only meaningful when weighing by bytes.
     if (m_totalBytes > 0) {
         qint64 elapsedMs = transferElapsedMs();
-        if (elapsedMs >= 500 && doneNow > 0) {
-            double bytesPerSec = static_cast<double>(doneNow) * 1000.0 / static_cast<double>(elapsedMs);
+        if (elapsedMs >= 500 && m_transferredBytes > 0) {
+            double bytesPerSec = static_cast<double>(m_transferredBytes) * 1000.0 / static_cast<double>(elapsedMs);
             double mbPerSec = bytesPerSec / (1024.0 * 1024.0);
+            // Remaining bytes still to process (some may end up skipped, so this
+            // is an upper bound - ETA can only come in earlier, never spike).
             quint64 remaining = (m_totalBytes > doneNow) ? (m_totalBytes - doneNow) : 0;
-            qint64 etaSec = (bytesPerSec > 0.0)
-                                ? static_cast<qint64>(static_cast<double>(remaining) / bytesPerSec + 0.5)
-                                : 0;
+            qint64 etaSec = static_cast<qint64>(static_cast<double>(remaining) / bytesPerSec + 0.5);
             m_statsLabel->setText(tr("%1 MB/s  —  ETA %2")
                                       .arg(mbPerSec, 0, 'f', 1)
                                       .arg(formatDuration(etaSec)));

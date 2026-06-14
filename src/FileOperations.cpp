@@ -453,6 +453,7 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
 
         written += buffer.size();
         if (progress) {
+            progress->addTransferred(buffer.size());
             progress->addFileBytes(written);
             if (progress->wasCanceled()) {
                 tempFile.close();
@@ -526,11 +527,15 @@ bool copyFile(const QString &srcPath, const QString &dstPath, FileOperationProgr
     } else {
         // Default: use system copy
         ok = QFile::copy(srcPath, dstPath);
-        if (ok)
+        if (ok) {
             finalizeCopiedFile(srcPath, dstPath);
-        else
+            // System copy gives no chunk callbacks; count it as transferred now.
+            if (progress)
+                progress->addTransferred(fileSize);
+        } else {
             QMessageBox::warning(nullptr, QObject::tr("Error"),
                                  QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
+        }
     }
 
     if (!ok)

@@ -37,6 +37,11 @@ public:
     void addFileBytes(qint64 bytesSoFar);
     void endFile();
 
+    // Report bytes actually written to disk. Drives speed/ETA so that skipped
+    // files (which advance the progress bar but transfer nothing) do not inflate
+    // the measured speed.
+    void addTransferred(qint64 deltaBytes) { m_transferredBytes += static_cast<quint64>(deltaBytes); }
+
     // Check if user canceled
     bool wasCanceled() const { return m_canceled; }
 
@@ -77,7 +82,8 @@ private:
     quint64 m_fileIndex = 0;      // 1-based index of the current file
     qint64 m_curFileSize = 0;     // size of the current file
     qint64 m_curFileBytes = 0;    // bytes transferred within the current file
-    quint64 m_bytesDone = 0;      // bytes of all fully-finished files
+    quint64 m_bytesDone = 0;      // bytes of all fully-finished files (incl. skipped)
+    quint64 m_transferredBytes = 0;  // bytes actually written (excludes skipped); for speed
     QString m_curFileName;
 
     QElapsedTimer m_repaintTimer;
