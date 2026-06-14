@@ -446,6 +446,24 @@ void EditorFrame::tabAboutToClose(int index, bool askPin, bool &allow_close)
                 allow_close = editor->saveFile(); break;
             default:allow_close = true;
         }
+    } else if (editor && !editor->filePath().isEmpty() && !QFileInfo::exists(editor->filePath())) {
+        // Unmodified, but the file has been deleted on disk while open. Don't lose
+        // the buffer silently - let the user save it back or discard it.
+        QString message = "The file " + editor->baseFileName() + " has been deleted on disk.\n";
+        message += "Do you want to save it back? (No = close and discard)";
+        QMessageBox::StandardButton reply = QMessageBox::question(
+                    this,
+                    tr("File Deleted"),
+                    message,
+                    QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel
+                );
+        switch (reply) {
+            case QMessageBox::Cancel:allow_close = false; break;
+            case QMessageBox::No:allow_close = true; break;
+            case QMessageBox::Yes:
+                allow_close = editor->saveFile(); break;
+            default:allow_close = true;
+        }
     } else
         allow_close = true;
 }
@@ -633,24 +651,18 @@ void EditorFrame::changeEvent(QEvent* event)
 
 void EditorFrame::checkAllTabsForExternalChanges()
 {
+    // Only react to *changes* on disk: silently reload unmodified tabs whose file
+    // changed. A deleted file is left untouched - it might be a still-unsaved name
+    // (e.g. opened via Shift+F4 for a path that never existed), and the deletion is
+    // only acted upon when the tab is closed (see tabAboutToClose).
     for (int i = m_editorTabWidget->count() - 1; i >= 0; --i) {
         auto* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i));
         if (!editor || editor->filePath().isEmpty())
             continue;
 
         QFileInfo fi(editor->filePath());
-        if (!fi.exists()) {
-            m_editorTabWidget->setCurrentIndex(i);
-            QString message = tr("File was deleted:\n%1\n\nDo you want to save it?").arg(editor->filePath());
-            auto reply = QMessageBox::question(this, tr("File Deleted"), message,
-                QMessageBox::Save | QMessageBox::Discard, QMessageBox::Discard);
-            if (reply == QMessageBox::Save)
-                editor->saveFile();
-            else
-                m_editorTabWidget->requestCloseTab(i);
-        } else if (!editor->isModified() && editor->isChangedOnDisk()) {
+        if (fi.exists() && !editor->isModified() && editor->isChangedOnDisk())
             editor->reloadFromDisk();
-        }
     }
 }
 
