@@ -4,6 +4,7 @@
 #include <QListWidget>
 #include <QStackedWidget>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QComboBox>
@@ -134,6 +135,8 @@ private:
     QComboBox* m_copyMode;
     QSpinBox* m_largeFileThreshold;
     QSpinBox* m_copyChunkSize;
+    QDoubleSpinBox* m_syncBatchThreshold;
+    QSpinBox* m_syncBatchInterval;
 
     // Comparer page
     QCheckBox* m_compareIgnoreTime;

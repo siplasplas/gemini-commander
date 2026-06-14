@@ -668,6 +668,37 @@ void ConfigDialog::createGeneralPage()
 
     layout->addWidget(copyGroup);
 
+    // --- Flush to disk (sync) settings ---
+    auto* syncGroup = new QGroupBox(tr("Flush to Disk (removable media)"), page);
+    auto* syncLayout = new QFormLayout(syncGroup);
+
+    m_syncBatchThreshold = new QDoubleSpinBox(syncGroup);
+    m_syncBatchThreshold->setRange(0.0, 1024.0);
+    m_syncBatchThreshold->setDecimals(1);
+    m_syncBatchThreshold->setSingleStep(1.0);
+    m_syncBatchThreshold->setSuffix(" MB");
+    m_syncBatchThreshold->setValue(10.0);
+    syncLayout->addRow(tr("Batch sync threshold:"), m_syncBatchThreshold);
+
+    m_syncBatchInterval = new QSpinBox(syncGroup);
+    m_syncBatchInterval->setRange(0, 60000);
+    m_syncBatchInterval->setSingleStep(100);
+    m_syncBatchInterval->setSuffix(" ms");
+    m_syncBatchInterval->setValue(1000);
+    syncLayout->addRow(tr("Batch sync interval:"), m_syncBatchInterval);
+
+    auto* syncInfo = new QLabel(
+        tr("Large files are flushed to disk immediately. Small files are flushed in "
+           "batches — once this many megabytes pile up, or this many milliseconds pass "
+           "since the last flush (and always at the end of the operation). 0 = flush "
+           "every file (threshold) / disable the time-based flush (interval)."),
+        syncGroup);
+    syncInfo->setWordWrap(true);
+    syncInfo->setStyleSheet("QLabel { color: gray; }");
+    syncLayout->addRow(syncInfo);
+
+    layout->addWidget(syncGroup);
+
     // Toolbar reset
     auto* toolbarGroup = new QGroupBox(tr("Toolbars"), page);
     auto* toolbarLayout = new QVBoxLayout(toolbarGroup);
@@ -845,6 +876,8 @@ void ConfigDialog::loadSettings()
         m_copyMode->setCurrentIndex(copyModeIdx);
     m_largeFileThreshold->setValue(static_cast<int>(cfg.largeFileThreshold() / (1024 * 1024)));
     m_copyChunkSize->setValue(static_cast<int>(cfg.copyChunkSize() / (1024 * 1024)));
+    m_syncBatchThreshold->setValue(cfg.syncBatchThresholdMB());
+    m_syncBatchInterval->setValue(cfg.syncBatchIntervalMs());
 }
 
 void ConfigDialog::saveSettings()
@@ -931,6 +964,8 @@ void ConfigDialog::saveSettings()
     cfg.setCopyMode(static_cast<CopyMode>(copyModeValue));
     cfg.setLargeFileThreshold(static_cast<qint64>(m_largeFileThreshold->value()) * 1024 * 1024);
     cfg.setCopyChunkSize(static_cast<qint64>(m_copyChunkSize->value()) * 1024 * 1024);
+    cfg.setSyncBatchThresholdMB(m_syncBatchThreshold->value());
+    cfg.setSyncBatchIntervalMs(m_syncBatchInterval->value());
 
     // Save to file
     cfg.save();
