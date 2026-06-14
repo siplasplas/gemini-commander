@@ -76,11 +76,19 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, [this](int) { updateWindowTitle(); });
 
     createActions();
-    m_mainHeader->setupMenus(m_newFileAction, m_openFileAction, m_closeAction,
+    QMenu* fileMenu = m_mainHeader->setupMenus(m_newFileAction, m_openFileAction, m_closeAction,
                              m_exitAction, m_showSpecialCharsAction, m_wrapLinesAction,
                              m_aboutAction, m_findAction, m_findNextAction, m_findPrevAction,
                              m_replaceAction, m_gotoAction);
     m_mainHeader->setupToolsMenu(m_insertDateAction, m_insertTimeAction, m_insertBothAction);
+
+    // Insert "Recent Files" submenu before the separator that precedes Close
+    m_recentMenu = new QMenu(tr("Recent Files"), fileMenu);
+    // Insert it after Open (index 1), before the first separator
+    QList<QAction*> fileActions = fileMenu->actions();
+    QAction* insertBefore = fileActions.size() > 2 ? fileActions[2] : nullptr;
+    fileMenu->insertMenu(insertBefore, m_recentMenu);
+    mruRebuildMenu();
 
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
@@ -377,6 +385,9 @@ bool EditorFrame::actionsBeforeTabClose(int index)
     Editor* editor = qobject_cast<Editor*>(widget); // Cast to our Editor view
     if (!editor)
         return true;
+    // Add to MRU when tab is closed (only real files, not untitled)
+    if (!editor->filePath().isEmpty())
+        mruAdd(editor->filePath());
     if (editor && editor->document())
     {
         KTextEditor::Document* doc = editor->document(); // Pobierz wskaźnik do dokumentu
@@ -562,6 +573,54 @@ void EditorFrame::onToggleWrapLines(bool checked)
                 wrapAction->trigger();
             }
         }
+    }
+}
+
+void EditorFrame::mruAdd(const QString& filePath)
+{
+    if (filePath.isEmpty())
+        return;
+    Config& cfg = Config::instance();
+    QStringList paths = cfg.editorMruPaths();
+    paths.removeAll(filePath);
+    paths.prepend(filePath);
+    while (paths.size() > cfg.editorMruMaxCount())
+        paths.removeLast();
+    cfg.setEditorMruPaths(paths);
+    cfg.save();
+    mruRebuildMenu();
+}
+
+void EditorFrame::mruRemove(const QString& filePath)
+{
+    if (filePath.isEmpty())
+        return;
+    Config& cfg = Config::instance();
+    QStringList paths = cfg.editorMruPaths();
+    if (!paths.removeAll(filePath))
+        return;
+    cfg.setEditorMruPaths(paths);
+    cfg.save();
+    mruRebuildMenu();
+}
+
+void EditorFrame::mruRebuildMenu()
+{
+    if (!m_recentMenu)
+        return;
+    m_recentMenu->clear();
+    const QStringList paths = Config::instance().editorMruPaths();
+    if (paths.isEmpty()) {
+        QAction* empty = m_recentMenu->addAction(tr("(empty)"));
+        empty->setEnabled(false);
+        return;
+    }
+    for (const QString& path : paths) {
+        QAction* act = m_recentMenu->addAction(path);
+        connect(act, &QAction::triggered, this, [this, path]() {
+            mruRemove(path);
+            openFile(path);
+        });
     }
 }
 

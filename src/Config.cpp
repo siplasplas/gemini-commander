@@ -282,6 +282,15 @@ bool Config::load(const QString& path)
                 m_editorX = static_cast<int>(*x);
             if (auto y = editor["y"].value<int64_t>())
                 m_editorY = static_cast<int>(*y);
+            if (auto n = editor["mru_max_count"].value<int64_t>())
+                m_editorMruMaxCount = static_cast<int>(*n);
+            m_editorMruPaths.clear();
+            if (editor.contains("mru_paths") && editor["mru_paths"].is_array()) {
+                for (const auto& node : *editor["mru_paths"].as_array()) {
+                    if (auto s = node.value<std::string>())
+                        m_editorMruPaths.append(QString::fromStdString(*s));
+                }
+            }
         }
 
         // [viewer] section (position relative to main window)
@@ -519,6 +528,11 @@ bool Config::save() const
     editorTbl.insert("height", static_cast<int64_t>(m_editorHeight));
     editorTbl.insert("x", static_cast<int64_t>(m_editorX));
     editorTbl.insert("y", static_cast<int64_t>(m_editorY));
+    editorTbl.insert("mru_max_count", static_cast<int64_t>(m_editorMruMaxCount));
+    toml::array mruArr;
+    for (const QString& p : m_editorMruPaths)
+        mruArr.push_back(p.toStdString());
+    editorTbl.insert("mru_paths", mruArr);
     tbl.insert("editor", editorTbl);
 
     // [viewer] section (position relative to main window)

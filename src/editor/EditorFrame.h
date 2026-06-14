@@ -100,6 +100,12 @@ private:
     void createActions();
     void saveGeometryToConfig();
 
+    void mruAdd(const QString& filePath);
+    void mruRemove(const QString& filePath);
+    void mruRebuildMenu();
+
+    QMenu* m_recentMenu = nullptr;
+
     bool m_geometryRestored = false;
     QTimer* m_fileWatchTimer = nullptr;
 };

@@ -183,6 +183,12 @@ public:
   double kteThresholdMB() const { return m_kteThresholdMB; }
   void setKteThresholdMB(double mb) { m_kteThresholdMB = mb; }
 
+  // Editor MRU (recently used files)
+  int editorMruMaxCount() const { return m_editorMruMaxCount; }
+  void setEditorMruMaxCount(int n) { m_editorMruMaxCount = qMax(1, n); }
+  QStringList editorMruPaths() const { return m_editorMruPaths; }
+  void setEditorMruPaths(const QStringList& paths) { m_editorMruPaths = paths; }
+
   // Large file copy mode
   CopyMode copyMode() const { return m_copyMode; }
   void setCopyMode(CopyMode mode) { m_copyMode = mode; }
@@ -266,6 +272,10 @@ private:
   CopyMode m_copyMode = CopyMode::ChunkedSha;  // Default: chunked with SHA
   qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MiB
   qint64 m_copyChunkSize = 5 * 1024 * 1024;  // 5 MiB
+
+  // Editor MRU
+  int m_editorMruMaxCount = 15;
+  QStringList m_editorMruPaths;
 };
 
 #endif

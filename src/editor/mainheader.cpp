@@ -25,7 +25,7 @@ void MainHeader::setupUi()
     m_layout->addWidget(m_toolBar, 0, 2);
 }
 
-void MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* closeFile,
+QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* closeFile,
                              QAction* exitApp, QAction* showSpecialChars, QAction* wrapLines,
                              QAction* aboutApp, QAction* findAction, QAction* findNextAction,
                              QAction* findPrevAction, QAction* replaceAction, QAction* gotoAction)
@@ -37,6 +37,7 @@ void MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* closeF
     fileMenu->addAction(closeFile);
     fileMenu->addSeparator();
     fileMenu->addAction(exitApp);
+    return fileMenu;
 
     QMenu* searchMenu = m_menuBar->addMenu(tr("&Search"));
     if (findAction)
