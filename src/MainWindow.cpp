@@ -11,6 +11,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QKeyEvent>
+#include <QFocusEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSplitter>
@@ -1032,9 +1033,19 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         return QMainWindow::eventFilter(obj, event);
 
     if (event->type() == QEvent::FocusIn) {
+        // Select-all only when the user deliberately focuses the field (click,
+        // Tab, shortcut). Programmatic focus - e.g. when switching panel tabs
+        // briefly lands focus on the path edit - must not select the text.
+        const Qt::FocusReason focusReason = static_cast<QFocusEvent*>(event)->reason();
+        const bool deliberateFocus = focusReason == Qt::MouseFocusReason
+                                  || focusReason == Qt::TabFocusReason
+                                  || focusReason == Qt::BacktabFocusReason
+                                  || focusReason == Qt::ShortcutFocusReason;
+
         // Handle command line edit focus
         if (obj == commandLineEdit) {
-            QTimer::singleShot(0, commandLineEdit, &QLineEdit::selectAll);
+            if (deliberateFocus)
+                QTimer::singleShot(0, commandLineEdit, &QLineEdit::selectAll);
             return QMainWindow::eventFilter(obj, event);
         }
 
@@ -1042,11 +1053,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         auto* leftPane = paneForSide(Side::Left);
         auto* rightPane = paneForSide(Side::Right);
         if (leftPane && obj == leftPane->pathEdit()) {
-            QTimer::singleShot(0, leftPane->pathEdit(), &QLineEdit::selectAll);
+            if (deliberateFocus)
+                QTimer::singleShot(0, leftPane->pathEdit(), &QLineEdit::selectAll);
             return QMainWindow::eventFilter(obj, event);
         }
         if (rightPane && obj == rightPane->pathEdit()) {
-            QTimer::singleShot(0, rightPane->pathEdit(), &QLineEdit::selectAll);
+            if (deliberateFocus)
+                QTimer::singleShot(0, rightPane->pathEdit(), &QLineEdit::selectAll);
             return QMainWindow::eventFilter(obj, event);
         }
 
