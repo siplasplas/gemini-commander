@@ -681,13 +681,6 @@ void MainWindow::setupUi() {
     });
     fileMenu->addAction(extractAction);
 
-    QAction* multiRenameAction = new QAction(tr("Multi-&Rename Tool..."), this);
-    multiRenameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
-    connect(multiRenameAction, &QAction::triggered, this, [this]() {
-        doMultiRename(nullptr, nullptr);
-    });
-    fileMenu->addAction(multiRenameAction);
-
     // File menu - File/Directory Info
     QAction* fileInfoAction = new QAction(tr("File Info..."), this);
     fileInfoAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
@@ -705,6 +698,13 @@ void MainWindow::setupUi() {
         doChangeAttributes(nullptr, nullptr);
     });
     fileMenu->addAction(chmodAction);
+
+    QAction* multiRenameAction = new QAction(tr("Multi-&Rename Tool..."), this);
+    multiRenameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+    connect(multiRenameAction, &QAction::triggered, this, [this]() {
+        doMultiRename(nullptr, nullptr);
+    });
+    fileMenu->addAction(multiRenameAction);
 
     fileMenu->addSeparator();
 
