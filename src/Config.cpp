@@ -169,6 +169,8 @@ bool Config::load(const QString& path)
                 m_copyChunkSize = *chunkSize;
             if (auto syncBatch = general["sync_batch_threshold_mb"].value<double>())
                 m_syncBatchThresholdMB = *syncBatch;
+            if (auto syncInterval = general["sync_batch_interval_ms"].value<int64_t>())
+                m_syncBatchIntervalMs = static_cast<int>(*syncInterval);
         }
 
         // [window] section
@@ -478,6 +480,7 @@ bool Config::save() const
     generalTbl.insert("large_file_threshold", static_cast<int64_t>(m_largeFileThreshold));
     generalTbl.insert("copy_chunk_size", static_cast<int64_t>(m_copyChunkSize));
     generalTbl.insert("sync_batch_threshold_mb", m_syncBatchThresholdMB);
+    generalTbl.insert("sync_batch_interval_ms", static_cast<int64_t>(m_syncBatchIntervalMs));
     tbl.insert("general", generalTbl);
 
     // [window] section

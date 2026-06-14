@@ -207,6 +207,12 @@ public:
       return static_cast<qint64>(m_syncBatchThresholdMB * 1024.0 * 1024.0);
   }
 
+  // Also flush pending small files when this many milliseconds have passed
+  // since the last sync, so slowly-arriving files don't linger unsynced even
+  // if they never reach the byte threshold. 0 disables the time-based flush.
+  int syncBatchIntervalMs() const { return m_syncBatchIntervalMs; }
+  void setSyncBatchIntervalMs(int ms) { m_syncBatchIntervalMs = ms; }
+
 private:
   Config()
       : m_leftColumns(defaultColumns())
@@ -283,6 +289,7 @@ private:
   qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MiB
   qint64 m_copyChunkSize = 5 * 1024 * 1024;  // 5 MiB
   double m_syncBatchThresholdMB = 10.0;  // batch sync of small files per 10 MB
+  int m_syncBatchIntervalMs = 1000;      // ...or at least once this often
 
   // Editor MRU
   int m_editorMruMaxCount = 15;

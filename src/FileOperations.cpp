@@ -15,6 +15,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -48,6 +49,8 @@ class DestSync {
 public:
     explicit DestSync(const QString& destPath) {
         m_batchThreshold = static_cast<quint64>(Config::instance().syncBatchThresholdBytes());
+        m_maxIntervalMs = Config::instance().syncBatchIntervalMs();
+        m_timer.start();
 #ifndef _WIN32
         QFileInfo info(destPath);
         QString dir = info.isDir() ? destPath : info.absolutePath();
@@ -74,7 +77,10 @@ public:
             doSync();  // large file (or batching disabled): sync right away
         } else {
             m_pending += static_cast<quint64>(fileSize);
-            if (m_pending >= m_batchThreshold)
+            // Flush when enough bytes piled up, or when too much time has passed
+            // since the last sync (so slowly-trickling files don't linger).
+            bool byTime = m_maxIntervalMs > 0 && m_timer.elapsed() >= m_maxIntervalMs;
+            if (m_pending > 0 && (m_pending >= m_batchThreshold || byTime))
                 doSync();
         }
 #endif
@@ -109,11 +115,14 @@ private:
             ::sync();
         }
         m_pending = 0;
+        m_timer.restart();
     }
     int m_fd = -1;
 #endif
     quint64 m_pending = 0;
     quint64 m_batchThreshold = 10ULL * 1024 * 1024;
+    int m_maxIntervalMs = 1000;
+    QElapsedTimer m_timer;
 };
 
 // Helper: round up size to cluster boundary
