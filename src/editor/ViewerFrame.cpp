@@ -7,6 +7,7 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
+#include <QEvent>
 
 #include "../Config.h"
 
@@ -30,6 +31,10 @@ ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
     if (!filePath.isEmpty()) {
         m_viewerWidget->openFile(filePath);
     }
+
+    connect(m_viewerWidget, &ViewerWidget::fileDeleted, this, [this]() {
+        hide();
+    });
 }
 
 ViewerFrame::~ViewerFrame() = default;
@@ -76,6 +81,13 @@ void ViewerFrame::updateMenuChecks()
     bool isText = (m_viewerWidget->viewMode() == ViewerWidget::ViewMode::Text);
     m_textAction->setChecked(isText);
     m_hexAction->setChecked(!isText);
+}
+
+void ViewerFrame::changeEvent(QEvent* event)
+{
+    QDialog::changeEvent(event);
+    if (event->type() == QEvent::ActivationChange && isActiveWindow())
+        m_viewerWidget->refreshIfChanged();
 }
 
 void ViewerFrame::closeEvent(QCloseEvent* event)

@@ -85,6 +85,14 @@ EditorFrame::EditorFrame(QWidget* parent)
 
     // --- Finish setup ---
     setMinimumSize(600, 400);
+
+    m_fileWatchTimer = new QTimer(this);
+    m_fileWatchTimer->setInterval(1000);
+    connect(m_fileWatchTimer, &QTimer::timeout, this, [this]() {
+        if (isVisible())
+            checkAllTabsForExternalChanges();
+    });
+    m_fileWatchTimer->start();
 }
 
 void EditorFrame::extendTabContextMenu(int tabIndex, QMenu* menu) {
@@ -207,7 +215,9 @@ void EditorFrame::openFile(const QString& fileName)
     if (existingTabIndex >= 0)
     {
         m_editorTabWidget->setCurrentIndex(existingTabIndex);
-        qDebug() << "Activated existing tab for:" << fileName;
+        auto* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(existingTabIndex));
+        if (editor && !editor->isModified() && editor->isChangedOnDisk())
+            editor->reloadFromDisk();
         return;
     }
 
@@ -535,6 +545,36 @@ void EditorFrame::onToggleWrapLines(bool checked)
             if (wrapAction && wrapAction->isChecked() != checked) {
                 wrapAction->trigger();
             }
+        }
+    }
+}
+
+void EditorFrame::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::ActivationChange && isActiveWindow())
+        checkAllTabsForExternalChanges();
+}
+
+void EditorFrame::checkAllTabsForExternalChanges()
+{
+    for (int i = m_editorTabWidget->count() - 1; i >= 0; --i) {
+        auto* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i));
+        if (!editor || editor->filePath().isEmpty())
+            continue;
+
+        QFileInfo fi(editor->filePath());
+        if (!fi.exists()) {
+            m_editorTabWidget->setCurrentIndex(i);
+            QString message = tr("File was deleted:\n%1\n\nDo you want to save it?").arg(editor->filePath());
+            auto reply = QMessageBox::question(this, tr("File Deleted"), message,
+                QMessageBox::Save | QMessageBox::Discard, QMessageBox::Discard);
+            if (reply == QMessageBox::Save)
+                editor->saveFile();
+            else
+                m_editorTabWidget->requestCloseTab(i);
+        } else if (!editor->isModified() && editor->isChangedOnDisk()) {
+            editor->reloadFromDisk();
         }
     }
 }

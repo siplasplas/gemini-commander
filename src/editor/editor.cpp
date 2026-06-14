@@ -32,6 +32,7 @@ Editor::Editor(KTextEditor::Document *doc, QWidget *parent) :
 
     // Store the file path from the document
     m_filePath = m_document->url().toLocalFile();
+    updateFileInfo();
 
     // Create the KTextEditor View, parented to this Editor widget
     m_view = m_document->createView(this);
@@ -76,6 +77,7 @@ Editor::Editor(KTextEditor::Document *doc, QWidget *parent) :
             [this](KTextEditor::Document* doc) {
                 m_filePath = doc->url().toLocalFile();
                 setObjectName(m_filePath);
+                updateFileInfo();
                 emit filePathChanged();
             });
 }
@@ -165,5 +167,38 @@ bool Editor::saveFile() {
     }
 
     // isModified should be automatically set to false by KTextEditor::Document on successful save
+    updateFileInfo();
     return true;
+}
+
+void Editor::updateFileInfo()
+{
+    if (m_filePath.isEmpty()) {
+        m_loadedModified = QDateTime();
+        m_loadedSize = -1;
+        return;
+    }
+    QFileInfo fi(m_filePath);
+    m_loadedModified = fi.lastModified();
+    m_loadedSize = fi.size();
+}
+
+bool Editor::isChangedOnDisk() const
+{
+    if (m_filePath.isEmpty())
+        return false;
+    QFileInfo fi(m_filePath);
+    if (!fi.exists())
+        return false;
+    return fi.lastModified() != m_loadedModified || fi.size() != m_loadedSize;
+}
+
+bool Editor::reloadFromDisk()
+{
+    if (!m_document || m_filePath.isEmpty())
+        return false;
+    bool ok = m_document->openUrl(QUrl::fromLocalFile(m_filePath));
+    if (ok)
+        updateFileInfo();
+    return ok;
 }

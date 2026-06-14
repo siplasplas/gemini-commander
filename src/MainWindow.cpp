@@ -238,6 +238,15 @@ void MainWindow::resizeEvent(QResizeEvent* event)
     m_geometryDirty = true;
 }
 
+void MainWindow::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::ActivationChange && isActiveWindow()) {
+        if (editorFrame && editorFrame->isVisible())
+            editorFrame->checkAllTabsForExternalChanges();
+    }
+}
+
 void MainWindow::closeEvent(QCloseEvent *event) {
     // If editor is visible, close it first instead of closing the app
     if (editorFrame && editorFrame->isVisible()) {

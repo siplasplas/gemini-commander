@@ -75,9 +75,16 @@ ViewerWidget::~ViewerWidget()
 
 void ViewerWidget::openFile(const QString& filePath)
 {
-    // Same file and same mode - do nothing
-    if (filePath == m_currentFile && (m_textViewer || m_kteView || m_hexViewer))
-        return;
+    if (filePath == m_currentFile && (m_textViewer || m_kteView || m_hexViewer)) {
+        QFileInfo fi(filePath);
+        if (!fi.exists()) {
+            emit fileDeleted(filePath);
+            return;
+        }
+        if (fi.lastModified() == m_loadedModified && fi.size() == m_loadedSize)
+            return;
+        // File changed on disk - reload it
+    }
 
     clearViewer();
     m_file.reset();
@@ -93,11 +100,21 @@ void ViewerWidget::openFile(const QString& filePath)
         return;
     }
 
+    QFileInfo fi(filePath);
+    m_loadedModified = fi.lastModified();
+    m_loadedSize = m_file->size();
+
     if (m_viewMode == ViewMode::Hex) {
         showHexView();
     } else {
         showTextView();
     }
+}
+
+void ViewerWidget::refreshIfChanged()
+{
+    if (!m_currentFile.isEmpty())
+        openFile(m_currentFile);
 }
 
 void ViewerWidget::clear()

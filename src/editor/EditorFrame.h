@@ -4,6 +4,7 @@
 #include <QString>
 #include "mainheader.h"
 #include <QMainWindow>
+#include <QTimer>
 
 class MruTabWidget;
 class QAction;
@@ -44,9 +45,12 @@ public:
     void openFileInViewer(const QString &fileName);
     Editor* currentEditor() const;
 
+    void checkAllTabsForExternalChanges();
+
 protected:
     void closeEvent(QCloseEvent *event) override;
     void showEvent(QShowEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 private slots:
     void onNewFileTriggered();
@@ -96,5 +100,6 @@ private:
     void saveGeometryToConfig();
 
     bool m_geometryRestored = false;
+    QTimer* m_fileWatchTimer = nullptr;
 };
 #endif // EDITORFRAME_H

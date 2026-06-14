@@ -41,6 +41,7 @@ public:
 protected:
     void closeEvent(QCloseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void changeEvent(QEvent *event) override;
 private:
     bool m_geometryDirty = false;  // True if user resized window interactively
     void setupUi();

@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QFile>
+#include <QDateTime>
 #include <memory>
 
 class QVBoxLayout;
@@ -33,8 +34,13 @@ public:
     ~ViewerWidget() override;
 
     void openFile(const QString& filePath);
+    void refreshIfChanged();
     void clear();
 
+signals:
+    void fileDeleted(const QString& filePath);
+
+public:
     [[nodiscard]] QString currentFile() const { return m_currentFile; }
     [[nodiscard]] ViewMode viewMode() const { return m_viewMode; }
 
@@ -60,6 +66,8 @@ private:
     QVBoxLayout* m_layout = nullptr;
     QString m_currentFile;
     ViewMode m_viewMode = ViewMode::Text;
+    QDateTime m_loadedModified;
+    qint64 m_loadedSize = -1;
 };
 
 #endif // VIEWERWIDGET_H

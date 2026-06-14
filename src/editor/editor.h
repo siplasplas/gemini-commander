@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QString>
+#include <QDateTime>
 #include <KTextEditor/Editor>       // The Editor singleton
 #include <KTextEditor/Document>     // Document representation
 #include <KTextEditor/View>         // Base view class (used for log)
@@ -64,9 +65,15 @@ public:
      */
     bool saveFile();
 
+    bool isChangedOnDisk() const;
+    bool reloadFromDisk();
+    void updateFileInfo();
+
 private:
     KTextEditor::Document *m_document; ///< Managed text document
     KTextEditor::View *m_view;         ///< Document visualization component
+    QDateTime m_loadedModified;
+    qint64 m_loadedSize = -1;
 };
 
 #endif // EDITOR_H
