@@ -197,6 +197,16 @@ public:
   qint64 copyChunkSize() const { return m_copyChunkSize; }
   void setCopyChunkSize(qint64 bytes) { m_copyChunkSize = bytes; }
 
+  // Batched flush threshold (in MB, decimal). While copying many small files,
+  // the destination filesystem is synced only once this many bytes have piled
+  // up since the last sync (large files are synced immediately). 0 disables
+  // batching (sync every file).
+  double syncBatchThresholdMB() const { return m_syncBatchThresholdMB; }
+  void setSyncBatchThresholdMB(double mb) { m_syncBatchThresholdMB = mb; }
+  qint64 syncBatchThresholdBytes() const {
+      return static_cast<qint64>(m_syncBatchThresholdMB * 1024.0 * 1024.0);
+  }
+
 private:
   Config()
       : m_leftColumns(defaultColumns())
@@ -272,6 +282,7 @@ private:
   CopyMode m_copyMode = CopyMode::ChunkedSha;  // Default: chunked with SHA
   qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MiB
   qint64 m_copyChunkSize = 5 * 1024 * 1024;  // 5 MiB
+  double m_syncBatchThresholdMB = 10.0;  // batch sync of small files per 10 MB
 
   // Editor MRU
   int m_editorMruMaxCount = 15;

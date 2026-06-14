@@ -1,3 +1,11 @@
+// _GNU_SOURCE must be defined before any system header so that syncfs() is
+// declared by <unistd.h> on Linux.
+#ifndef _WIN32
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#endif
+
 #include "FileOperations.h"
 #include "Config.h"
 #include "FileOperationProgressDialog.h"
@@ -16,6 +24,7 @@
 #include <io.h>
 #include <windows.h>
 #else
+#include <fcntl.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
 #endif
@@ -23,6 +32,89 @@
 #include <limits>
 
 namespace FileOperations {
+
+// Flushes copied data to the destination's physical storage.
+//
+// fsync() works on one file descriptor, but a group of small files have their
+// descriptors closed by the time they are done, so they cannot be flushed
+// individually after the fact. Instead we sync the whole destination filesystem
+// (Linux: syncfs() on a descriptor that lives on it - i.e. just that one volume,
+// not the entire machine like sync()). Large files are synced immediately; small
+// files are batched and synced once enough bytes have accumulated, plus once more
+// at the end of the operation (or when the user interrupts it). On slow removable
+// media this is dramatically faster than fsync-after-every-small-file while still
+// guaranteeing everything is on disk before we report completion.
+class DestSync {
+public:
+    explicit DestSync(const QString& destPath) {
+        m_batchThreshold = static_cast<quint64>(Config::instance().syncBatchThresholdBytes());
+#ifndef _WIN32
+        QFileInfo info(destPath);
+        QString dir = info.isDir() ? destPath : info.absolutePath();
+        m_fd = ::open(dir.toLocal8Bit().constData(), O_RDONLY);
+#endif
+    }
+
+    ~DestSync() {
+        flush();
+#ifndef _WIN32
+        if (m_fd >= 0)
+            ::close(m_fd);
+#endif
+    }
+
+    // Called after each regular file is copied.
+    void afterFileCopied(const QString& dstPath, qint64 fileSize, bool largeFile) {
+#ifdef _WIN32
+        // No whole-volume flush without admin rights; flush each file as before.
+        flushFileWindows(dstPath);
+#else
+        Q_UNUSED(dstPath);
+        if (largeFile || m_batchThreshold == 0) {
+            doSync();  // large file (or batching disabled): sync right away
+        } else {
+            m_pending += static_cast<quint64>(fileSize);
+            if (m_pending >= m_batchThreshold)
+                doSync();
+        }
+#endif
+    }
+
+    // Force a sync of everything still pending (end of operation / on abort).
+    void flush() {
+#ifndef _WIN32
+        if (m_pending > 0)
+            doSync();
+#endif
+    }
+
+private:
+#ifdef _WIN32
+    void flushFileWindows(const QString& dstPath) {
+        HANDLE h = CreateFileW(
+            reinterpret_cast<LPCWSTR>(dstPath.utf16()),
+            GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (h != INVALID_HANDLE_VALUE) {
+            FlushFileBuffers(h);
+            CloseHandle(h);
+        }
+    }
+#else
+    void doSync() {
+        if (m_fd >= 0) {
+            if (::syncfs(m_fd) != 0)
+                ::sync();  // fall back to a global sync if syncfs fails
+        } else {
+            ::sync();
+        }
+        m_pending = 0;
+    }
+    int m_fd = -1;
+#endif
+    quint64 m_pending = 0;
+    quint64 m_batchThreshold = 10ULL * 1024 * 1024;
+};
 
 // Helper: round up size to cluster boundary
 static quint64 roundUpToCluster(quint64 size, quint64 clusterSize) {
@@ -411,26 +503,33 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
     return true;
 }
 
-bool copyFile(const QString &srcPath, const QString &dstPath, FileOperationProgressDialog* progress) {
+bool copyFile(const QString &srcPath, const QString &dstPath, FileOperationProgressDialog* progress,
+              DestSync* sync) {
     const auto& cfg = Config::instance();
     QFileInfo srcInfo(srcPath);
     qint64 fileSize = srcInfo.size();
+    bool largeFile = fileSize > cfg.largeFileThreshold();
 
+    bool ok;
     // For files larger than threshold, use configured copy mode
-    if (fileSize > cfg.largeFileThreshold()) {
-        CopyMode mode = cfg.copyMode();
-        if (mode != CopyMode::System) {
-            return copyFileChunked(srcPath, dstPath, mode, progress);
-        }
+    if (largeFile && cfg.copyMode() != CopyMode::System) {
+        ok = copyFileChunked(srcPath, dstPath, cfg.copyMode(), progress);
+    } else {
+        // Default: use system copy
+        ok = QFile::copy(srcPath, dstPath);
+        if (ok)
+            finalizeCopiedFile(srcPath, dstPath);
+        else
+            QMessageBox::warning(nullptr, QObject::tr("Error"),
+                                 QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
     }
 
-    // Default: use system copy
-    if (!QFile::copy(srcPath, dstPath)) {
-        QMessageBox::warning(nullptr, QObject::tr("Error"),
-                             QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, dstPath));
+    if (!ok)
         return false;
-    }
-    finalizeCopiedFile(srcPath, dstPath);
+
+    // Flush the written data to physical storage (batched for small files).
+    if (sync)
+        sync->afterFileCopied(dstPath, fileSize, largeFile);
     return true;
 }
 
@@ -456,7 +555,7 @@ bool copySymlink(const QString &srcPath, const QString &dstPath) {
 
 QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &dstPath, bool multi,
                                          QMessageBox::Button askPolice, QWidget *parent,
-                                         FileOperationProgressDialog* progress) {
+                                         FileOperationProgressDialog* progress, DestSync* sync) {
     QFileInfo dstInfo(dstPath);
     QMessageBox::Button result = QMessageBox::Yes;
     if (dstInfo.exists()) {
@@ -495,15 +594,15 @@ QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &
             result = QMessageBox::YesToAll;
         QFile::remove(dstPath);
     }
-    if (!copyFile(srcPath, dstPath, progress))
+    if (!copyFile(srcPath, dstPath, progress, sync))
         return QMessageBox::No;
     return result;
 }
 
 QMessageBox::Button copyOrMoveFileAskOverwrite(const QString &srcPath, const QString &dstPath, bool move, bool multi,
                                                QMessageBox::Button askPolice, QWidget *parent,
-                                               FileOperationProgressDialog* progress) {
-    auto reply = copyFileAskOverwrite(srcPath, dstPath, multi, askPolice, parent, progress);
+                                               FileOperationProgressDialog* progress, DestSync* sync) {
+    auto reply = copyFileAskOverwrite(srcPath, dstPath, multi, askPolice, parent, progress, sync);
     if (move)
         if (reply == QMessageBox::Yes || reply == QMessageBox::YesToAll)
             QFile::remove(srcPath);
@@ -551,7 +650,7 @@ void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *
 
 QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, bool move,
                                                  bool sameFs, QMessageBox::Button askPolice, CopyStats &stats,
-                                                 FileOperationProgressDialog &progress) {
+                                                 FileOperationProgressDialog &progress, DestSync &sync) {
     if (askPolice == QMessageBox::Abort)
         return QMessageBox::Abort;
 
@@ -598,7 +697,7 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
         // Handle regular files
         if (fi.isFile()) {
             progress.beginFile(fi.fileName(), fi.size());
-            askPolice = copyOrMoveFileAskOverwrite(srcPath, dstPath, move, true, askPolice, &progress, &progress);
+            askPolice = copyOrMoveFileAskOverwrite(srcPath, dstPath, move, true, askPolice, &progress, &progress, &sync);
             progress.endFile();
 
             if (askPolice == QMessageBox::Abort)
@@ -606,7 +705,7 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
         }
         // Handle directories (recursive)
         else if (fi.isDir()) {
-            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress);
+            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress, sync);
 
             if (askPolice == QMessageBox::Abort)
                 return QMessageBox::Abort;
@@ -746,6 +845,10 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         progressDlg.setTotals(totalFiles, totalBytes);
     }
 
+    // Batches flushing copied data to the destination's filesystem (syncfs on
+    // Linux). Its destructor performs the final flush even on early return.
+    DestSync destSync(dstPath);
+
     QMessageBox::Button askPolice = QMessageBox::Yes;
     for (const QString &name: names) {
         QString srcPath = srcDir.absoluteFilePath(name);
@@ -834,12 +937,12 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         if (srcInfo.isFile()) {
             progressDlg.beginFile(name, srcInfo.size());
             askPolice = copyOrMoveFileAskOverwrite(srcPath, dstFilePath,
-                              move, names.size()>1, askPolice, &progressDlg, &progressDlg);
+                              move, names.size()>1, askPolice, &progressDlg, &progressDlg, &destSync);
             progressDlg.endFile();
         }
         else if (srcInfo.isDir()) {
             askPolice = copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
-                                             sameFs, askPolice, stats, progressDlg);
+                                             sameFs, askPolice, stats, progressDlg, destSync);
             if (askPolice != QMessageBox::Abort) {
                 // Carry source directory metadata (times, permissions) to the copy
                 // while the source still exists, then drop the source if moving.

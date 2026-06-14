@@ -178,22 +178,6 @@ void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
     DWORD srcAttrs = GetFileAttributesW(reinterpret_cast<LPCWSTR>(srcPath.utf16()));
     if (srcAttrs != INVALID_FILE_ATTRIBUTES)
         SetFileAttributesW(reinterpret_cast<LPCWSTR>(dstPath.utf16()), srcAttrs);
-
-    // Sync file to disk (important for USB drives to prevent data loss)
-    HANDLE hFlush = CreateFileW(
-        reinterpret_cast<LPCWSTR>(dstPath.utf16()),
-        GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        nullptr,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr
-    );
-
-    if (hFlush != INVALID_HANDLE_VALUE) {
-        FlushFileBuffers(hFlush);
-        CloseHandle(hFlush);
-    }
 #else
     // Linux/Unix implementation
     struct stat srcStat;
@@ -206,14 +190,10 @@ void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
         times[1] = srcStat.st_mtim;  // modification time
         utimensat(AT_FDCWD, dstPath.toLocal8Bit().constData(), times, 0);
     }
-
-    // Sync file to disk (important for USB drives to prevent data loss)
-    int fd = open(dstPath.toLocal8Bit().constData(), O_RDONLY);
-    if (fd >= 0) {
-        fsync(fd);
-        close(fd);
-    }
 #endif
+    // NOTE: flushing copied data to physical storage is handled separately by
+    // the copy orchestration (DestSync) so that many small files can be synced
+    // in batches instead of one fsync per file.
 }
 
 bool areOnSameFilesystem(const QString& path1, const QString& path2)

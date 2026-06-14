@@ -12,6 +12,8 @@ class FileOperationProgressDialog;
 
 namespace FileOperations {
 
+class DestSync;  // defined in FileOperations.cpp
+
 struct Params {
     bool valid = false;
     QString srcPath;
@@ -67,7 +69,7 @@ void countCopyWork(const QString& basePath, const QStringList& names,
 QMessageBox::Button copyOrMoveDirectoryRecursive(const QString& srcRoot, const QString& dstRoot,
                             bool move, bool sameFs,
                             QMessageBox::Button askPolice, CopyStats& stats,
-                            FileOperationProgressDialog& progress);
+                            FileOperationProgressDialog& progress, DestSync& sync);
 
 // Check if target is invalid (same path or subdirectory of source)
 bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPath);
