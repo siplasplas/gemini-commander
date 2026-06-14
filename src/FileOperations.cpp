@@ -463,19 +463,24 @@ QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &
         // Never offer to overwrite a directory with a same-named file:
         // wiping a whole target tree to drop a single file is too dangerous.
         if (dstInfo.isDir()) {
+            if (progress) progress->pauseClock();
             QMessageBox::warning(parent, QObject::tr("Error"),
                 QObject::tr("Cannot copy '%1': a directory with the same name "
                             "already exists at the destination.").arg(dstInfo.fileName()));
+            if (progress) progress->resumeClock();
             return QMessageBox::No;
         }
         QMessageBox::Button reply;
         switch (askPolice) {
             case QMessageBox::Yes:
             case QMessageBox::No:
+                // Exclude the time spent waiting on the prompt from speed/ETA.
+                if (progress) progress->pauseClock();
                 if (multi)
                     reply = askOverwriteMulti(parent, dstPath);
                 else
                     reply = askOverwriteSingle(parent, dstPath);
+                if (progress) progress->resumeClock();
                 break;
             default:
                 reply = askPolice;

@@ -48,6 +48,9 @@ void FileOperationProgressDialog::setupUi(const QString& title)
     m_overallBar->setValue(0);
     layout->addWidget(m_overallBar);
 
+    m_statsLabel = new QLabel(this);
+    layout->addWidget(m_statsLabel);
+
     m_cancelButton = new QPushButton(tr("Cancel"), this);
     connect(m_cancelButton, &QPushButton::clicked, this, [this]() {
         m_canceled = true;
@@ -76,6 +79,43 @@ QString FileOperationProgressDialog::formatBytes(qint64 bytes)
     return QString::number(bytes) + " B";
 }
 
+QString FileOperationProgressDialog::formatDuration(qint64 seconds)
+{
+    if (seconds < 0)
+        seconds = 0;
+    qint64 h = seconds / 3600;
+    qint64 m = (seconds % 3600) / 60;
+    qint64 s = seconds % 60;
+    if (h > 0)
+        return QString("%1:%2:%3")
+            .arg(h).arg(m, 2, 10, QChar('0')).arg(s, 2, 10, QChar('0'));
+    return QString("%1:%2").arg(m, 2, 10, QChar('0')).arg(s, 2, 10, QChar('0'));
+}
+
+void FileOperationProgressDialog::pauseClock()
+{
+    if (m_clockRunning && m_pauseStartedAt < 0)
+        m_pauseStartedAt = m_clock.elapsed();
+}
+
+void FileOperationProgressDialog::resumeClock()
+{
+    if (m_clockRunning && m_pauseStartedAt >= 0) {
+        m_pausedMs += m_clock.elapsed() - m_pauseStartedAt;
+        m_pauseStartedAt = -1;
+    }
+}
+
+qint64 FileOperationProgressDialog::transferElapsedMs() const
+{
+    if (!m_clockRunning)
+        return 0;
+    qint64 elapsed = m_clock.elapsed() - m_pausedMs;
+    if (m_pauseStartedAt >= 0)  // currently paused
+        elapsed -= (m_clock.elapsed() - m_pauseStartedAt);
+    return elapsed > 0 ? elapsed : 0;
+}
+
 void FileOperationProgressDialog::updateCounting(quint64 files, quint64 bytes)
 {
     if (m_canceled)
@@ -94,6 +134,13 @@ void FileOperationProgressDialog::setTotals(quint64 totalFiles, quint64 totalByt
     m_fileIndex = 0;
     m_curFileBytes = 0;
     m_curFileSize = 0;
+
+    // Start the transfer clock now that the (byte) work is known.
+    m_clock.start();
+    m_clockRunning = true;
+    m_pausedMs = 0;
+    m_pauseStartedAt = -1;
+
     refreshBars(true);
 }
 
@@ -147,6 +194,25 @@ void FileOperationProgressDialog::refreshBars(bool force)
     m_overallLabel->setText(tr("Total: %1 / %2")
                                 .arg(formatBytes(static_cast<qint64>(doneNow)))
                                 .arg(formatBytes(static_cast<qint64>(m_totalBytes))));
+
+    // Speed and ETA, based on the transfer clock (overwrite-prompt time excluded).
+    // Only meaningful when we are weighing the operation by bytes.
+    if (m_totalBytes > 0) {
+        qint64 elapsedMs = transferElapsedMs();
+        if (elapsedMs >= 500 && doneNow > 0) {
+            double bytesPerSec = static_cast<double>(doneNow) * 1000.0 / static_cast<double>(elapsedMs);
+            double mbPerSec = bytesPerSec / (1024.0 * 1024.0);
+            quint64 remaining = (m_totalBytes > doneNow) ? (m_totalBytes - doneNow) : 0;
+            qint64 etaSec = (bytesPerSec > 0.0)
+                                ? static_cast<qint64>(static_cast<double>(remaining) / bytesPerSec + 0.5)
+                                : 0;
+            m_statsLabel->setText(tr("%1 MB/s  —  ETA %2")
+                                      .arg(mbPerSec, 0, 'f', 1)
+                                      .arg(formatDuration(etaSec)));
+        } else {
+            m_statsLabel->setText(tr("estimating..."));
+        }
+    }
 
     // Throttle event processing to keep the UI responsive without slowing the copy.
     if (force || m_repaintTimer.elapsed() >= 30) {

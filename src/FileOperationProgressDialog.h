@@ -43,6 +43,11 @@ public:
     // Pointer to the cancel flag, for cancellable counting helpers.
     bool* cancelPointer() { return &m_canceled; }
 
+    // Pause/resume the transfer clock so time spent waiting on an overwrite
+    // prompt is excluded from the speed and ETA computation.
+    void pauseClock();
+    void resumeClock();
+
     // Force event processing
     void processEvents();
 
@@ -53,11 +58,14 @@ protected:
 private:
     void setupUi(const QString& title);
     void refreshBars(bool force = false);
+    qint64 transferElapsedMs() const;
     static void setBarFraction(QProgressBar* bar, double fraction);
     static QString formatBytes(qint64 bytes);
+    static QString formatDuration(qint64 seconds);
 
     QLabel* m_fileLabel = nullptr;
     QLabel* m_overallLabel = nullptr;
+    QLabel* m_statsLabel = nullptr;
     QProgressBar* m_fileBar = nullptr;
     QProgressBar* m_overallBar = nullptr;
     QPushButton* m_cancelButton = nullptr;
@@ -71,6 +79,13 @@ private:
     QString m_curFileName;
 
     QElapsedTimer m_repaintTimer;
+
+    // Transfer clock (excludes time paused for overwrite prompts).
+    QElapsedTimer m_clock;
+    bool m_clockRunning = false;
+    qint64 m_pausedMs = 0;
+    qint64 m_pauseStartedAt = -1;  // m_clock.elapsed() when a pause began; -1 = not paused
+
     bool m_canceled = false;
     bool m_operationWasInProgress = false;
 };
