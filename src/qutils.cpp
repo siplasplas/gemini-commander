@@ -174,6 +174,11 @@ void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
         CloseHandle(hSrc);
     }
 
+    // Copy file attributes (read-only, hidden, system, etc.) from the source.
+    DWORD srcAttrs = GetFileAttributesW(reinterpret_cast<LPCWSTR>(srcPath.utf16()));
+    if (srcAttrs != INVALID_FILE_ATTRIBUTES)
+        SetFileAttributesW(reinterpret_cast<LPCWSTR>(dstPath.utf16()), srcAttrs);
+
     // Sync file to disk (important for USB drives to prevent data loss)
     HANDLE hFlush = CreateFileW(
         reinterpret_cast<LPCWSTR>(dstPath.utf16()),
@@ -193,6 +198,9 @@ void finalizeCopiedFile(const QString& srcPath, const QString& dstPath)
     // Linux/Unix implementation
     struct stat srcStat;
     if (stat(srcPath.toLocal8Bit().constData(), &srcStat) == 0) {
+        // Copy permission bits (and setuid/setgid/sticky) from the source.
+        chmod(dstPath.toLocal8Bit().constData(), srcStat.st_mode & 07777);
+
         struct timespec times[2];
         times[0] = srcStat.st_atim;  // access time
         times[1] = srcStat.st_mtim;  // modification time

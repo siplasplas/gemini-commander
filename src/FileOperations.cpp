@@ -215,6 +215,52 @@ void calculateEntriesSize(const QString& basePath, const QStringList& names, Cop
     }
 }
 
+void countCopyWork(const QString& basePath, const QStringList& names,
+                   quint64& outFiles, quint64& outBytes,
+                   FileOperationProgressDialog* progress) {
+    QDir dir(basePath);
+    int counter = 0;
+    for (const QString& name : names) {
+        if (progress && progress->wasCanceled())
+            return;
+
+        const QString absPath = dir.absoluteFilePath(name);
+        QFileInfo fi(absPath);
+
+        // Symlinks are copied as links / skipped cross-FS: negligible bytes.
+        if (fi.isSymLink())
+            continue;
+
+        if (fi.isFile()) {
+            outFiles++;
+            outBytes += static_cast<quint64>(fi.size());
+            continue;
+        }
+
+        if (fi.isDir()) {
+            // Recurse without following symlinks (same iterator as size info).
+            SortedDirIterator it(absPath,
+                QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+            while (it.hasNext()) {
+                if (progress && progress->wasCanceled())
+                    return;
+                it.next();
+                const QFileInfo entryInfo = it.fileInfo();
+                if (entryInfo.isSymLink())
+                    continue;
+                if (entryInfo.isFile()) {
+                    outFiles++;
+                    outBytes += static_cast<quint64>(entryInfo.size());
+                }
+                if (progress && (++counter % 200 == 0))
+                    progress->updateCounting(outFiles, outBytes);
+            }
+        }
+    }
+    if (progress)
+        progress->updateCounting(outFiles, outBytes);
+}
+
 QMessageBox::StandardButton askOverwriteMulti(QWidget *parent, const QString &name) {
     auto reply = QMessageBox::question(
             parent, QObject::tr("Overwrite"), QObject::tr("'%1' already exists.\nOverwrite?").arg(name),
@@ -231,8 +277,10 @@ QMessageBox::StandardButton askOverwriteSingle(QWidget *parent, const QString &n
 }
 
 // Copy file in chunks with optional SHA-256 verification and sync per chunk
-// Uses temp file + atomic rename for safety
-bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mode) {
+// Uses temp file + atomic rename for safety.
+// Reports per-chunk progress to the dialog (top bar) when provided.
+bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mode,
+                     FileOperationProgressDialog* progress) {
     QFile srcFile(srcPath);
     if (!srcFile.open(QIODevice::ReadOnly)) {
         QMessageBox::warning(nullptr, QObject::tr("Error"),
@@ -266,6 +314,7 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
     QCryptographicHash srcHash(QCryptographicHash::Sha256);
     bool useSha = (mode == CopyMode::ChunkedSha);
     bool useSync = (mode == CopyMode::ChunkedSync);
+    qint64 written = 0;
 
     while (!srcFile.atEnd()) {
         buffer = srcFile.read(chunkSize);
@@ -301,7 +350,19 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
 #endif
         }
 
-        QCoreApplication::processEvents();
+        written += buffer.size();
+        if (progress) {
+            progress->addFileBytes(written);
+            if (progress->wasCanceled()) {
+                tempFile.close();
+                tempFile.remove();
+                dstFile.close();
+                dstFile.remove();
+                return false;
+            }
+        } else {
+            QCoreApplication::processEvents();
+        }
     }
 
     srcFile.close();
@@ -350,7 +411,7 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
     return true;
 }
 
-bool copyFile(const QString &srcPath, const QString &dstPath) {
+bool copyFile(const QString &srcPath, const QString &dstPath, FileOperationProgressDialog* progress) {
     const auto& cfg = Config::instance();
     QFileInfo srcInfo(srcPath);
     qint64 fileSize = srcInfo.size();
@@ -359,7 +420,7 @@ bool copyFile(const QString &srcPath, const QString &dstPath) {
     if (fileSize > cfg.largeFileThreshold()) {
         CopyMode mode = cfg.copyMode();
         if (mode != CopyMode::System) {
-            return copyFileChunked(srcPath, dstPath, mode);
+            return copyFileChunked(srcPath, dstPath, mode, progress);
         }
     }
 
@@ -394,7 +455,8 @@ bool copySymlink(const QString &srcPath, const QString &dstPath) {
 }
 
 QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &dstPath, bool multi,
-                                         QMessageBox::Button askPolice, QWidget *parent) {
+                                         QMessageBox::Button askPolice, QWidget *parent,
+                                         FileOperationProgressDialog* progress) {
     QFileInfo dstInfo(dstPath);
     QMessageBox::Button result = QMessageBox::Yes;
     if (dstInfo.exists()) {
@@ -428,14 +490,15 @@ QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &
             result = QMessageBox::YesToAll;
         QFile::remove(dstPath);
     }
-    if (!copyFile(srcPath, dstPath))
+    if (!copyFile(srcPath, dstPath, progress))
         return QMessageBox::No;
     return result;
 }
 
 QMessageBox::Button copyOrMoveFileAskOverwrite(const QString &srcPath, const QString &dstPath, bool move, bool multi,
-                                               QMessageBox::Button askPolice, QWidget *parent) {
-    auto reply = copyFileAskOverwrite(srcPath, dstPath, multi, askPolice, parent);
+                                               QMessageBox::Button askPolice, QWidget *parent,
+                                               FileOperationProgressDialog* progress) {
+    auto reply = copyFileAskOverwrite(srcPath, dstPath, multi, askPolice, parent, progress);
     if (move)
         if (reply == QMessageBox::Yes || reply == QMessageBox::YesToAll)
             QFile::remove(srcPath);
@@ -483,7 +546,7 @@ void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *
 
 QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, bool move,
                                                  bool sameFs, QMessageBox::Button askPolice, CopyStats &stats,
-                                                 FileOperationProgressDialog &progress, quint64 &bytesCopied) {
+                                                 FileOperationProgressDialog &progress) {
     if (askPolice == QMessageBox::Abort)
         return QMessageBox::Abort;
 
@@ -506,14 +569,8 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
         QDir::Name);
 
     for (const QFileInfo &fi: entries) {
-        // Handle Cancel
-        if (progress.wasCanceled()) {
-            auto reply = QMessageBox::question(nullptr, QObject::tr("Cancel copy"),
-                                               QObject::tr("Do you really want to cancel the copy operation?"),
-                                               QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-            if (reply == QMessageBox::Yes)
-                return QMessageBox::Abort;
-        }
+        if (progress.wasCanceled())
+            return QMessageBox::Abort;
 
         const QString srcPath = fi.absoluteFilePath();
         const QString dstPath = QDir(dstRoot).filePath(fi.fileName());
@@ -535,23 +592,22 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
 
         // Handle regular files
         if (fi.isFile()) {
-            askPolice = copyOrMoveFileAskOverwrite(srcPath, dstPath, move, true, askPolice, &progress);
+            progress.beginFile(fi.fileName(), fi.size());
+            askPolice = copyOrMoveFileAskOverwrite(srcPath, dstPath, move, true, askPolice, &progress, &progress);
+            progress.endFile();
 
             if (askPolice == QMessageBox::Abort)
                 return QMessageBox::Abort;
-            if (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll) {
-                bytesCopied += static_cast<quint64>(fi.size());
-            }
         }
         // Handle directories (recursive)
         else if (fi.isDir()) {
-            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress, bytesCopied);
+            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress);
 
             if (askPolice == QMessageBox::Abort)
                 return QMessageBox::Abort;
+            // Carry source directory metadata (times, permissions) to the copy.
+            finalizeCopiedFile(srcPath, dstPath);
         }
-
-        qApp->processEvents();
     }
     return askPolice;
 }
@@ -647,7 +703,6 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     if (names.isEmpty())
         return {};
 
-    quint64 bytesCopied = 0;
     CopyStats stats;
     QString dstPath = resolveDstPath(currentPath, destInput);
 
@@ -663,38 +718,29 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
 
     QDir srcDir(currentPath);
 
-    // Skip collecting stats for same-filesystem moves (fast rename)
-    bool needStats = !move;
-    if (!needStats) {
-        for (const QString& name : names) {
-            QString srcPath = srcDir.absoluteFilePath(name);
-            QString dstFilePath = destIsDir ? QDir(dstPath).filePath(name) : dstPath;
-            if (!areOnSameFilesystem(srcPath, dstFilePath)) {
-                needStats = true;
-                break;
-            }
-        }
-    }
-    if (needStats) {
-        // Collect stats only for selected items, not entire directory
-        for (const QString& name : names) {
-            QString srcPath = srcDir.absoluteFilePath(name);
-            QFileInfo srcInfo(srcPath);
-            if (srcInfo.isDir()) {
-                bool statsOk = false;
-                collectCopyStats(srcPath, stats, statsOk);
-            } else if (srcInfo.isFile()) {
-                stats.totalFiles++;
-                stats.totalBytes += static_cast<quint64>(srcInfo.size());
-            }
-        }
-    }
-    FileOperationProgressDialog progressDlg(QObject::tr("Copy"), static_cast<int>(names.size()), parent);
-    progressDlg.show();
-    progressDlg.activateWindow();
-    qApp->processEvents();
+    // The destination is a single path, and every source comes from one
+    // directory, so source and destination share one filesystem for the whole
+    // batch. A same-filesystem move is therefore a fast rename of every item;
+    // anything else (copy, or a cross-filesystem move) transfers bytes.
+    bool sameFs = areOnSameFilesystem(currentPath, dstPath);
+    bool fastMove = move && sameFs;
 
-    int currentFile = 0;
+    FileOperationProgressDialog progressDlg(move ? QObject::tr("Move") : QObject::tr("Copy"), parent);
+
+    if (fastMove) {
+        // Fast renames: nothing to weigh by bytes, drive progress by item count.
+        progressDlg.setTotals(static_cast<quint64>(names.size()), 0);
+    } else {
+        // Count the real work (files + bytes) up front so progress is
+        // byte-proportional. Uses SortedDirIterator (does not follow symlinks).
+        quint64 totalFiles = 0;
+        quint64 totalBytes = 0;
+        countCopyWork(currentPath, names, totalFiles, totalBytes, &progressDlg);
+        if (progressDlg.wasCanceled())
+            return {};
+        progressDlg.setTotals(totalFiles, totalBytes);
+    }
+
     QMessageBox::Button askPolice = QMessageBox::Yes;
     for (const QString &name: names) {
         QString srcPath = srcDir.absoluteFilePath(name);
@@ -704,12 +750,8 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
             continue;
 
-        ++currentFile;
-        progressDlg.updateProgress(currentFile, name, srcInfo.size());
         if (progressDlg.wasCanceled())
             break;
-
-        bool sameFs = areOnSameFilesystem(srcPath, dstFilePath);
 
         // Handle symbolic links
         if (srcInfo.isSymLink()) {
@@ -732,11 +774,9 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             continue;
         }
 
-        if (move && sameFs) {
-            // Same filesystem - use rename (fast move)
-            progressDlg.updateMoveProgress(currentFile, 100);
-            if (progressDlg.wasCanceled())
-                break;
+        if (fastMove) {
+            // Same filesystem move - rename (fast). Advance progress per item.
+            progressDlg.beginFile(name, 0);
 
             // QFile::rename never overwrites: if the target exists we must
             // ask (honoring Yes/No/YesToAll/NoToAll/Abort) and remove it first,
@@ -748,6 +788,7 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                     QMessageBox::warning(parent, QObject::tr("Error"),
                         QObject::tr("Cannot move '%1': a directory with the same name "
                                     "already exists at the destination.").arg(name));
+                    progressDlg.endFile();
                     continue;
                 }
                 QMessageBox::Button reply;
@@ -764,10 +805,13 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                     break;
                 if (reply == QMessageBox::NoToAll) {
                     askPolice = QMessageBox::NoToAll;
+                    progressDlg.endFile();
                     continue;
                 }
-                if (reply == QMessageBox::No)
+                if (reply == QMessageBox::No) {
+                    progressDlg.endFile();
                     continue;
+                }
                 if (reply == QMessageBox::YesToAll)
                     askPolice = QMessageBox::YesToAll;
                 removeExisting(dstFilePath);
@@ -778,21 +822,25 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                 QMessageBox::warning(parent, QObject::tr("Error"),
                     QObject::tr("Failed to move '%1'").arg(name));
             }
-
+            progressDlg.endFile();
             continue;
         }
 
         if (srcInfo.isFile()) {
+            progressDlg.beginFile(name, srcInfo.size());
             askPolice = copyOrMoveFileAskOverwrite(srcPath, dstFilePath,
-                              move, names.size()>1, askPolice, &progressDlg);
+                              move, names.size()>1, askPolice, &progressDlg, &progressDlg);
+            progressDlg.endFile();
         }
         else if (srcInfo.isDir()) {
             askPolice = copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
-                                             sameFs, askPolice, stats,
-                                             progressDlg, bytesCopied);
-            // After copying directory, delete source if move
-            if (move && (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll)) {
-                QDir(srcPath).removeRecursively();
+                                             sameFs, askPolice, stats, progressDlg);
+            if (askPolice != QMessageBox::Abort) {
+                // Carry source directory metadata (times, permissions) to the copy
+                // while the source still exists, then drop the source if moving.
+                finalizeCopiedFile(srcPath, dstFilePath);
+                if (move && (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll))
+                    QDir(srcPath).removeRecursively();
             }
         }
         if (progressDlg.wasCanceled())

@@ -2,29 +2,46 @@
 #define FILEOPERATIONPROGRESSDIALOG_H
 
 #include <QDialog>
+#include <QElapsedTimer>
 #include <QLabel>
 #include <QProgressBar>
 #include <QPushButton>
 
-// Progress dialog for file operations (copy/move)
-// - Shows "1/1000 filename, len=2400" style progress
-// - Always on top, blocks nested commands
-// - Allows cancel, processes events for repaint
+// Progress dialog for file operations (copy/move).
+//
+// Shows two progress bars:
+//   - top    : progress within the current file (proportional to its bytes;
+//              updated chunk-by-chunk for large files copied in chunked mode)
+//   - bottom : overall progress proportional to the total bytes of all files
+//
+// Always on top, blocks nested commands, allows cancel, processes events for
+// repaint. The byte totals come from an up-front counting pass.
 class FileOperationProgressDialog : public QDialog {
     Q_OBJECT
 
 public:
-    explicit FileOperationProgressDialog(const QString& title, int totalFiles, QWidget* parent = nullptr);
+    explicit FileOperationProgressDialog(const QString& title, QWidget* parent = nullptr);
     ~FileOperationProgressDialog() override;
 
-    // Update progress for copy operations (shows filename and size)
-    void updateProgress(int currentFile, const QString& fileName, qint64 fileSize);
+    // Counting phase (before totals are known): show how much has been scanned.
+    void updateCounting(quint64 files, quint64 bytes);
 
-    // Update progress for fast move operations (shows only every Nth file, no filename)
-    void updateMoveProgress(int currentFile, int showEveryN = 100);
+    // Set the totals discovered by the counting pass.
+    void setTotals(quint64 totalFiles, quint64 totalBytes);
+
+    // Per-file lifecycle:
+    //  beginFile()  - start a new file (resets the top bar, updates the label)
+    //  addFileBytes() - report bytes transferred so far within the current file
+    //  endFile()    - the current file is done/skipped; commit its bytes to overall
+    void beginFile(const QString& fileName, qint64 fileSize);
+    void addFileBytes(qint64 bytesSoFar);
+    void endFile();
 
     // Check if user canceled
     bool wasCanceled() const { return m_canceled; }
+
+    // Pointer to the cancel flag, for cancellable counting helpers.
+    bool* cancelPointer() { return &m_canceled; }
 
     // Force event processing
     void processEvents();
@@ -35,12 +52,25 @@ protected:
 
 private:
     void setupUi(const QString& title);
+    void refreshBars(bool force = false);
+    static void setBarFraction(QProgressBar* bar, double fraction);
+    static QString formatBytes(qint64 bytes);
 
-    QLabel* m_progressLabel = nullptr;
-    QProgressBar* m_progressBar = nullptr;
+    QLabel* m_fileLabel = nullptr;
+    QLabel* m_overallLabel = nullptr;
+    QProgressBar* m_fileBar = nullptr;
+    QProgressBar* m_overallBar = nullptr;
     QPushButton* m_cancelButton = nullptr;
 
-    int m_totalFiles = 0;
+    quint64 m_totalFiles = 0;
+    quint64 m_totalBytes = 0;
+    quint64 m_fileIndex = 0;      // 1-based index of the current file
+    qint64 m_curFileSize = 0;     // size of the current file
+    qint64 m_curFileBytes = 0;    // bytes transferred within the current file
+    quint64 m_bytesDone = 0;      // bytes of all fully-finished files
+    QString m_curFileName;
+
+    QElapsedTimer m_repaintTimer;
     bool m_canceled = false;
     bool m_operationWasInProgress = false;
 };

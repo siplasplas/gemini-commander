@@ -55,12 +55,19 @@ void calculateEntrySizeAtomic(const QString& path, AtomicStats& stats, quint64 c
 // Collect statistics about directory to copy (file count, total size)
 void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag = nullptr);
 
-// Copy directory recursively with progress tracking
-// stats.skippedSymlinks is updated if symlinks are skipped (cross-FS)
+// Count the actual copy work (regular files and their logical bytes) for the
+// given entries, used to drive byte-proportional progress. Uses SortedDirIterator
+// so it does not follow symbolic links. Updates the progress dialog while scanning.
+void countCopyWork(const QString& basePath, const QStringList& names,
+                   quint64& outFiles, quint64& outBytes,
+                   FileOperationProgressDialog* progress);
+
+// Copy directory recursively with byte-proportional progress tracking.
+// stats.symlinks is updated if symlinks are skipped (cross-FS).
 QMessageBox::Button copyOrMoveDirectoryRecursive(const QString& srcRoot, const QString& dstRoot,
                             bool move, bool sameFs,
                             QMessageBox::Button askPolice, CopyStats& stats,
-                            FileOperationProgressDialog& progress, quint64& bytesCopied);
+                            FileOperationProgressDialog& progress);
 
 // Check if target is invalid (same path or subdirectory of source)
 bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPath);
@@ -70,12 +77,6 @@ EnsureDirResult ensureDestDirExists(const QString& dstPath, QWidget* parent);
 
 // Check if destination input indicates a directory
 bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
-
-// Copy a directory recursively with progress dialog
-// Returns true on success, false on failure or user abort
-// If deleteSourceAfter is true, removes source after successful copy
-bool copyOrMoveDirectoryWithProgress(const QString& srcPath, const QString& dstPath,
-                               const QString& displayName, bool deleteSourceAfter, QWidget* parent);
 
 QString executeCopyOrMove(const QString& currentPath, const QStringList& names,
                     const QString& destInput, bool move,
