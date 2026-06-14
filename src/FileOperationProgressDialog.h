@@ -58,6 +58,8 @@ protected:
 private:
     void setupUi(const QString& title);
     void refreshBars(bool force = false);
+    // Ask the user to confirm interrupting the operation; sets m_canceled on Yes.
+    void requestCancel();
     qint64 transferElapsedMs() const;
     static void setBarFraction(QProgressBar* bar, double fraction);
     static QString formatBytes(qint64 bytes);
@@ -87,6 +89,7 @@ private:
     qint64 m_pauseStartedAt = -1;  // m_clock.elapsed() when a pause began; -1 = not paused
 
     bool m_canceled = false;
+    bool m_askingCancel = false;  // guard against re-entrant confirmation prompts
     bool m_operationWasInProgress = false;
 };
 

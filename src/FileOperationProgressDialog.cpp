@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QKeyEvent>
+#include <QMessageBox>
 #include <QVBoxLayout>
 
 FileOperationProgressDialog::FileOperationProgressDialog(const QString& title, QWidget* parent)
@@ -53,7 +54,7 @@ void FileOperationProgressDialog::setupUi(const QString& title)
 
     m_cancelButton = new QPushButton(tr("Cancel"), this);
     connect(m_cancelButton, &QPushButton::clicked, this, [this]() {
-        m_canceled = true;
+        requestCancel();
     });
     layout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
 
@@ -226,18 +227,40 @@ void FileOperationProgressDialog::processEvents()
     QApplication::processEvents(QEventLoop::AllEvents, 50);
 }
 
+void FileOperationProgressDialog::requestCancel()
+{
+    if (m_canceled || m_askingCancel)
+        return;
+
+    // Stop and ask: interrupt the operation, or keep going? Exclude the time
+    // spent on this prompt from the speed/ETA.
+    m_askingCancel = true;
+    pauseClock();
+    auto reply = QMessageBox::question(this, tr("Interrupt operation"),
+        tr("Do you really want to interrupt the operation?"),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    resumeClock();
+    m_askingCancel = false;
+
+    if (reply == QMessageBox::Yes)
+        m_canceled = true;
+}
+
 void FileOperationProgressDialog::closeEvent(QCloseEvent* event)
 {
-    // Treat close as cancel
-    m_canceled = true;
-    event->accept();
+    // Treat the window close like Esc: confirm before interrupting.
+    requestCancel();
+    if (m_canceled)
+        event->accept();
+    else
+        event->ignore();
 }
 
 void FileOperationProgressDialog::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Escape) {
-        m_canceled = true;
         event->accept();
+        requestCancel();
     } else {
         QDialog::keyPressEvent(event);
     }
