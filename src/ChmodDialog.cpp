@@ -79,7 +79,9 @@ void ChmodDialog::setupUnixUi(QWidget* page)
         grid->addWidget(new QLabel(tr(rowLabels[row]), group), row + 1, 0);
         for (int col = 0; col < 3; ++col) {
             auto* cb = new QCheckBox(group);
-            cb->setTristate(true);
+            // Tristate only makes sense for a mixed selection; a single file is
+            // either on or off, so keep it a plain two-state checkbox.
+            cb->setTristate(m_paths.size() > 1);
             grid->addItem(new QSpacerItem(0, 0), row + 1, col + 1);
             grid->addWidget(cb, row + 1, col + 1, Qt::AlignCenter);
             m_cb[row][col] = cb;
@@ -267,10 +269,12 @@ void ChmodDialog::setupWindowsUi(QWidget* page)
     m_system   = new QCheckBox(tr("System"),    group);
     m_archive  = new QCheckBox(tr("Archive"),   group);
 
-    m_readOnly->setTristate(true);
-    m_hidden->setTristate(true);
-    m_system->setTristate(true);
-    m_archive->setTristate(true);
+    // Tristate only for a mixed multi-file selection; a single file is on/off.
+    const bool tri = m_paths.size() > 1;
+    m_readOnly->setTristate(tri);
+    m_hidden->setTristate(tri);
+    m_system->setTristate(tri);
+    m_archive->setTristate(tri);
 
     gLayout->addWidget(m_readOnly);
     gLayout->addWidget(m_hidden);

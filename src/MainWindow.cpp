@@ -700,7 +700,7 @@ void MainWindow::setupUi() {
     });
     fileMenu->addAction(compareContentsAction);
 
-    QAction* chmodAction = new QAction(tr("Change attributes..."), this);
+    QAction* chmodAction = new QAction(tr("Change &attributes..."), this);
     connect(chmodAction, &QAction::triggered, this, [this]() {
         doChangeAttributes(nullptr, nullptr);
     });
