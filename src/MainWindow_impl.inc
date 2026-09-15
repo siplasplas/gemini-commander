@@ -33,8 +33,9 @@ bool MainWindow::doPreviousTab(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doActivate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
-    if (!commandLineEdit->text().isEmpty()) {
-        currentFilePanel()->run(QString::fromStdString(utils::trim(commandLineEdit->text().toStdString())));
+    const std::string command = utils::trim(commandLineEdit->text().toStdString());
+    if (!command.empty()) {
+        currentFilePanel()->run(QString::fromStdString(command));
         doClearAndReturnToPanel(obj, keyEvent);
     } else {
         currentFilePanel()->trigger(currentPanelName());

@@ -176,13 +176,13 @@ std::string compute_file_hash(const std::filesystem::path& file_path,
 
 std::string trimLeft(const std::string &str) {
     const auto strBegin = str.find_first_not_of(" \t");
-    return str.substr(strBegin, str.length() - strBegin);
+    return strBegin == std::string::npos ? std::string{} : str.substr(strBegin);
 }
 
 
 std::string trimRight(const std::string &str) {
     const auto strEnd = str.find_last_not_of(" \t\r");
-    return str.substr(0, strEnd + 1);
+    return strEnd == std::string::npos ? std::string{} : str.substr(0, strEnd + 1);
 }
 
 std::string trim(const std::string &str) {

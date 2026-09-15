@@ -3,6 +3,7 @@ find_package(GTest REQUIRED)
 add_executable(sizeformat_tests
         test_SizeFormat.cpp
         test_file_hash.cpp
+        test_utils.cpp
 )
 
 target_link_libraries(sizeformat_tests
