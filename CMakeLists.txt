@@ -35,6 +35,21 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# backward-cpp declares compatibility with older CMake releases.  CMake 4
+# requires opting into that legacy policy level while configuring it.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
+include(FetchContent)
+FetchContent_Declare(
+        backward
+        GIT_REPOSITORY https://github.com/bombela/backward-cpp.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(backward)
+
 find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets DBus Concurrent)
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
@@ -190,6 +205,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         core
+        Backward::Object
         Qt${QT_MAJOR_VERSION}::Widgets
         Qt${QT_MAJOR_VERSION}::DBus
         Qt${QT_MAJOR_VERSION}::Concurrent
@@ -206,6 +222,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ICU::uc ICU::i18n
         ${LIBARCHIVE_LIBRARIES}
  )
+
+# Keep enough information in the executable for backward-cpp to resolve source
+# files and line numbers in crash reports, including optimized builds.
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer)
+endif()
 
 # Generate git_version.h at build time (not configure time)
 set(GIT_VERSION_HEADER "${CMAKE_BINARY_DIR}/git_version.h")
