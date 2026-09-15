@@ -659,9 +659,10 @@ void MainWindow::setupUi() {
         QString aboutText = tr(
             "<h3>Gemini Commander</h3>"
             "<p>Version: %1 (%2)</p>"
-            "<p>Qt Version: %3</p>"
-            "<p>KDE Frameworks Version: %4</p>"
-        ).arg(APP_VERSION, GIT_SHA, qVersion(), KCOREADDONS_VERSION_STRING);
+            "<p>Build type: %3</p>"
+            "<p>Qt Version: %4</p>"
+            "<p>KDE Frameworks Version: %5</p>"
+        ).arg(APP_VERSION, GIT_SHA, APP_BUILD_TYPE, qVersion(), KCOREADDONS_VERSION_STRING);
         QMessageBox::about(this, tr("About Gemini Commander"), aboutText);
     });
     helpMenu->addAction(aboutAction);

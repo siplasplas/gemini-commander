@@ -45,7 +45,7 @@ include(FetchContent)
 FetchContent_Declare(
         backward
         GIT_REPOSITORY https://github.com/bombela/backward-cpp.git
-        GIT_TAG master
+        GIT_TAG 0bfd0a07a61551413ccd2ab9a9099af3bad40681
         GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(backward)
@@ -244,6 +244,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         APP_VERSION="${PROJECT_VERSION}"
+        APP_BUILD_TYPE="$<IF:$<CONFIG:Debug>,Debug,Release>"
 )
 
 if(QT_MAJOR_VERSION EQUAL 5)
