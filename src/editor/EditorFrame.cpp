@@ -771,33 +771,28 @@ void EditorFrame::onGotoTriggered()
 
     bool ok;
     QString text = QInputDialog::getText(this, tr("Goto Line"),
-                                         tr("Line[:Column] (1-based):"),
+                                         tr("Line or Line:Column (1-based):"),
                                          QLineEdit::Normal,
-                                         "1:1", &ok);
+                                         QString::number(editor->view()->cursorPosition().line() + 1), &ok);
     if (!ok || text.isEmpty())
         return;
 
-    // Parse line:column format
-    int line = 1;
-    int column = 1;
-
-    QStringList parts = text.split(':');
-    if (!parts.isEmpty()) {
-        bool lineOk;
-        int parsedLine = parts[0].trimmed().toInt(&lineOk);
-        if (lineOk && parsedLine >= 1)
-            line = parsedLine;
-
-        if (parts.size() > 1) {
-            bool colOk;
-            int parsedCol = parts[1].trimmed().toInt(&colOk);
-            if (colOk && parsedCol >= 1)
-                column = parsedCol;
-        }
+    const QStringList parts = text.split(':');
+    bool lineOk = false;
+    bool columnOk = true;
+    const int line = parts[0].trimmed().toInt(&lineOk);
+    const int column = parts.size() == 2
+        ? parts[1].trimmed().toInt(&columnOk) : 1;
+    if (parts.size() > 2 || !lineOk || !columnOk || line < 1 || column < 1
+        || line > editor->document()->lines()) {
+        QMessageBox::warning(this, tr("Invalid Position"),
+                             tr("Enter a line number or line:column within the document."));
+        return;
     }
 
     // KTextEditor uses 0-based line and column
-    KTextEditor::Cursor cursor(line - 1, column - 1);
+    KTextEditor::Cursor cursor(line - 1,
+                               qMin(column - 1, editor->document()->lineLength(line - 1)));
     editor->view()->setCursorPosition(cursor);
     editor->view()->setFocus();
 }

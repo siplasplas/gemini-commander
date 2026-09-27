@@ -37,7 +37,6 @@ QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* clos
     fileMenu->addAction(closeFile);
     fileMenu->addSeparator();
     fileMenu->addAction(exitApp);
-    return fileMenu;
 
     QMenu* searchMenu = m_menuBar->addMenu(tr("&Search"));
     if (findAction)
@@ -59,13 +58,15 @@ QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* clos
     viewMenu->addAction(showSpecialChars);
     viewMenu->addAction(wrapLines);
 
-    QMenu* helpMenu = m_menuBar->addMenu(tr("&Help"));
-    helpMenu->addAction(aboutApp);
+    m_helpMenu = m_menuBar->addMenu(tr("&Help"));
+    m_helpMenu->addAction(aboutApp);
+    return fileMenu;
 }
 
 void MainHeader::setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth)
 {
-    QMenu* toolsMenu = m_menuBar->addMenu(tr("&Tools"));
+    QMenu* toolsMenu = new QMenu(tr("&Tools"), m_menuBar);
+    m_menuBar->insertMenu(m_helpMenu->menuAction(), toolsMenu);
     toolsMenu->addAction(insertDate);
     toolsMenu->addAction(insertTime);
     toolsMenu->addAction(insertBoth);

@@ -62,6 +62,7 @@ private:
 
     QGridLayout *m_layout = nullptr;
     QMenuBar *m_menuBar = nullptr;
+    QMenu *m_helpMenu = nullptr;
     QToolBar *m_toolBar = nullptr;
     QWidget *m_spacer = nullptr;
 
