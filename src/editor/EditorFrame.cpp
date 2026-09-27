@@ -99,7 +99,7 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_fileWatchTimer = new QTimer(this);
     m_fileWatchTimer->setInterval(1000);
     connect(m_fileWatchTimer, &QTimer::timeout, this, [this]() {
-        if (isVisible())
+        if (isActiveWindow())
             checkAllTabsForExternalChanges();
     });
     m_fileWatchTimer->start();
@@ -642,11 +642,12 @@ void EditorFrame::mruRebuildMenu()
     }
 }
 
-void EditorFrame::changeEvent(QEvent* event)
+bool EditorFrame::event(QEvent* event)
 {
-    QMainWindow::changeEvent(event);
-    if (event->type() == QEvent::ActivationChange && isActiveWindow())
+    const bool handled = QMainWindow::event(event);
+    if (event->type() == QEvent::WindowActivate)
         checkAllTabsForExternalChanges();
+    return handled;
 }
 
 void EditorFrame::checkAllTabsForExternalChanges()

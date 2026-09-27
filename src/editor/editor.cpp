@@ -8,6 +8,7 @@
 #include <QDebug>
 #include <QAction>
 #include <QShortcut>
+#include <algorithm>
 
 #include "../Config.h"
 
@@ -195,10 +196,16 @@ bool Editor::isChangedOnDisk() const
 
 bool Editor::reloadFromDisk()
 {
-    if (!m_document || m_filePath.isEmpty())
+    if (!m_document || !m_view || m_filePath.isEmpty() || isModified())
         return false;
-    bool ok = m_document->openUrl(QUrl::fromLocalFile(m_filePath));
-    if (ok)
-        updateFileInfo();
-    return ok;
+
+    const KTextEditor::Cursor previousCursor = m_view->cursorPosition();
+    if (!m_document->documentReload())
+        return false;
+
+    updateFileInfo();
+    const int line = std::min(previousCursor.line(), m_document->lines() - 1);
+    const int column = std::min(previousCursor.column(), m_document->lineLength(line));
+    m_view->setCursorPosition(KTextEditor::Cursor(line, column));
+    return true;
 }
