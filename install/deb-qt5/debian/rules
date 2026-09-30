@@ -7,9 +7,11 @@ export DEB_BUILD_OPTIONS = parallel=$(shell nproc)
 %:
 	dh $@ --buildsystem=cmake
 
+# debhelper disables FetchContent downloads; backward-cpp is fetched at configure time
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCMAKE_BUILD_TYPE=Release \
+		-DFETCHCONTENT_FULLY_DISCONNECTED=OFF \
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-DUSE_QT5=ON
 

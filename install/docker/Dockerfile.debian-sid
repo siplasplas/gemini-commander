@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     debhelper \
     devscripts \
     cmake \
+    git \
+    ca-certificates \
     g++ \
     qt6-base-dev \
     qt6-tools-dev \
@@ -30,5 +32,15 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     librsvg2-bin \
     && rm -rf /var/lib/apt/lists/*
+
+# qt-extra (MruTabWidget and other shared widgets) is not packaged; build and
+# install it into /usr/local, where gemini-commander's find_package() finds it.
+ARG QT_EXTRA_TAG=v2.0.0
+RUN git clone --depth 1 --branch "$QT_EXTRA_TAG" https://github.com/siplasplas/qt-extra.git /tmp/qt-extra \
+    && cmake -S /tmp/qt-extra -B /tmp/qt-extra/build \
+        -DCMAKE_BUILD_TYPE=Release -DQT_EXTRA_BUILD_DEMO=OFF \
+    && cmake --build /tmp/qt-extra/build -j"$(nproc)" \
+    && cmake --install /tmp/qt-extra/build \
+    && rm -rf /tmp/qt-extra
 
 WORKDIR /build

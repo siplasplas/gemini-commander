@@ -88,6 +88,9 @@ build_qt5() {
         $CONTAINER_CMD build -t "$IMAGE_QT5" -f "$DOCKER_DIR/Dockerfile.ubuntu24.04" "$DOCKER_DIR"
     fi
 
+    # Drop stale packages so the success check below only sees this build
+    rm -f "$OUTPUT_DIR"/*ubuntu24.04*.deb
+
     local LOG_FILE="$LOG_DIR/build-qt5-$(date +%Y%m%d-%H%M%S).log"
     echo "Log file: $LOG_FILE"
 
@@ -140,6 +143,9 @@ build_ubuntu2510() {
         $CONTAINER_CMD build -t "$IMAGE_UBUNTU2510" -f "$DOCKER_DIR/Dockerfile.ubuntu25.10" "$DOCKER_DIR"
     fi
 
+    # Drop stale packages so the success check below only sees this build
+    rm -f "$OUTPUT_DIR"/*ubuntu25.10*.deb
+
     local LOG_FILE="$LOG_DIR/build-ubuntu2510-$(date +%Y%m%d-%H%M%S).log"
     echo "Log file: $LOG_FILE"
 
@@ -191,6 +197,9 @@ build_qt6() {
         echo "Image not found. Building..."
         $CONTAINER_CMD build -t "$IMAGE_QT6" -f "$DOCKER_DIR/Dockerfile.debian-sid" "$DOCKER_DIR"
     fi
+
+    # Drop stale packages so the success check below only sees this build
+    rm -f "$OUTPUT_DIR"/*debian-sid*.deb
 
     local LOG_FILE="$LOG_DIR/build-qt6-$(date +%Y%m%d-%H%M%S).log"
     echo "Log file: $LOG_FILE"

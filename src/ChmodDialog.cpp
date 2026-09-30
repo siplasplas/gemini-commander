@@ -85,7 +85,11 @@ void ChmodDialog::setupUnixUi(QWidget* page)
             grid->addItem(new QSpacerItem(0, 0), row + 1, col + 1);
             grid->addWidget(cb, row + 1, col + 1, Qt::AlignCenter);
             m_cb[row][col] = cb;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
             connect(cb, &QCheckBox::checkStateChanged, this, [this]() {
+#else
+            connect(cb, &QCheckBox::stateChanged, this, [this]() {
+#endif
                 if (!m_syncing) updateOctalFromCheckboxes();
             });
         }
