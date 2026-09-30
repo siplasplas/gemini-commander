@@ -40,6 +40,7 @@
 #include <QRegularExpression>
 #include <QDebug>
 #include <QClipboard>
+#include <QPointer>
 
 #include "SortedDirIterator.h"
 #include "SearchDialog.h"
@@ -569,12 +570,13 @@ void MainWindow::setupUi() {
 
     // Extend tab context menu with "Copy Dir" action
     auto extendTabMenu = [this](MruTabWidget* tabs, Side side) {
-        connect(tabs, &MruTabWidget::tabContextMenuRequested, this, [this, tabs, side](int tabIndex, QMenu* menu) {
+        connect(tabs, &MruTabWidget::tabContextMenuRequested, this, [side](QWidget* page, QMenu* menu) {
             Q_UNUSED(side)
             menu->addSeparator();
             QAction* copyDirAction = menu->addAction(tr("Copy Dir"));
-            connect(copyDirAction, &QAction::triggered, [tabs, tabIndex]() {
-                if (auto* pane = qobject_cast<FilePaneWidget*>(tabs->widget(tabIndex))) {
+            QPointer<QWidget> pagePtr(page);
+            connect(copyDirAction, &QAction::triggered, [pagePtr]() {
+                if (auto* pane = qobject_cast<FilePaneWidget*>(pagePtr.data())) {
                     QString path = pane->filePanel()->currentPath;
                     QClipboard* clipboard = QGuiApplication::clipboard();
                     clipboard->setText(qEscapePathForShell(path));

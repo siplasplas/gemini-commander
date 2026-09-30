@@ -66,10 +66,11 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_editorTabWidget->setTabsClosable(true);
     m_editorTabWidget->setMovable(true);
     m_editorTabWidget->setUsesScrollButtons(true);
-    connect(m_editorTabWidget, &MruTabWidget::actionsBeforeTabClose,
+    connect(m_editorTabWidget, &MruTabWidget::tabClosing,
             this, &EditorFrame::actionsBeforeTabClose);
+    // tabAboutToClose writes to allow_close, so it needs a direct connection
     connect(m_editorTabWidget, &MruTabWidget::tabAboutToClose,
-            this, &EditorFrame::tabAboutToClose);
+            this, &EditorFrame::tabAboutToClose, Qt::DirectConnection);
     connect(m_editorTabWidget, &MruTabWidget::tabContextMenuRequested,
             this, &EditorFrame::extendTabContextMenu);
     connect(m_editorTabWidget, &MruTabWidget::currentChanged,
@@ -105,7 +106,7 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_fileWatchTimer->start();
 }
 
-void EditorFrame::extendTabContextMenu(int tabIndex, QMenu* menu) {
+void EditorFrame::extendTabContextMenu(QWidget* page, QMenu* menu) {
     menu->addSeparator();
     QAction* closeUnmodifiedAction = menu->addAction(tr("Close Unmodified Tabs"));
     connect(closeUnmodifiedAction, &QAction::triggered, [this]() {
@@ -119,15 +120,14 @@ void EditorFrame::extendTabContextMenu(int tabIndex, QMenu* menu) {
             }
         }
         });
-    QWidget* tabContent = m_editorTabWidget->widget(tabIndex);
-    if (auto base_viewer = qobject_cast<BaseViewer*>(tabContent)) {
+    if (auto base_viewer = qobject_cast<BaseViewer*>(page)) {
         QAction* copyPath = menu->addAction("Copy FileName");
         connect(copyPath, &QAction::triggered, [base_viewer]() {
             QClipboard *clipboard = QGuiApplication::clipboard();
             clipboard->setText(base_viewer->baseFileName());
         });
     }
-    if (auto base_viewer = qobject_cast<BaseViewer*>(tabContent)) {
+    if (auto base_viewer = qobject_cast<BaseViewer*>(page)) {
         QAction* copyPath = menu->addAction("Copy Path");
         connect(copyPath, &QAction::triggered, [base_viewer]() {
             QClipboard *clipboard = QGuiApplication::clipboard();
@@ -373,18 +373,16 @@ void EditorFrame::onAboutTriggered()
 }
 
 /**
- * @brief Closes editor tab
- * @param index Tab index to close
- * @return true if closed successfully
+ * @brief Releases an editor tab that is being closed
+ * @param page Page of the tab being closed
  *
- * Handles document saving and KTextEditor integration
+ * Adds the file to the recent list and closes its KTextEditor document
  */
-bool EditorFrame::actionsBeforeTabClose(int index)
+void EditorFrame::actionsBeforeTabClose(QWidget* page)
 {
-    QWidget* widget = m_editorTabWidget->widget(index);
-    Editor* editor = qobject_cast<Editor*>(widget); // Cast to our Editor view
+    Editor* editor = qobject_cast<Editor*>(page); // Cast to our Editor view
     if (!editor)
-        return true;
+        return;
     // Add to MRU when tab is closed (only real files, not untitled)
     if (!editor->filePath().isEmpty())
         mruAdd(editor->filePath());
@@ -408,19 +406,13 @@ bool EditorFrame::actionsBeforeTabClose(int index)
             qWarning() << "Could not get Application or Document pointer to close document via KTE.";
         }
     }
-    else if (widget)
-    {
-        qDebug() << "Closing non-Editor tab at index:" << index;
-    }
-    return true;
 }
 
-void EditorFrame::tabAboutToClose(int index, bool askPin, bool &allow_close)
+void EditorFrame::tabAboutToClose(QWidget* page, bool askPin, bool &allow_close)
 {
     if (!allow_close)
         return;
-    QWidget* w = m_editorTabWidget->widget(index);
-    auto* editor = qobject_cast<Editor*>(w);
+    auto* editor = qobject_cast<Editor*>(page);
     if (editor && editor->isModified())
     {
         QString message;

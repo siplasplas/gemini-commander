@@ -106,12 +106,13 @@ pacman -S mingw-w64-ucrt-x86_64-gtest
 ### qt-extra library (required)
 
 Shared widgets such as `MruTabWidget` live in the separate **qt-extra** library
-([source](https://github.com/siplasplas/qt-extra)). It is no longer vendored in
-this repository — you must build and install it once before building
-Gemini Commander. CMake finds it via `find_package(qt-extra)`.
+(<https://github.com/siplasplas/qt-extra.git>). Gemini Commander requires
+**qt-extra 2.x, tag `v2.0.0`**; the 1.x API is not compatible. It is not vendored
+in this repository — you must build and install it once before building
+Gemini Commander. CMake finds it via `find_package(qt-extra 2)`.
 
 ```bash
-git clone https://github.com/siplasplas/qt-extra
+git clone --branch v2.0.0 https://github.com/siplasplas/qt-extra.git
 cd qt-extra
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
@@ -121,7 +122,7 @@ sudo cmake --install build          # installs to /usr/local by default
 To install into a non-default prefix (e.g. `~/.local`), add
 `-DCMAKE_INSTALL_PREFIX=~/.local` to the configure step, and then pass the same
 prefix to Gemini Commander's CMake via `-DCMAKE_PREFIX_PATH=~/.local` so
-`find_package(qt-extra)` can locate it.
+`find_package(qt-extra 2)` can locate it.
 
 ## Building
 

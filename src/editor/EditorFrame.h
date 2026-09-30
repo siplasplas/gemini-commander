@@ -30,16 +30,16 @@ class EditorFrame : public QMainWindow
 public:
     explicit EditorFrame(QWidget *parent = nullptr);
 #include  "EditorFrame_decl.inc"
-    void extendTabContextMenu(int tabIndex, QMenu* menu);
+    void extendTabContextMenu(QWidget* page, QMenu* menu);
     ~EditorFrame();
 
     /// @brief Loads registered build system plugins
     void loadPlugins();
 
-    /// @brief Closes specific editor tab
-    bool actionsBeforeTabClose(int index);
+    /// @brief Releases the document of an editor tab that is being closed
+    void actionsBeforeTabClose(QWidget* page);
 
-    void tabAboutToClose(int index, bool askPin, bool &allow_close);
+    void tabAboutToClose(QWidget* page, bool askPin, bool &allow_close);
     void newFile();
     void openFile(const QString& filePath);
     void openFileInViewer(const QString &fileName);
