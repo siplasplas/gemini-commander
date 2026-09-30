@@ -1,3 +1,11 @@
+gemini-commander (1.6.0) unstable; urgency=medium
+
+  * Reload editor files on activation and preserve cursor position
+  * Add editor search menu and move Help after Tools
+  * Migrate to qt-extra 2.0.0 MruTabWidget
+
+ -- Andrzej Borucki <borucki.andrzej@gmail.com>  Wed, 30 Sep 2026 12:00:00 +0200
+
 gemini-commander (1.5.3) unstable; urgency=medium
 
   * Prevent a crash when activating a whitespace-only command line
