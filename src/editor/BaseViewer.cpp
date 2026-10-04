@@ -10,9 +10,7 @@ BaseViewer::BaseViewer(QWidget *parent) : QWidget(parent) {
  * @note Logs destruction and relies on Qt's parent-child cleanup
  */
 BaseViewer::~BaseViewer() {
-    // The m_view widget will be deleted by Qt's parent/child mechanism
-    // as it's parented to 'this' (the Editor QWidget).
-    // The m_document is managed by KTextEditor::Editor singleton, do not delete here.
+    // Child widgets are deleted by Qt's parent/child mechanism.
 }
 
 /**

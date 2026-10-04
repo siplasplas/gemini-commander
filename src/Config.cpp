@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QStandardPaths>
 #include <cmath>
+#include <fstream>
 
 #include <toml++/toml.h>
 
@@ -288,6 +289,12 @@ bool Config::load(const QString& path)
                 m_editorY = static_cast<int>(*y);
             if (auto n = editor["mru_max_count"].value<int64_t>())
                 m_editorMruMaxCount = static_cast<int>(*n);
+            if (auto b = editor["word_wrap"].value<bool>())
+                m_editorWordWrap = *b;
+            if (auto b = editor["show_whitespace"].value<bool>())
+                m_editorShowWhitespace = *b;
+            if (auto b = editor["syntax_download_declined"].value<bool>())
+                m_syntaxDownloadDeclined = *b;
             m_editorMruPaths.clear();
             if (editor.contains("mru_paths") && editor["mru_paths"].is_array()) {
                 for (const auto& node : *editor["mru_paths"].as_array()) {
@@ -535,6 +542,9 @@ bool Config::save() const
     editorTbl.insert("x", static_cast<int64_t>(m_editorX));
     editorTbl.insert("y", static_cast<int64_t>(m_editorY));
     editorTbl.insert("mru_max_count", static_cast<int64_t>(m_editorMruMaxCount));
+    editorTbl.insert("word_wrap", m_editorWordWrap);
+    editorTbl.insert("show_whitespace", m_editorShowWhitespace);
+    editorTbl.insert("syntax_download_declined", m_syntaxDownloadDeclined);
     toml::array mruArr;
     for (const QString& p : m_editorMruPaths)
         mruArr.push_back(p.toStdString());

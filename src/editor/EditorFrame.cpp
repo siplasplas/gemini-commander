@@ -22,32 +22,17 @@
 #include <ctime>
 #include "../Config.h"
 
-// KTextEditor Includes
 #include <qguiapplication.h>
 #include <QVBoxLayout>
-#include <KTextEditor/Editor>       // The Editor singleton
-#include <KTextEditor/Document>     // Document representation
-#include <KTextEditor/View>         // Base view class (used for log)
-#include <KTextEditor/MainWindow>   // Often needed for full integration/context
-#include <KTextEditor/Application>
+#include <QStatusBar>
+#include <qce/kate/KateDataDownloader.h>
+#include <qce/kate/KatePaths.h>
 
 #include "EditorFrame.h"
 #include "editor.h"
+#include "SyntaxData.h"
 #include <mrutabwidget.h>
 #include "keys/ObjectRegistry.h"
-
-// Helper function to get KTextEditor::EditorFrame (can be nullptr if not embedded)
-// This might be needed for some KTextEditor features. For now, we create a dummy one
-// if needed, or pass nullptr where possible. A better approach might involve KParts::Part.
-KTextEditor::MainWindow* getDummyKateMainWindow()
-{
-    // This is a HACK - ideally we'd have a proper KTextEditor::EditorFrame
-    // or integrate via KParts::Part. Returning nullptr might work for some things.
-    // static KTextEditor::EditorFrame dummyKateWin;
-    // return &dummyKateWin;
-    return nullptr; // Try with nullptr first
-}
-
 
 EditorFrame::EditorFrame(QWidget* parent)
     : QMainWindow(parent)
@@ -81,11 +66,13 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, [this](int) { updateWindowTitle(); });
 
     createActions();
-    QMenu* fileMenu = m_mainHeader->setupMenus(m_newFileAction, m_openFileAction, m_closeAction,
+    QMenu* fileMenu = m_mainHeader->setupMenus(m_newFileAction, m_openFileAction,
+                             m_saveAction, m_saveAsAction, m_closeAction,
                              m_exitAction, m_showSpecialCharsAction, m_wrapLinesAction,
                              m_aboutAction, m_findAction, m_findNextAction, m_findPrevAction,
                              m_replaceAction, m_gotoAction);
-    m_mainHeader->setupToolsMenu(m_insertDateAction, m_insertTimeAction, m_insertBothAction);
+    m_mainHeader->setupToolsMenu(m_insertDateAction, m_insertTimeAction, m_insertBothAction,
+                                 m_updateSyntaxAction);
 
     // Insert "Recent Files" submenu before the separator that precedes Close
     m_recentMenu = new QMenu(tr("Recent Files"), fileMenu);
@@ -97,6 +84,7 @@ EditorFrame::EditorFrame(QWidget* parent)
 
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
+    m_statusBar = statusBar();
 
     // --- Finish setup ---
     setMinimumSize(600, 400);
@@ -140,12 +128,7 @@ void EditorFrame::extendTabContextMenu(QWidget* page, QMenu* menu) {
     }
 }
 
-EditorFrame::~EditorFrame()
-{
-    // Destructor - Qt parent/child should handle widget deletion.
-    // KTextEditor documents might need explicit closing if not managed by KParts
-    // KTextEditor::Editor::instance()->closeDocuments(); // Maybe? Check docs.
-}
+EditorFrame::~EditorFrame() = default;
 
 void EditorFrame::createActions()
 {
@@ -156,6 +139,14 @@ void EditorFrame::createActions()
     m_openFileAction = new QAction(tr("&Open File..."), this);
     m_openFileAction->setShortcut(QKeySequence::Open);
     connect(m_openFileAction, &QAction::triggered, this, &EditorFrame::onOpenFileTriggered);
+
+    m_saveAction = new QAction(tr("&Save"), this);
+    m_saveAction->setShortcut(QKeySequence::Save);
+    connect(m_saveAction, &QAction::triggered, this, &EditorFrame::onSaveTriggered);
+
+    m_saveAsAction = new QAction(tr("Save &As..."), this);
+    m_saveAsAction->setShortcut(QKeySequence::SaveAs);
+    connect(m_saveAsAction, &QAction::triggered, this, &EditorFrame::onSaveAsTriggered);
 
     m_closeAction = new QAction(tr("&Close"), this);
     m_closeAction->setShortcut(QKeySequence::Close);
@@ -170,29 +161,31 @@ void EditorFrame::createActions()
 
     m_showSpecialCharsAction = new QAction(tr("Show Special Characters"), this);
     m_showSpecialCharsAction->setCheckable(true);
-    m_showSpecialCharsAction->setChecked(false);
+    m_showSpecialCharsAction->setChecked(Config::instance().editorShowWhitespace());
     connect(m_showSpecialCharsAction, &QAction::toggled, this, &EditorFrame::onToggleSpecialChars);
 
     m_wrapLinesAction = new QAction(tr("Wrap Lines"), this);
     m_wrapLinesAction->setCheckable(true);
-    m_wrapLinesAction->setChecked(false);
+    m_wrapLinesAction->setChecked(Config::instance().editorWordWrap());
     connect(m_wrapLinesAction, &QAction::toggled, this, &EditorFrame::onToggleWrapLines);
 
-    // Note: KTextEditor already handles Ctrl+F, F3, Shift+F3 internally
-    // We just add menu entries that trigger the same actions
-    m_findAction = new QAction(tr("&Find...\tCtrl+F"), this);
+    m_findAction = new QAction(tr("&Find..."), this);
+    m_findAction->setShortcut(QKeySequence::Find);
     connect(m_findAction, &QAction::triggered, this, &EditorFrame::onFindTriggered);
 
-    m_findNextAction = new QAction(tr("Find &Next\tF3"), this);
+    m_findNextAction = new QAction(tr("Find &Next"), this);
+    m_findNextAction->setShortcut(QKeySequence(Qt::Key_F3));
     connect(m_findNextAction, &QAction::triggered, this, &EditorFrame::onFindNextTriggered);
 
-    m_findPrevAction = new QAction(tr("Find &Previous\tShift+F3"), this);
+    m_findPrevAction = new QAction(tr("Find &Previous"), this);
+    m_findPrevAction->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3));
     connect(m_findPrevAction, &QAction::triggered, this, &EditorFrame::onFindPrevTriggered);
 
-    m_replaceAction = new QAction(tr("&Replace...\tCtrl+H"), this);
+    m_replaceAction = new QAction(tr("&Replace..."), this);
+    m_replaceAction->setShortcuts({QKeySequence(Qt::CTRL | Qt::Key_H), QKeySequence(Qt::CTRL | Qt::Key_R)});
     connect(m_replaceAction, &QAction::triggered, this, &EditorFrame::onReplaceTriggered);
 
-    m_gotoAction = new QAction(tr("&Goto..."), this);
+    m_gotoAction = new QAction(tr("&Go to Line/Column..."), this);
     m_gotoAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
     connect(m_gotoAction, &QAction::triggered, this, &EditorFrame::onGotoTriggered);
 
@@ -204,6 +197,9 @@ void EditorFrame::createActions()
 
     m_insertBothAction = new QAction(tr("Insert &Both Date and Time"), this);
     connect(m_insertBothAction, &QAction::triggered, this, &EditorFrame::onInsertBothTriggered);
+
+    m_updateSyntaxAction = new QAction(tr("&Update Syntax Definitions"), this);
+    connect(m_updateSyntaxAction, &QAction::triggered, this, &EditorFrame::onUpdateSyntaxTriggered);
 }
 
 /**
@@ -214,17 +210,6 @@ void EditorFrame::createActions()
  */
 void EditorFrame::openFile(const QString& fileName)
 {
-    KTextEditor::Editor* kate = KTextEditor::Editor::instance(); // Singleton KTE Editor
-    KTextEditor::Application* app = kate->application();
-    if (!app)
-    {
-        // This should not happen, but security
-        qWarning() << "Could not get KTextEditor::Application interface from KTextEditor::Editor!";
-        return;; // Go to next file, cannot continue
-    }
-
-    QUrl fileUrl = QUrl::fromLocalFile(fileName);
-
     int existingTabIndex = findTabByPath(fileName);
     if (existingTabIndex >= 0)
     {
@@ -239,49 +224,33 @@ void EditorFrame::openFile(const QString& fileName)
     if (!m_editorTabWidget->makeRoomForNewTab())
         return;
 
-    KTextEditor::Document* doc = KTextEditor::Editor::instance()->createDocument(nullptr);
-    if (doc)
+    auto* newEditor = new Editor(m_editorTabWidget);
+    if (!newEditor->loadFile(fileName))
     {
-        if (!doc->openUrl(fileUrl))
-        {
-            qWarning() << "Manual openUrl on Document failed for:" << fileUrl;
-            QMessageBox::warning(this, tr("Error"), tr("Could not open document for:\n%1").arg(fileName));
-            delete doc; // Clean up
-            return;
-        }
-    }
-    else
-    {
-        qWarning() << "Failed to create KTextEditor::Document manually!";
-        QMessageBox::warning(this, tr("Error"), tr("Could not create document for:\n%1").arg(fileName));
+        qWarning() << "Could not open file:" << fileName;
+        QMessageBox::warning(this, tr("Error"), tr("Could not open document for:\n%1").arg(fileName));
+        delete newEditor;
         return;
     }
-    Editor* newEditor = new Editor(doc, m_editorTabWidget);
-    QString tabTitle = generateUniqueTabTitle(newEditor->filePath());
-    int finalIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
-    m_editorTabWidget->setCurrentIndex(finalIndex);
     // Ctrl+Tab popup shows the last two path components (e.g. dir1/file.txt)
-    m_editorTabWidget->setTabPopupText(finalIndex, qLastPathComponents(newEditor->filePath()));
-    refreshTabTitleOnPathChange(newEditor);
-    auto view = qobject_cast<Editor*>(m_editorTabWidget->currentWidget())->view();
-    ObjectRegistry::add(view, "Editor");
+    addEditorTab(newEditor, generateUniqueTabTitle(newEditor->filePath()),
+                 qLastPathComponents(newEditor->filePath()));
+}
 
-    // Disable KTextEditor's built-in Ctrl+G (go_goto_line) so we can use our own Goto dialog
-    if (QAction* gotoLineAction = view->action("go_goto_line")) {
-        gotoLineAction->setShortcut(QKeySequence());
-    }
-
-    // Sync menu checkboxes with KTextEditor settings on first file open
-    if (m_editorTabWidget->count() == 1) {
-        if (QAction* wrapAction = view->action("view_dynamic_word_wrap")) {
-            m_wrapLinesAction->setChecked(wrapAction->isChecked());
-        }
-        if (QAction* wsAction = view->action("view_show_whitespaces")) {
-            m_showSpecialCharsAction->setChecked(wsAction->isChecked());
-        }
-    }
-
-    view->setFocus();
+void EditorFrame::addEditorTab(Editor* editor, const QString& tabTitle, const QString& popupText)
+{
+    editor->setWordWrap(m_wrapLinesAction->isChecked());
+    editor->setShowWhitespace(m_showSpecialCharsAction->isChecked());
+    int finalIndex = m_editorTabWidget->addTab(editor, tabTitle);
+    m_editorTabWidget->setCurrentIndex(finalIndex);
+    m_editorTabWidget->setTabPopupText(finalIndex, popupText);
+    refreshTabTitleOnPathChange(editor);
+    connect(editor, &Editor::modificationChanged, this, [this, editor]() {
+        if (editor == currentEditor())
+            updateWindowTitle();
+    });
+    ObjectRegistry::add(editor, "Editor");
+    editor->setFocus();
 }
 
 Editor* EditorFrame::currentEditor() const
@@ -302,37 +271,10 @@ void EditorFrame::onNewFileTriggered()
     if (!m_editorTabWidget->makeRoomForNewTab())
         return;
 
-    KTextEditor::Document* doc = KTextEditor::Editor::instance()->createDocument(nullptr);
-    if (!doc) {
-        qWarning() << "Failed to create new KTextEditor::Document!";
-        return;
-    }
-
-    Editor* newEditor = new Editor(doc, m_editorTabWidget);
+    auto* newEditor = new Editor(m_editorTabWidget);
     QString tabTitle = generateUniqueTabTitle(QString());
-    int finalIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
-    m_editorTabWidget->setCurrentIndex(finalIndex);
     // Untitled document has no path, so the popup just mirrors the tab title
-    m_editorTabWidget->setTabPopupText(finalIndex, tabTitle);
-    refreshTabTitleOnPathChange(newEditor);
-    auto view = newEditor->view();
-    ObjectRegistry::add(view, "Editor");
-
-    if (QAction* gotoLineAction = view->action("go_goto_line")) {
-        gotoLineAction->setShortcut(QKeySequence());
-    }
-
-    // Sync menu checkboxes with KTextEditor settings on first file open
-    if (m_editorTabWidget->count() == 1) {
-        if (QAction* wrapAction = view->action("view_dynamic_word_wrap")) {
-            m_wrapLinesAction->setChecked(wrapAction->isChecked());
-        }
-        if (QAction* wsAction = view->action("view_show_whitespaces")) {
-            m_showSpecialCharsAction->setChecked(wsAction->isChecked());
-        }
-    }
-
-    view->setFocus();
+    addEditorTab(newEditor, tabTitle, tabTitle);
 }
 
 /**
@@ -354,6 +296,18 @@ void EditorFrame::onOpenFileTriggered()
     openFile(fileName);
 }
 
+void EditorFrame::onSaveTriggered()
+{
+    if (Editor* editor = currentEditor())
+        editor->saveFile();
+}
+
+void EditorFrame::onSaveAsTriggered()
+{
+    if (Editor* editor = currentEditor())
+        editor->saveFileAs();
+}
+
 void EditorFrame::onCloseCurrentTabTriggered()
 {
     m_editorTabWidget->requestCloseTab(m_editorTabWidget-> currentIndex());
@@ -362,21 +316,10 @@ void EditorFrame::onCloseCurrentTabTriggered()
 void EditorFrame::onAboutTriggered()
 {
     QString aboutText;
-    aboutText += tr("Qt Version: ") + QString::fromUtf8(QT_VERSION_STR) + "\n";
-    QString frameworksVersion;
-#if (QT_VERSION_MAJOR >= 6)
-    frameworksVersion = QStringLiteral("6.x (KF6 assumed)");
-#else
-    frameworksVersion = QStringLiteral("5.x (KF5 assumed)");
-#endif
-    aboutText += tr("KDE Frameworks Version: ") + frameworksVersion + "\n";
-
-    // Program specific info
-#ifdef VERSION
-    QString version = QStringLiteral(VERSION);
-#else
-    QString version = QStringLiteral("unknown");
-#endif
+    aboutText += tr("Gemini Commander editor %1").arg(QStringLiteral(APP_VERSION)) + "\n";
+    aboutText += tr("Qt Version: ") + QString::fromUtf8(qVersion()) + "\n";
+    aboutText += tr("Editor component: qcodeedit") + "\n";
+    aboutText += tr("Syntax definitions: %1").arg(qce::kate::dataDir()) + "\n";
     QMessageBox::about(this, tr("About"), aboutText);
 }
 
@@ -384,7 +327,7 @@ void EditorFrame::onAboutTriggered()
  * @brief Releases an editor tab that is being closed
  * @param page Page of the tab being closed
  *
- * Adds the file to the recent list and closes its KTextEditor document
+ * Adds the file to the recent list
  */
 void EditorFrame::actionsBeforeTabClose(QWidget* page)
 {
@@ -394,26 +337,6 @@ void EditorFrame::actionsBeforeTabClose(QWidget* page)
     // Add to MRU when tab is closed (only real files, not untitled)
     if (!editor->filePath().isEmpty())
         mruAdd(editor->filePath());
-    if (editor && editor->document())
-    {
-        KTextEditor::Document* doc = editor->document(); // Pobierz wskaźnik do dokumentu
-        // Zamknij dokument przez interfejs Application <<< POPRAWKA
-        KTextEditor::Editor* kate = KTextEditor::Editor::instance();
-        KTextEditor::Application* app = kate->application();
-        bool closedDocOk = false;
-
-        if (app && doc)
-        {
-            // Użyj app->closeDocument(doc) zamiast błędnego kate->closeUrl() <<< POPRAWKA
-            closedDocOk = app->closeDocument(doc);
-            qDebug() << "KTextEditor::Application::closeDocument(" << doc->url().toLocalFile() << ") returned:" <<
-                closedDocOk;
-        }
-        else
-        {
-            qWarning() << "Could not get Application or Document pointer to close document via KTE.";
-        }
-    }
 }
 
 void EditorFrame::tabLimitReached(QWidget* page, MruTabWidget::LimitAction &action)
@@ -540,8 +463,11 @@ void EditorFrame::updateWindowTitle()
         return;
     }
     const QString path = editor->filePath();
-    setWindowTitle(path.isEmpty() ? m_editorTabWidget->tabText(m_editorTabWidget->currentIndex())
-                                  : path);
+    QString title = path.isEmpty() ? m_editorTabWidget->tabText(m_editorTabWidget->currentIndex())
+                                   : path;
+    if (editor->isModified())
+        title += QStringLiteral(" *");
+    setWindowTitle(title);
 }
 
 void EditorFrame::refreshTabTitleOnPathChange(Editor* editor)
@@ -612,32 +538,22 @@ QString EditorFrame::generateUniqueTabTitle(const QString& filePath)
 
 void EditorFrame::onToggleSpecialChars(bool checked)
 {
-    // Iterate through all open editor tabs and toggle whitespace display
     for (int i = 0; i < m_editorTabWidget->count(); ++i) {
-        Editor* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i));
-        if (editor && editor->view()) {
-            // Use the built-in KTextEditor action for showing whitespace
-            QAction* wsAction = editor->view()->action("view_show_whitespaces");
-            if (wsAction && wsAction->isChecked() != checked) {
-                wsAction->trigger();
-            }
-        }
+        if (Editor* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i)))
+            editor->setShowWhitespace(checked);
     }
+    Config::instance().setEditorShowWhitespace(checked);
+    Config::instance().save();
 }
 
 void EditorFrame::onToggleWrapLines(bool checked)
 {
-    // Iterate through all open editor tabs and toggle word wrap
     for (int i = 0; i < m_editorTabWidget->count(); ++i) {
-        Editor* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i));
-        if (editor && editor->view()) {
-            // Use the built-in KTextEditor action for dynamic word wrap
-            QAction* wrapAction = editor->view()->action("view_dynamic_word_wrap");
-            if (wrapAction && wrapAction->isChecked() != checked) {
-                wrapAction->trigger();
-            }
-        }
+        if (Editor* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i)))
+            editor->setWordWrap(checked);
     }
+    Config::instance().setEditorWordWrap(checked);
+    Config::instance().save();
 }
 
 void EditorFrame::mruAdd(const QString& filePath)
@@ -743,6 +659,8 @@ void EditorFrame::showEvent(QShowEvent* event)
             QPoint parentPos = parentWidget()->pos();
             move(parentPos.x() + relX, parentPos.y() + relY);
         }
+        // After the window is shown: offer the first download if needed.
+        QTimer::singleShot(0, this, &EditorFrame::offerSyntaxDownload);
     }
 }
 
@@ -766,81 +684,96 @@ void EditorFrame::saveGeometryToConfig()
 
 void EditorFrame::onFindTriggered()
 {
-    Editor* editor = currentEditor();
-    if (!editor || !editor->view())
-        return;
-
-    // Use KTextEditor's built-in search bar (appears at bottom of view)
-    QAction* findAction = editor->view()->action("edit_find");
-    if (findAction)
-        findAction->trigger();
+    if (Editor* editor = currentEditor())
+        editor->showSearch();
 }
 
 void EditorFrame::onFindNextTriggered()
 {
-    Editor* editor = currentEditor();
-    if (!editor || !editor->view())
-        return;
-
-    QAction* findNextAction = editor->view()->action("edit_find_next");
-    if (findNextAction)
-        findNextAction->trigger();
+    if (Editor* editor = currentEditor())
+        editor->findNext();
 }
 
 void EditorFrame::onFindPrevTriggered()
 {
-    Editor* editor = currentEditor();
-    if (!editor || !editor->view())
-        return;
-
-    QAction* findPrevAction = editor->view()->action("edit_find_prev");
-    if (findPrevAction)
-        findPrevAction->trigger();
+    if (Editor* editor = currentEditor())
+        editor->findNext(true);
 }
 
 void EditorFrame::onReplaceTriggered()
 {
-    Editor* editor = currentEditor();
-    if (!editor || !editor->view())
-        return;
-
-    QAction* replaceAction = editor->view()->action("edit_replace");
-    if (replaceAction)
-        replaceAction->trigger();
+    if (Editor* editor = currentEditor())
+        editor->showReplace();
 }
 
 void EditorFrame::onGotoTriggered()
 {
-    Editor* editor = currentEditor();
-    if (!editor || !editor->view())
+    if (Editor* editor = currentEditor())
+        editor->goToPosition();
+}
+
+qce::kate::KateDataDownloader* EditorFrame::downloader()
+{
+    if (m_downloader)
+        return m_downloader;
+
+    m_downloader = new qce::kate::KateDataDownloader(this);
+    connect(m_downloader, &qce::kate::KateDataDownloader::progress,
+            this, [this](int done, int total) {
+        m_statusBar->showMessage(tr("Downloading syntax definitions: %1/%2").arg(done).arg(total));
+    });
+    connect(m_downloader, &qce::kate::KateDataDownloader::finished,
+            this, [this](bool ok, int downloaded, int failed) {
+        SyntaxData::reload();
+        for (int i = 0; i < m_editorTabWidget->count(); ++i)
+            if (Editor* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i)))
+                editor->reapplyHighlighter();
+        m_statusBar->showMessage(
+            ok ? tr("Syntax definitions up to date (%1 files downloaded)").arg(downloaded)
+               : tr("Syntax definitions incomplete: %1 downloaded, %2 failed")
+                     .arg(downloaded).arg(failed),
+            8000);
+    });
+    return m_downloader;
+}
+
+// Ask once when the editor is first shown and no (complete) data set is
+// present. A "No" is remembered; Tools > Update Syntax Definitions stays available.
+void EditorFrame::offerSyntaxDownload()
+{
+    if (m_syntaxDownloadOffered)
+        return;
+    m_syntaxDownloadOffered = true;
+    Config& cfg = Config::instance();
+    if (cfg.syntaxDownloadDeclined() || !downloader()->mustDownload())
         return;
 
-    bool ok;
-    QString text = QInputDialog::getText(this, tr("Goto Line"),
-                                         tr("Line or Line:Column (1-based):"),
-                                         QLineEdit::Normal,
-                                         QString::number(editor->view()->cursorPosition().line() + 1), &ok);
-    if (!ok || text.isEmpty())
-        return;
-
-    const QStringList parts = text.split(':');
-    bool lineOk = false;
-    bool columnOk = true;
-    const int line = parts[0].trimmed().toInt(&lineOk);
-    const int column = parts.size() == 2
-        ? parts[1].trimmed().toInt(&columnOk) : 1;
-    if (parts.size() > 2 || !lineOk || !columnOk || line < 1 || column < 1
-        || line > editor->document()->lines()) {
-        QMessageBox::warning(this, tr("Invalid Position"),
-                             tr("Enter a line number or line:column within the document."));
+    const auto answer = QMessageBox::question(
+        this, tr("Syntax Definitions"),
+        tr("Download Kate syntax definitions %1 and color themes from "
+           "kate-editor.org and invent.kde.org?\n\nThey will be stored in:\n%2")
+            .arg(qce::kate::supportedSyntaxVersion().toString(),
+                 downloader()->dataDir()),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    if (answer != QMessageBox::Yes) {
+        cfg.setSyntaxDownloadDeclined(true);
+        cfg.save();
         return;
     }
+    onUpdateSyntaxTriggered();
+}
 
-    // KTextEditor uses 0-based line and column
-    KTextEditor::Cursor cursor(line - 1,
-                               qMin(column - 1, editor->document()->lineLength(line - 1)));
-    editor->view()->setCursorPosition(cursor);
-    editor->view()->setFocus();
+void EditorFrame::onUpdateSyntaxTriggered()
+{
+    Config& cfg = Config::instance();
+    if (cfg.syntaxDownloadDeclined()) {
+        cfg.setSyntaxDownloadDeclined(false);
+        cfg.save();
+    }
+    if (downloader()->busy())
+        return;
+    m_statusBar->showMessage(tr("Downloading syntax definitions…"));
+    downloader()->start();
 }
 
 static const char* daysOfWeek[] = {
@@ -850,7 +783,7 @@ static const char* daysOfWeek[] = {
 void EditorFrame::onInsertDateTriggered()
 {
     Editor* editor = currentEditor();
-    if (!editor || !editor->view() || !editor->document())
+    if (!editor)
         return;
 
     auto nowChrono = std::chrono::system_clock::now();
@@ -861,14 +794,13 @@ void EditorFrame::onInsertDateTriggered()
             daysOfWeek[now_tm->tm_wday],
             now_tm->tm_year + 1900, now_tm->tm_mon + 1, now_tm->tm_mday);
 
-    KTextEditor::Cursor cursor = editor->view()->cursorPosition();
-    editor->document()->insertText(cursor, QString::fromUtf8(buf));
+    editor->insertAtCursor(QString::fromUtf8(buf));
 }
 
 void EditorFrame::onInsertTimeTriggered()
 {
     Editor* editor = currentEditor();
-    if (!editor || !editor->view() || !editor->document())
+    if (!editor)
         return;
 
     auto nowChrono = std::chrono::system_clock::now();
@@ -878,14 +810,13 @@ void EditorFrame::onInsertTimeTriggered()
     sprintf(buf, "%.2d:%.2d:%.2d",
             now_tm->tm_hour, now_tm->tm_min, now_tm->tm_sec);
 
-    KTextEditor::Cursor cursor = editor->view()->cursorPosition();
-    editor->document()->insertText(cursor, QString::fromUtf8(buf));
+    editor->insertAtCursor(QString::fromUtf8(buf));
 }
 
 void EditorFrame::onInsertBothTriggered()
 {
     Editor* editor = currentEditor();
-    if (!editor || !editor->view() || !editor->document())
+    if (!editor)
         return;
 
     auto nowChrono = std::chrono::system_clock::now();
@@ -897,8 +828,7 @@ void EditorFrame::onInsertBothTriggered()
             now_tm->tm_year + 1900, now_tm->tm_mon + 1, now_tm->tm_mday,
             now_tm->tm_hour, now_tm->tm_min, now_tm->tm_sec);
 
-    KTextEditor::Cursor cursor = editor->view()->cursorPosition();
-    editor->document()->insertText(cursor, QString::fromUtf8(buf));
+    editor->insertAtCursor(QString::fromUtf8(buf));
 }
 
 #include  "EditorFrame_impl.inc"

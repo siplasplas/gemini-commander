@@ -14,3 +14,28 @@ target_link_libraries(sizeformat_tests
 )
 
 gtest_discover_tests(sizeformat_tests)
+
+# The qcodeedit-based editor: loading, saving and modification state.
+add_executable(editor_tests
+        test_editor.cpp
+        ${CMAKE_SOURCE_DIR}/src/editor/editor.cpp
+        ${CMAKE_SOURCE_DIR}/src/editor/BaseViewer.cpp
+        ${CMAKE_SOURCE_DIR}/src/editor/FindBar.cpp
+        ${CMAKE_SOURCE_DIR}/src/editor/SyntaxData.cpp
+        ${CMAKE_SOURCE_DIR}/src/Config.cpp
+        ${CMAKE_SOURCE_DIR}/src/SizeFormat.cpp
+)
+
+target_include_directories(editor_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+target_link_libraries(editor_tests
+        PRIVATE
+        Qt6::Widgets
+        qt-extra
+        qcodeedit::qcodeedit
+        qcodeedit::kate
+        toml_headers
+        GTest::gtest
+)
+
+gtest_discover_tests(editor_tests)

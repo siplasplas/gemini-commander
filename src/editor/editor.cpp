@@ -1,158 +1,222 @@
 #include "editor.h"
-#include <KTextEditor/Document>
-#include <KTextEditor/View>
-#include <QFont>
-#include <QFileInfo>
-#include <QVBoxLayout>
-#include <QMessageBox>
+#include "FindBar.h"
+#include "ReplaceCommand.h"
+#include "SyntaxData.h"
+
+#include <QActionGroup>
+#include <QApplication>
+#include <QClipboard>
 #include <QDebug>
-#include <QAction>
-#include <QShortcut>
+#include <QDialogButtonBox>
+#include <QFile>
+#include <QFileInfo>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMap>
+#include <QMenu>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QRegularExpression>
+#include <QSaveFile>
+#include <QStringDecoder>
+#include <QStringEncoder>
+#include <QTimer>
+#include <QUndoStack>
+#include <QVBoxLayout>
 #include <algorithm>
+#include <optional>
+
+#include <qce/CodeEdit.h>
+#include <qce/CodeEditArea.h>
+#include <qce/FoldState.h>
+#include <qce/RuleBasedFoldingProvider.h>
+#include <qce/RulesHighlighter.h>
+#include <qce/SimpleTextDocument.h>
+#include <qce/margins/FoldingGutter.h>
+#include <qce/margins/LineNumberGutter.h>
+#include <qce/kate/KatePaths.h>
+#include <qce/kate/KateXmlReader.h>
+#include <qxfiledialog.h>
 
 #include "../Config.h"
 
-/**
- * @brief Constructs editor with document
- * @param doc KTextEditor document to display
- * @param parent Parent widget
- *
- * @note Creates view and sets up editor layout automatically
- */
-Editor::Editor(KTextEditor::Document *doc, QWidget *parent) :
-    BaseViewer(parent),
-    m_document(doc),
-    m_view(nullptr)
+// Used only when no Kate definition matches (e.g. data not downloaded yet).
+static bool isCppExtension(const QString& ext)
 {
-    if (!m_document) {
-        qWarning() << "Editor created with null document!";
-        // Handle error? Maybe create a placeholder? For now, just proceed carefully.
-        m_filePath = ""; // Ensure path is empty
-        return; // Cannot create view without document
-    }
+    static const QStringList cpp = {"c","cpp","cxx","cc","h","hpp","hxx"};
+    return cpp.contains(ext.toLower());
+}
 
-    // Store the file path from the document
-    m_filePath = m_document->url().toLocalFile();
-    updateFileInfo();
+Editor::Editor(QWidget *parent) :
+    BaseViewer(parent)
+{
+    m_doc = new qce::SimpleTextDocument(this);
+    m_edit = new qce::CodeEdit(this);
+    m_edit->setDocument(m_doc);
+    m_defaultPalette = m_edit->area()->palette();
+    m_edit->area()->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_edit->area(), &QWidget::customContextMenuRequested,
+            this, &Editor::showContextMenu);
 
-    // Create the KTextEditor View, parented to this Editor widget
-    m_view = m_document->createView(this);
-    if (!m_view) {
-        qWarning() << "Failed to create KTextEditor::View for document:" << m_filePath;
-        // Handle error?
-        return; // Cannot proceed without a view
-    }
+    m_lineNumbers = std::make_unique<qce::LineNumberGutter>(m_doc);
+    m_lineNumbers->setFont(m_edit->area()->font());
+    m_edit->addLeftMargin(m_lineNumbers.get());
 
-    // --- Configure the view (Basic settings) ---
-    // Attempt basic configuration directly on the view
-    QFont editorFont("Monospace");
-    editorFont.setStyleHint(QFont::TypeWriter);
-    m_view->setFont(editorFont); // Set font directly on the view
+    // FoldingGutter is added once and stays; it reads foldState() which is
+    // updated whenever a new FoldingProvider is set.
+    m_foldGutter = std::make_unique<qce::FoldingGutter>(
+        &m_edit->area()->foldState(),
+        [this](int line) { m_edit->area()->toggleFoldAt(line); });
+    m_edit->addLeftMargin(m_foldGutter.get());
 
-    // TODO: Explore KConfig for more persistent/advanced KTextEditor view settings in KF6
+    auto* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    m_findBar = new FindBar(this);
+    layout->addWidget(m_findBar);
+    layout->addWidget(m_edit);
+    setFocusProxy(m_edit->area());
 
-    // --- Set up layout ---
-    // Create a layout for the Editor widget
-    QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0); // No margins
-    // Add the KTextEditor::View to the layout, making it fill the Editor widget
-    layout->addWidget(m_view);
-    this->setLayout(layout);
+    // The undo stack's clean state is the document's saved state, so undoing
+    // back to it clears the modification flag.
+    connect(m_edit->area()->undoStack(), &QUndoStack::cleanChanged,
+            this, [this](bool clean) { emit modificationChanged(!clean); });
 
-    // Intercept Ctrl+S to use our saveFile() with validation
-    // Find and disable the default save action from KTextEditor
-    QAction* kteSaveAction = m_view->action("file_save");
-    if (kteSaveAction) {
-        kteSaveAction->setShortcut(QKeySequence());  // Remove shortcut
-    }
-    // Add our own Ctrl+S shortcut
-    QShortcut* saveShortcut = new QShortcut(QKeySequence::Save, m_view);
-    connect(saveShortcut, &QShortcut::activated, this, &Editor::saveFile);
+    m_edit->area()->setWordWrap(m_wordWrap);
+}
 
-    // Set object name for debugging/identification
+Editor::~Editor()
+{
+    // The area refers to highlighter, folding provider and margins; detach them
+    // before the unique_ptrs below release them.
+    m_edit->area()->setHighlighter(nullptr);
+    m_edit->area()->setFoldingProvider(nullptr);
+    m_edit->removeLeftMargin(m_foldGutter.get());
+    m_edit->removeLeftMargin(m_lineNumbers.get());
+}
+
+void Editor::setPath(const QString& path)
+{
+    const bool changed = path != m_filePath;
+    m_filePath = path;
     setObjectName(m_filePath);
-
-    // Keep our path in sync when the document URL changes (e.g. Save As),
-    // so the tab title/popup can be refreshed.
-    connect(m_document, &KTextEditor::Document::documentUrlChanged, this,
-            [this](KTextEditor::Document* doc) {
-                m_filePath = doc->url().toLocalFile();
-                setObjectName(m_filePath);
-                updateFileInfo();
-                emit filePathChanged();
-            });
+    if (changed)
+        emit filePathChanged();
 }
 
-/**
- * @brief Provides access to managed document
- * @return KTextEditor document pointer
- */
-KTextEditor::Document* Editor::document() const {
-    return m_document;
+bool Editor::loadFile(const QString& path)
+{
+    if (!QFileInfo::exists(path)) {
+        // A name that does not exist yet (e.g. Shift+F4): empty document saved there.
+        m_doc->setText(QString());
+        m_encoding = QStringConverter::Utf8;
+        m_bom = false;
+        m_crlf = false;
+        m_finalNewline = true;
+        m_edit->area()->undoStack()->clear();
+        setPath(path);
+        updateFileInfo();
+        reapplyHighlighter();
+        return true;
+    }
+    return readFile(path, true);
 }
-
-/**
- * @brief Provides access to editor view
- * @return KTextEditor view widget pointer
- */
-KTextEditor::View* Editor::view() const {
-    return m_view;
-}
-
 
 /**
  * @brief Extracts filename from path
  * @return Short filename or "Untitled"
  */
 QString Editor::baseFileName() const {
-    if (m_filePath.isEmpty()) {
-        // Try getting from document URL if path wasn't set/valid
-        if(m_document && !m_document->url().isEmpty()){
-             return QFileInfo(m_document->url().path()).fileName();
-        }
+    if (m_filePath.isEmpty())
         return tr("Untitled");
-    }
     return QFileInfo(m_filePath).fileName();
 }
 
-/**
- * @brief Checks document modification state
- * @return true if document contains unsaved changes
- */
 bool Editor::isModified() const {
-    if (m_document) {
-        return m_document->isModified();
+    return !m_edit->area()->undoStack()->isClean();
+}
+
+bool Editor::readFile(const QString& path, bool resetSyntax)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly))
+        return false;
+    const QFileInfo stamp(f);
+    const QByteArray bytes = f.readAll();
+    if (f.error() != QFileDevice::NoError)
+        return false;
+
+    // UTF-8 unless the bytes are not valid UTF-8; Latin-1 then keeps every
+    // byte, so saving does not destroy the file.
+    m_bom = bytes.startsWith("\xEF\xBB\xBF");
+    QStringDecoder utf8(QStringConverter::Utf8);
+    QString text = utf8.decode(bytes);
+    m_encoding = QStringConverter::Utf8;
+    if (utf8.hasError()) {
+        QStringDecoder latin1(QStringConverter::Latin1);
+        text = latin1.decode(bytes);
+        m_encoding = QStringConverter::Latin1;
+        m_bom = false;
     }
-    return false;
+    m_crlf = text.contains(QLatin1String("\r\n"));
+    if (m_crlf)
+        text.replace(QLatin1String("\r\n"), QLatin1String("\n"));
+    m_finalNewline = text.endsWith(QLatin1Char('\n'));
+
+    m_doc->setText(text);
+    m_edit->area()->undoStack()->clear();
+    setPath(path);
+    m_loadedModified = stamp.lastModified();
+    m_loadedSize = stamp.size();
+
+    if (resetSyntax) {
+        m_syntaxMode = SyntaxMode::Automatic;
+        m_syntaxFile.clear();
+    }
+    reapplyHighlighter();
+    return true;
+}
+
+bool Editor::writeFile(const QString& path)
+{
+    QString text = m_doc->toPlainText();
+    if (m_finalNewline)
+        text += QLatin1Char('\n');
+    if (m_crlf)
+        text.replace(QLatin1Char('\n'), QLatin1String("\r\n"));
+    QStringEncoder encoder(m_encoding, m_bom ? QStringConverter::Flag::WriteBom
+                                             : QStringConverter::Flag::Default);
+    const QByteArray bytes = encoder.encode(text);
+
+    QSaveFile f(path);
+    f.setDirectWriteFallback(true);
+    if (!f.open(QIODevice::WriteOnly))
+        return false;
+    if (f.write(bytes) != bytes.size()) {
+        f.cancelWriting();
+        return false;
+    }
+    return f.commit();
 }
 
 /**
- * @brief Saves document to original path
+ * @brief Saves document to its path
  * @return true on successful save
  *
- * @details Uses KTextEditor's native save functionality.
- *          For config.toml files, validates TOML syntax before saving.
+ * @details For config.toml files, validates TOML syntax before saving.
  * @warning Shows QMessageBox on failure
  */
 bool Editor::saveFile() {
-    if (!m_document) {
-        qWarning() << "saveFile called on Editor with null document.";
-        return false;
-    }
-
-    // An untitled document has no URL to save to: ask for a name
-    if (m_document->url().isEmpty()) {
-        if (!m_document->documentSaveAs())
-            return false;
-        updateFileInfo();
-        return true;
-    }
+    // An untitled document has no path to save to: ask for a name.
+    // saveFileAs() returns false when the dialog is cancelled, so callers
+    // (e.g. "Save and Close" in the tab-limit dialog) keep the tab open.
+    if (m_filePath.isEmpty())
+        return saveFileAs();
 
     // If this is the config file, validate TOML before saving
     if (Config::instance().isConfigFile(m_filePath)) {
-        QString content = m_document->text();
         QString errorMsg;
-        if (!Config::validateToml(content, errorMsg)) {
+        if (!Config::validateToml(m_doc->toPlainText(), errorMsg)) {
             QMessageBox::critical(this->parentWidget(),
                                   tr("Invalid Configuration"),
                                   tr("Cannot save: TOML syntax error.\n\n%1").arg(errorMsg));
@@ -160,23 +224,40 @@ bool Editor::saveFile() {
         }
     }
 
-    // Use the document's save method
-    if (!m_document->save()) {
+    if (!writeFile(m_filePath)) {
         qWarning() << "Failed to save document:" << m_filePath;
         QMessageBox::warning(this->parentWidget(), // Show error relative to parent window
                              tr("Save Error"),
                              tr("Failed to save file:\n%1").arg(m_filePath));
         return false;
     }
-    qDebug() << "Document saved successfully:" << m_filePath;
 
     // If config file was saved, emit signal to notify MainWindow
     if (Config::instance().isConfigFile(m_filePath)) {
         emit configFileSaved();
     }
 
-    // isModified should be automatically set to false by KTextEditor::Document on successful save
+    m_edit->area()->undoStack()->setClean();
     updateFileInfo();
+    return true;
+}
+
+bool Editor::saveFileAs()
+{
+    const QString path = QxFileDialog::getSaveFileName(this, tr("Save As"), m_filePath);
+    if (path.isEmpty())
+        return false;
+    if (!writeFile(path)) {
+        QMessageBox::warning(this->parentWidget(), tr("Save Error"),
+                             tr("Failed to save file:\n%1").arg(path));
+        return false;
+    }
+    const bool renamed = path != m_filePath;
+    setPath(path);
+    m_edit->area()->undoStack()->setClean();
+    updateFileInfo();
+    if (renamed)
+        reapplyHighlighter();
     return true;
 }
 
@@ -204,16 +285,488 @@ bool Editor::isChangedOnDisk() const
 
 bool Editor::reloadFromDisk()
 {
-    if (!m_document || !m_view || m_filePath.isEmpty() || isModified())
+    if (m_filePath.isEmpty() || isModified())
         return false;
-
-    const KTextEditor::Cursor previousCursor = m_view->cursorPosition();
-    if (!m_document->documentReload())
+    auto* area = m_edit->area();
+    const auto cursor = area->cursorPosition();
+    const auto anchor = cursor == area->selectionStart() ? area->selectionEnd() : area->selectionStart();
+    if (!readFile(m_filePath, false))
         return false;
-
-    updateFileInfo();
-    const int line = std::min(previousCursor.line(), m_document->lines() - 1);
-    const int column = std::min(previousCursor.column(), m_document->lineLength(line));
-    m_view->setCursorPosition(KTextEditor::Cursor(line, column));
+    // The component clamps both endpoints if lines or columns no longer exist.
+    area->setSelection(anchor, cursor);
+    const auto clampedCursor = area->cursorPosition();
+    const auto clampedAnchor = clampedCursor == area->selectionStart() ? area->selectionEnd() : area->selectionStart();
+    revealRange(area->selectionStart(), area->selectionEnd());
+    area->setSelection(clampedAnchor, clampedCursor);
     return true;
+}
+
+void Editor::setReadOnly(bool readOnly)
+{
+    m_edit->area()->setReadOnly(readOnly);
+}
+
+void Editor::setWordWrap(bool wrap)
+{
+    m_wordWrap = wrap;
+    m_edit->area()->setWordWrap(wrap);
+}
+
+void Editor::setShowWhitespace(bool show)
+{
+    m_edit->area()->setShowWhitespace(show);
+}
+
+void Editor::insertAtCursor(const QString& text)
+{
+    auto* area = m_edit->area();
+    if (area->readOnly())
+        return;
+    area->undoStack()->push(new ReplaceCommand(area, area->selectionStart(),
+                                               area->selectionEnd(), text));
+}
+
+void Editor::revealRange(qce::TextCursor start, qce::TextCursor end)
+{
+    auto* area = m_edit->area();
+    auto& folds = area->foldState();
+    int refreshLine = -1;
+    const auto& regions = folds.regions();
+    for (int i = 0; i < regions.size(); ++i) {
+        if (!folds.isCollapsed(i)) continue;
+        const auto& region = regions[i];
+        const qce::TextCursor hiddenStart{region.startLine, region.startColumn};
+        // Folding hides the header suffix and every following line through
+        // endLine, including text after the closing marker on that line.
+        const bool overlaps = start.line <= region.endLine
+            && (start == end ? hiddenStart <= start : hiddenStart < end);
+        if (!overlaps) continue;
+        folds.setCollapsed(i, false);
+        refreshLine = region.startLine;
+    }
+    if (refreshLine >= 0) {
+        // The public toggle refreshes layout, scrollbars and the viewport.
+        // It addresses the first region on a line; invert that region first
+        // so the toggle restores its desired state, including same-line folds.
+        const int first = folds.regionStartingAt(refreshLine);
+        folds.setCollapsed(first, !folds.isCollapsed(first));
+        area->toggleFoldAt(refreshLine);
+    }
+}
+
+void Editor::showSearch()
+{
+    m_findBar->showSearch();
+}
+
+void Editor::showReplace()
+{
+    m_findBar->showReplace();
+}
+
+void Editor::findNext(bool backwards)
+{
+    m_findBar->findNext(backwards);
+}
+
+void Editor::goToPosition()
+{
+    auto* area = m_edit->area();
+    const auto cursor = area->cursorPosition();
+    const int lineCount = qMax(1, m_doc->lineCount());
+    QInputDialog dialog(this);
+    dialog.setWindowTitle(tr("Go to Line/Column"));
+    dialog.setLabelText(tr("Line[:column] (1–%1):").arg(lineCount));
+    dialog.setInputMode(QInputDialog::TextInput);
+    dialog.setTextValue(QString("%1:%2").arg(cursor.line + 1).arg(cursor.column + 1));
+
+    auto position = [this, lineCount](const QString& text) -> std::optional<qce::TextCursor> {
+        static const QRegularExpression pattern(QStringLiteral("^\\s*([1-9][0-9]*)\\s*(?::\\s*([1-9][0-9]*)\\s*)?$"));
+        const auto match = pattern.match(text);
+        if (!match.hasMatch()) return std::nullopt;
+        bool lineOk = false, columnOk = true;
+        const int line = match.captured(1).toInt(&lineOk);
+        const int column = match.captured(2).isEmpty() ? 1 : match.captured(2).toInt(&columnOk);
+        if (!lineOk || !columnOk || line > lineCount
+            || column > m_doc->lineAt(line - 1).size() + 1)
+            return std::nullopt;
+        return qce::TextCursor{line - 1, column - 1};
+    };
+    auto validate = [&dialog, position]() {
+        if (auto* buttons = dialog.findChild<QDialogButtonBox*>())
+            buttons->button(QDialogButtonBox::Ok)->setEnabled(position(dialog.textValue()).has_value());
+    };
+    connect(&dialog, &QInputDialog::textValueChanged, &dialog, validate);
+    QTimer::singleShot(0, &dialog, [&dialog, validate]() {
+        if (auto* input = dialog.findChild<QLineEdit*>()) input->selectAll();
+        validate();
+    });
+    if (dialog.exec() != QDialog::Accepted) return;
+    if (const auto target = position(dialog.textValue())) {
+        revealRange(*target, *target);
+        area->setCursorPosition(*target);
+        area->setFocus();
+    }
+}
+
+void Editor::showContextMenu(const QPoint& position)
+{
+    auto* area = m_edit->area();
+    QMenu menu(this);
+
+    auto* undo = menu.addAction(tr("&Undo"), area, &qce::CodeEditArea::undo);
+    undo->setEnabled(area->canUndo() && !area->readOnly());
+    auto* redo = menu.addAction(tr("&Redo"), area, &qce::CodeEditArea::redo);
+    redo->setEnabled(area->canRedo() && !area->readOnly());
+    menu.addSeparator();
+    auto* cut = menu.addAction(tr("Cu&t"), this, [this, area]() {
+        QApplication::clipboard()->setText(area->selectedText());
+        insertAtCursor(QString());
+    });
+    cut->setEnabled(area->hasSelection() && !area->readOnly());
+    auto* copy = menu.addAction(tr("&Copy"), this, [area]() {
+        QApplication::clipboard()->setText(area->selectedText());
+    });
+    copy->setEnabled(area->hasSelection());
+    const QString clipboardText = QApplication::clipboard()->text();
+    auto* paste = menu.addAction(tr("&Paste"), this, [this, clipboardText]() {
+        insertAtCursor(clipboardText);
+    });
+    paste->setEnabled(!clipboardText.isEmpty() && !area->readOnly());
+    menu.addAction(tr("Select &All"), area, &qce::CodeEditArea::selectAll);
+    menu.addSeparator();
+
+    auto* syntaxMenu = menu.addMenu(tr("Syntax"));
+    auto* choices = new QActionGroup(&menu);
+    choices->setExclusive(true);
+
+    auto addChoice = [choices](QMenu* parent, const QString& text, bool checked) {
+        auto* action = parent->addAction(text);
+        action->setCheckable(true);
+        action->setChecked(checked);
+        choices->addAction(action);
+        return action;
+    };
+
+    auto* automatic = addChoice(syntaxMenu, tr("Automatic"),
+                                m_syntaxMode == SyntaxMode::Automatic);
+    connect(automatic, &QAction::triggered, this, [this]() {
+        m_syntaxMode = SyntaxMode::Automatic;
+        m_syntaxFile.clear();
+        reapplyHighlighter();
+    });
+    auto* plainText = addChoice(syntaxMenu, tr("Plain Text"),
+                                m_syntaxMode == SyntaxMode::PlainText);
+    connect(plainText, &QAction::triggered, this, [this]() {
+        m_syntaxMode = SyntaxMode::PlainText;
+        m_syntaxFile.clear();
+        reapplyHighlighter();
+    });
+    syntaxMenu->addSeparator();
+
+    QMap<QString, QList<qce::kate::LanguageEntry>> sections;
+    for (const auto& entry : SyntaxData::index().languages()) {
+        if (entry.hidden || entry.unsupported)
+            continue;
+        sections[entry.section.isEmpty() ? tr("Other") : entry.section].append(entry);
+    }
+    auto sectionNames = sections.keys();
+    std::sort(sectionNames.begin(), sectionNames.end(), [](const QString& a, const QString& b) {
+        return QString::localeAwareCompare(a, b) < 0;
+    });
+    for (const auto& section : sectionNames) {
+        // Index names are literal labels, not Qt mnemonic strings.
+        auto* group = syntaxMenu->addMenu(QString(section).replace("&", "&&"));
+        auto& entries = sections[section];
+        std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+            return QString::localeAwareCompare(a.name, b.name) < 0;
+        });
+        for (const auto& entry : entries) {
+            auto* action = addChoice(group, QString(entry.name).replace("&", "&&"),
+                m_syntaxMode == SyntaxMode::Manual && m_syntaxFile == entry.file);
+            connect(action, &QAction::triggered, this, [this, file = entry.file]() {
+                const auto& index = SyntaxData::index();
+                const auto* language = index.byFile(file);
+                if (!language || language->unsupported
+                    || !applyKateHighlighter(index.filePath(*language))) {
+                    QMessageBox::warning(this, tr("Syntax"),
+                                         tr("Cannot load syntax definition: %1").arg(file));
+                    return;
+                }
+                m_syntaxMode = SyntaxMode::Manual;
+                m_syntaxFile = file;
+            });
+        }
+    }
+    if (sections.isEmpty())
+        syntaxMenu->addAction(tr("No syntax definitions installed"))->setEnabled(false);
+
+    auto* themeMenu = menu.addMenu(tr("Theme"));
+    auto* themeChoices = new QActionGroup(&menu);
+    themeChoices->setExclusive(true);
+    auto addTheme = [&](const QString& name, const QString& path) {
+        auto* action = themeMenu->addAction(QString(name).replace("&", "&&"));
+        action->setCheckable(true);
+        action->setChecked(m_themeFile == path);
+        themeChoices->addAction(action);
+        connect(action, &QAction::triggered, this, [this, path]() {
+            KateTheme theme;
+            if (!path.isEmpty()) {
+                theme = KateTheme::load(path);
+                if (!theme.isValid()) {
+                    QMessageBox::warning(this, tr("Theme"),
+                                         tr("Cannot load theme: %1").arg(path));
+                    return;
+                }
+            }
+            m_themeFile = path;
+            m_theme = theme;
+            reapplyHighlighter();
+        });
+    };
+    addTheme(tr("Default"), QString());
+    themeMenu->addSeparator();
+    const auto themes = KateTheme::listThemes(qce::kate::themesDir());
+    for (const auto& theme : themes)
+        addTheme(theme.first, theme.second);
+    if (themes.isEmpty())
+        themeMenu->addAction(tr("No themes installed"))->setEnabled(false);
+
+    menu.exec(area->viewport()->mapToGlobal(position));
+}
+
+void Editor::applyThemePalette()
+{
+    QPalette palette = m_defaultPalette;
+    if (m_theme.editorBackground.isValid()) {
+        palette.setColor(QPalette::Base, m_theme.editorBackground);
+        palette.setColor(QPalette::Window, m_theme.editorBackground);
+    }
+    const auto normal = m_theme.styles.constFind(QStringLiteral("Normal"));
+    if (normal != m_theme.styles.constEnd() && normal->fg.isValid()) {
+        palette.setColor(QPalette::Text, normal->fg);
+        palette.setColor(QPalette::WindowText, normal->fg);
+    }
+    m_edit->setPalette(palette);
+    m_edit->area()->setPalette(palette);
+    m_edit->area()->viewport()->setPalette(palette);
+    m_edit->area()->viewport()->update();
+}
+
+qce::TextAttribute Editor::themedAttribute(const QString& style,
+                                           const qce::TextAttribute& fallback) const
+{
+    const auto entry = m_theme.styles.constFind(style);
+    if (entry == m_theme.styles.constEnd())
+        return fallback;
+    return {entry->fg.isValid() ? entry->fg : fallback.foreground,
+            entry->bg, entry->bold, entry->italic, entry->underline};
+}
+
+void Editor::reapplyHighlighter()
+{
+    if (!m_themeFile.isEmpty()) {
+        const auto theme = KateTheme::load(m_themeFile);
+        if (theme.isValid())
+            m_theme = theme;
+    }
+    applyThemePalette();
+    if (m_syntaxMode == SyntaxMode::PlainText) {
+        clearHighlighter();
+    } else if (m_syntaxMode == SyntaxMode::Manual) {
+        const auto& index = SyntaxData::index();
+        const auto* entry = index.byFile(m_syntaxFile);
+        if (!entry || entry->unsupported || !applyKateHighlighter(index.filePath(*entry)))
+            clearHighlighter();
+    } else {
+        applyHighlighterForFile(m_filePath);
+    }
+    // Setting a highlighter or folding provider may change the wrap mode.
+    m_edit->area()->setWordWrap(m_wordWrap);
+}
+
+void Editor::applyHighlighterForFile(const QString& path)
+{
+    // Kate definitions downloaded by qcodeedit, matched by file name and
+    // sorted by priority (definitions needing a newer Kate are skipped).
+    const auto& index   = SyntaxData::index();
+    const auto  matches = index.forFileName(path);
+    if (!matches.isEmpty()) {
+        if (!applyKateHighlighter(index.filePath(*matches.first())))
+            clearHighlighter();
+        return;
+    }
+
+    // No Kate definition — fall back to built-in programmatic highlighter for C/C++
+    if (isCppExtension(QFileInfo(path).suffix())) {
+        applyCppHighlighter();
+        return;
+    }
+
+    clearHighlighter();
+}
+
+void Editor::applyCppHighlighter()
+{
+    using namespace qce;
+
+    auto hl = std::make_unique<RulesHighlighter>();
+
+    const int attrKw      = hl->addAttribute(themedAttribute(QStringLiteral("Keyword"), {QColor(0x00,0x00,0xAA), {}, true}));
+    const int attrType    = hl->addAttribute(themedAttribute(QStringLiteral("DataType"), {QColor(0x00,0x80,0x80), {}, true}));
+    const int attrString  = hl->addAttribute(themedAttribute(QStringLiteral("String"), {QColor(0xC0,0x10,0x10)}));
+    const int attrComment = hl->addAttribute(themedAttribute(QStringLiteral("Comment"), {QColor(0x80,0x80,0x80), {}, false, true}));
+    const int attrNumber  = hl->addAttribute(themedAttribute(QStringLiteral("DecVal"), {QColor(0x80,0x40,0x00)}));
+    const int attrPP      = hl->addAttribute(themedAttribute(QStringLiteral("Preprocessor"), {QColor(0x60,0x00,0x80)}));
+
+    const int klKeywords = hl->addKeywordList({"keywords", {
+        "if","else","return","for","while","do","break","continue",
+        "switch","case","default","goto","sizeof","alignof","noexcept",
+        "try","catch","throw","new","delete","operator","template",
+        "typename","namespace","using","class","struct","enum","union",
+        "public","protected","private","virtual","override","final",
+        "static","inline","explicit","friend","mutable","volatile",
+        "extern","register","typedef","nullptr","true","false","this",
+    }, true});
+
+    const int klTypes = hl->addKeywordList({"types", {
+        "int","void","char","bool","float","double","long","short",
+        "unsigned","signed","size_t","auto","const","constexpr",
+        "int8_t","int16_t","int32_t","int64_t",
+        "uint8_t","uint16_t","uint32_t","uint64_t",
+        "wchar_t","char8_t","char16_t","char32_t",
+    }, true});
+
+    // Contexts
+    HighlightContext ctxN{"Normal",       -1,          -1, 0, false, -1, {}};
+    HighlightContext ctxS{"String",       attrString,  -1, 0, false, -1, {}};
+    HighlightContext ctxC{"Char",         attrString,  -1, 0, false, -1, {}};
+    HighlightContext ctxB{"BlockComment", attrComment, -1, 0, false, -1, {}};
+    HighlightContext ctxL{"LineComment",  attrComment,  0, 1, false, -1, {}};
+    HighlightContext ctxP{"Preprocessor", attrPP,      0, 1, false, -1, {}};
+
+    const int normal       = hl->addContext(ctxN);
+    const int strCtx       = hl->addContext(ctxS);
+    const int charCtx      = hl->addContext(ctxC);
+    const int blockComment = hl->addContext(ctxB);
+    const int lineComment  = hl->addContext(ctxL);
+    const int preprocessor = hl->addContext(ctxP);
+
+    // Folding region IDs
+    const int rgCurly = hl->regionIdForName("curly");
+    const int rgComm  = hl->regionIdForName("Comment");
+
+    auto& norm = hl->contextRef(normal);
+
+    // Preprocessor lines (#include, #define, …)
+    norm.rules.push_back({HighlightRule::DetectChar, '#', {}, {}, true, {}, -1, -1,
+                          attrPP, preprocessor, 0, true/*firstNonSpace*/, false});
+    // Line comment //
+    norm.rules.push_back({HighlightRule::Detect2Chars, '/', '/', {}, true, {}, -1, -1,
+                          attrComment, lineComment, 0, false, false});
+    // Block comment /* — also starts Comment fold region
+    {
+        HighlightRule r;
+        r.kind = HighlightRule::Detect2Chars;
+        r.ch = '/'; r.ch1 = '*';
+        r.attributeId = attrComment; r.nextContextId = blockComment;
+        r.beginRegionId = rgComm;
+        norm.rules.push_back(r);
+    }
+    // String "
+    norm.rules.push_back({HighlightRule::DetectChar, '"', {}, {}, true, {}, -1, -1,
+                          attrString, strCtx, 0, false, false});
+    // Char '
+    norm.rules.push_back({HighlightRule::DetectChar, '\'', {}, {}, true, {}, -1, -1,
+                          attrString, charCtx, 0, false, false});
+    // Types (before keywords — both match identifiers)
+    norm.rules.push_back({HighlightRule::Keyword, {}, {}, {}, true, {}, klTypes, -1,
+                          attrType, -1, 0, false, false});
+    // Keywords
+    norm.rules.push_back({HighlightRule::Keyword, {}, {}, {}, true, {}, klKeywords, -1,
+                          attrKw, -1, 0, false, false});
+    // Numbers
+    { HighlightRule r; r.kind = HighlightRule::Int;   r.attributeId = attrNumber; norm.rules.push_back(r); }
+    { HighlightRule r; r.kind = HighlightRule::Float; r.attributeId = attrNumber; norm.rules.push_back(r); }
+    // Opening brace { — starts curly fold region
+    {
+        HighlightRule r;
+        r.kind = HighlightRule::DetectChar; r.ch = '{';
+        r.beginRegionId = rgCurly;
+        norm.rules.push_back(r);
+    }
+    // Closing brace } — ends curly fold region
+    {
+        HighlightRule r;
+        r.kind = HighlightRule::DetectChar; r.ch = '}';
+        r.endRegionId = rgCurly;
+        norm.rules.push_back(r);
+    }
+
+    // String context
+    auto& str = hl->contextRef(strCtx);
+    str.rules.push_back({HighlightRule::HlCStringChar, {}, {}, {}, true, {}, -1, -1,
+                         -1, -1, 0, false, false});
+    str.rules.push_back({HighlightRule::DetectChar, '"', {}, {}, true, {}, -1, -1,
+                         attrString, -1, 1, false, false});
+
+    // Char context
+    auto& ch = hl->contextRef(charCtx);
+    ch.rules.push_back({HighlightRule::HlCStringChar, {}, {}, {}, true, {}, -1, -1,
+                        -1, -1, 0, false, false});
+    ch.rules.push_back({HighlightRule::DetectChar, '\'', {}, {}, true, {}, -1, -1,
+                        attrString, -1, 1, false, false});
+
+    // Block comment context — closing */ ends Comment fold region
+    {
+        HighlightRule r;
+        r.kind = HighlightRule::Detect2Chars; r.ch = '*'; r.ch1 = '/';
+        r.attributeId = attrComment; r.nextContextId = -1; r.popCount = 1;
+        r.endRegionId = rgComm;
+        hl->contextRef(blockComment).rules.push_back(r);
+    }
+
+    hl->setInitialContextId(normal);
+
+    // Detach the old provider before its highlighter goes away.
+    m_edit->area()->setFoldingProvider(nullptr);
+    m_highlighter = std::move(hl);
+    m_edit->area()->setHighlighter(m_highlighter.get());
+
+    m_foldProvider = std::make_unique<qce::RuleBasedFoldingProvider>(m_highlighter.get());
+    m_foldProvider->setPlaceholderFor("curly",   "{…}");
+    m_foldProvider->setPlaceholderFor("Comment", "/*…*/");
+    m_edit->area()->setFoldingProvider(m_foldProvider.get());
+}
+
+bool Editor::applyKateHighlighter(const QString& xmlPath)
+{
+    // ##Lang includes (e.g. Doxygen inside C++) are resolved through the index.
+    auto hl = KateXmlReader::load(xmlPath, m_theme, SyntaxData::index());
+    if (!hl) return false;
+
+    // Detach the old provider before its highlighter goes away.
+    m_edit->area()->setFoldingProvider(nullptr);
+    m_highlighter = std::move(hl);
+    m_edit->area()->setHighlighter(m_highlighter.get());
+
+    m_foldProvider = std::make_unique<qce::RuleBasedFoldingProvider>(m_highlighter.get());
+    m_foldProvider->setPlaceholderFor("Brace1",  "{…}");
+    m_foldProvider->setPlaceholderFor("brace",   "{…}");
+    m_foldProvider->setPlaceholderFor("curly",   "{…}");
+    m_foldProvider->setPlaceholderFor("square",  "[…]");
+    m_foldProvider->setPlaceholderFor("paren",   "(…)");
+    m_foldProvider->setPlaceholderFor("Comment", "/*…*/");
+    m_foldProvider->setPlaceholderFor("Region1", "//BEGIN…END");
+    m_edit->area()->setFoldingProvider(m_foldProvider.get());
+    m_edit->area()->setWordWrap(m_wordWrap);
+    return true;
+}
+
+void Editor::clearHighlighter()
+{
+    m_edit->area()->setHighlighter(nullptr);
+    m_edit->area()->setFoldingProvider(nullptr);
+    m_highlighter.reset();
+    m_foldProvider.reset();
 }

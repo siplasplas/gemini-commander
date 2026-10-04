@@ -9,11 +9,7 @@
 namespace {
     template<typename T>
     QPoint getLocalPosImpl(T* event) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return event->pos();
-#else
         return event->position().toPoint();
-#endif
     }
 } // namespace
 
@@ -24,11 +20,7 @@ QPoint Ev::global(QEvent* e) {
         qCritical("Ev::global requires QMouseEvent");
         return QPoint();
     }
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    return mouseEvent->globalPos();
-#else
     return mouseEvent->globalPosition().toPoint();
-#endif
 }
 
 QPoint Ev::local(QEvent* e) {

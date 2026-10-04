@@ -1,6 +1,0 @@
-[submodule "external/textviewers"]
-	path = external/textviewers
-	url = https://github.com/ideorg/textviewers.git
-[submodule "external/tomlplusplus"]
-	path = external/tomlplusplus
-	url = https://github.com/marzer/tomlplusplus.git

@@ -1,15 +1,19 @@
 #include "ViewerWidget.h"
 #include "HexViewWidget.h"
+#include "editor.h"
 #include "../Config.h"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QFileInfo>
-#include <QUrl>
 #include <QMenu>
 #include <QContextMenuEvent>
 #include <QEvent>
-#include "../../external/textviewers/wid/TextViewer.h"
+#include <qce/CodeEdit.h>
+#include <qce/CodeEditArea.h>
+#include "wid/TextViewer.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -56,11 +60,6 @@ qint64 getSystemRamBytes()
 }
 } // namespace
 
-// KTextEditor includes
-#include <KTextEditor/Editor>
-#include <KTextEditor/Document>
-#include <KTextEditor/View>
-
 ViewerWidget::ViewerWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -75,7 +74,7 @@ ViewerWidget::~ViewerWidget()
 
 void ViewerWidget::openFile(const QString& filePath)
 {
-    if (filePath == m_currentFile && (m_textViewer || m_kteView || m_hexViewer)) {
+    if (filePath == m_currentFile && (m_textViewer || m_codeView || m_hexViewer)) {
         QFileInfo fi(filePath);
         if (!fi.exists()) {
             emit fileDeleted(filePath);
@@ -91,7 +90,7 @@ void ViewerWidget::openFile(const QString& filePath)
 
     m_currentFile = filePath;
 
-    // Open file (needed for mmap in TextViewer/HexViewer, not for KTextEditor)
+    // Open file (needed for mmap in TextViewer/HexViewer, not for the code view)
     m_file = std::make_unique<QFile>(filePath);
     if (!m_file->open(QIODevice::ReadOnly)) {
         auto* label = new QLabel(tr("Cannot open file:\n%1").arg(filePath), this);
@@ -162,12 +161,9 @@ bool ViewerWidget::eventFilter(QObject* watched, QEvent* event)
 
         // Add editor-specific actions
         QAction* copyAction = nullptr;
-        if (m_kteView) {
-            // Get KTextEditor's copy action
-            if (QAction* kteCopy = m_kteView->action("edit_copy")) {
-                copyAction = menu.addAction(tr("Copy"));
-                copyAction->setEnabled(kteCopy->isEnabled());
-            }
+        if (m_codeView) {
+            copyAction = menu.addAction(tr("Copy"));
+            copyAction->setEnabled(m_codeView->codeEdit()->area()->hasSelection());
         } else if (m_textViewer || m_hexViewer) {
             copyAction = menu.addAction(tr("Copy"));
         }
@@ -179,10 +175,8 @@ bool ViewerWidget::eventFilter(QObject* watched, QEvent* event)
         } else if (selected == hexAction) {
             setViewMode(ViewMode::Hex);
         } else if (selected == copyAction) {
-            if (m_kteView) {
-                if (QAction* kteCopy = m_kteView->action("edit_copy")) {
-                    kteCopy->trigger();
-                }
+            if (m_codeView) {
+                QApplication::clipboard()->setText(m_codeView->codeEdit()->area()->selectedText());
             }
             // For TextViewer - PaintArea handles copy via its own mechanism
             // For HexViewer - TODO: implement copy
@@ -237,8 +231,8 @@ void ViewerWidget::showTextView()
         }
         createTextViewer(addr, fileSize);
     } else {
-        // Small files (<= threshold): use KTextEditor
-        createKTextEditorView(m_currentFile);
+        // Small files (<= threshold): use the highlighting code view
+        createCodeView(m_currentFile);
     }
 }
 
@@ -284,54 +278,27 @@ void ViewerWidget::createTextViewer(uchar* data, qint64 size)
     setFocusProxy(m_textViewer);
 }
 
-void ViewerWidget::createKTextEditorView(const QString& filePath)
+void ViewerWidget::createCodeView(const QString& filePath)
 {
-    KTextEditor::Editor* editor = KTextEditor::Editor::instance();
-    if (!editor) {
-        auto* label = new QLabel(tr("KTextEditor not available"), this);
-        label->setAlignment(Qt::AlignCenter);
-        m_layout->addWidget(label);
-        return;
-    }
-
-    m_kteDocument = editor->createDocument(this);
-    if (!m_kteDocument) {
-        auto* label = new QLabel(tr("Cannot create document"), this);
-        label->setAlignment(Qt::AlignCenter);
-        m_layout->addWidget(label);
-        return;
-    }
-
-    QUrl fileUrl = QUrl::fromLocalFile(filePath);
-    if (!m_kteDocument->openUrl(fileUrl)) {
+    m_codeView = new Editor(this);
+    if (!m_codeView->loadFile(filePath)) {
+        delete m_codeView;
+        m_codeView = nullptr;
         auto* label = new QLabel(tr("Cannot open file:\n%1").arg(filePath), this);
         label->setAlignment(Qt::AlignCenter);
         m_layout->addWidget(label);
-        delete m_kteDocument;
-        m_kteDocument = nullptr;
         return;
     }
+    m_codeView->setReadOnly(true);
+    m_codeView->setWordWrap(Config::instance().editorWordWrap());
 
-    // Set read-only mode for viewing
-    m_kteDocument->setReadWrite(false);
-
-    m_kteView = m_kteDocument->createView(this);
-    if (!m_kteView) {
-        auto* label = new QLabel(tr("Cannot create view"), this);
-        label->setAlignment(Qt::AlignCenter);
-        m_layout->addWidget(label);
-        delete m_kteDocument;
-        m_kteDocument = nullptr;
-        return;
-    }
-
-    // Install event filter on KTextEditor view and all its children
-    m_kteView->installEventFilter(this);
-    for (QWidget* child : m_kteView->findChildren<QWidget*>()) {
+    // Install event filter on the code view and all its children
+    m_codeView->installEventFilter(this);
+    for (QWidget* child : m_codeView->findChildren<QWidget*>()) {
         child->installEventFilter(this);
     }
-    m_layout->addWidget(m_kteView);
-    setFocusProxy(m_kteView);
+    m_layout->addWidget(m_codeView);
+    setFocusProxy(m_codeView);
 }
 
 void ViewerWidget::createHexViewer(uchar* data, qint64 size)
@@ -353,15 +320,10 @@ void ViewerWidget::clearViewer()
         m_textViewer = nullptr;
     }
 
-    if (m_kteView) {
-        m_layout->removeWidget(m_kteView);
-        delete m_kteView;
-        m_kteView = nullptr;
-    }
-
-    if (m_kteDocument) {
-        delete m_kteDocument;
-        m_kteDocument = nullptr;
+    if (m_codeView) {
+        m_layout->removeWidget(m_codeView);
+        delete m_codeView;
+        m_codeView = nullptr;
     }
 
     if (m_hexViewer) {

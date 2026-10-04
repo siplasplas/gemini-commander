@@ -7,9 +7,22 @@ Files: *
 Copyright: 2024-2025 Andrzej Borucki
 License: Apache-2.0
 
-Files: external/tomlplusplus/*
+Files: _deps/tomlplusplus-src/*
 Copyright: Mark Gillard
 License: MIT
+Comment: Fetched by CMake at build time (header-only).
+
+Files: _deps/qcodeedit-src/*
+Copyright: Andrzej Borucki
+License: LGPL-3.0-or-later
+Comment: Editor widget and Kate syntax reader, fetched by CMake at build time
+ (github.com/siplasplas/qcodeedit) and linked statically.
+
+Files: _deps/qt-extra-src/* _deps/textviewers-src/*
+Copyright: Andrzej Borucki
+License: LGPL-2.1
+Comment: Fetched by CMake at build time (github.com/siplasplas/qt-extra,
+ github.com/ideorg/textviewers) and compiled into the executable.
 
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");

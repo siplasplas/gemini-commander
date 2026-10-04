@@ -4,74 +4,125 @@
 #include <QWidget>
 #include <QString>
 #include <QDateTime>
-#include <KTextEditor/Editor>       // The Editor singleton
-#include <KTextEditor/Document>     // Document representation
-#include <KTextEditor/View>         // Base view class (used for log)
-#include <KTextEditor/MainWindow>   // Often needed for full integration/context
-#include <KTextEditor/Application>
+#include <QPalette>
+#include <QStringConverter>
+#include <memory>
+#include <qce/TextCursor.h>
+#include <qce/TextAttribute.h>
+#include <qce/kate/KateTheme.h>
 
 #include "BaseViewer.h"
 
+namespace qce {
+class CodeEdit;
+class SimpleTextDocument;
+class LineNumberGutter;
+class FoldingGutter;
+class RulesHighlighter;
+class RuleBasedFoldingProvider;
+}
+class FindBar;
+
 /**
  * @class Editor
- * @brief Widget wrapper for KTextEditor components
+ * @brief Text editor tab built on the qcodeedit widget
  *
- * Manages text editing sessions with document/view architecture
+ * Holds one document: loading, saving, Kate syntax highlighting with folding,
+ * the inline search/replace bar and the check for changes on disk.
  */
 class Editor : public BaseViewer {
     Q_OBJECT
 
 signals:
     void configFileSaved();
-    /// Emitted when the document's URL changes (e.g. after Save As).
+    /// Emitted when the file path changes (e.g. after Save As).
     void filePathChanged();
+    void modificationChanged(bool modified);
 
 public:
-    /**
-     * @brief Constructs editor with KTextEditor document
-     * @param doc KTextEditor document to manage
-     * @param parent Parent widget
-     */
-    explicit Editor(KTextEditor::Document *doc, QWidget *parent = nullptr);
+    explicit Editor(QWidget *parent = nullptr);
+    ~Editor() override;
 
     /**
-     * @brief Gets managed document
-     * @return Pointer to KTextEditor document
+     * @brief Loads a file into the editor
+     * @return false if the file exists but cannot be read
+     * @note A path that does not exist yet gives an empty document saved under that path
      */
-    KTextEditor::Document* document() const;
+    bool loadFile(const QString& path);
 
-    /**
-     * @brief Gets editor view component
-     * @return Pointer to KTextEditor view widget
-     */
-    KTextEditor::View* view() const;
-
-    /**
-     * @brief Gets filename without path
-     * @return Base filename or "Untitled" for new documents
-     */
     [[nodiscard]] QString baseFileName() const override;
-
-    /**
-     * @brief Checks document modification state
-     * @return true if document has unsaved changes
-     */
     [[nodiscard]] bool isModified() const override;
 
     /**
-     * @brief Saves document to disk
+     * @brief Saves document to disk, asking for a name if it has none
      * @return true on successful save
-     * @note Shows error message on failure
+     * @note For config.toml validates TOML syntax first; shows error message on failure
      */
     bool saveFile();
+    /// Asks for a new name and saves under it.
+    bool saveFileAs();
 
     bool isChangedOnDisk() const;
     bool reloadFromDisk();
     void updateFileInfo();
 
+    void setReadOnly(bool readOnly);
+    void setWordWrap(bool wrap);
+    void setShowWhitespace(bool show);
+
+    /// Inserts text at the cursor (replacing the selection) as one undo step.
+    void insertAtCursor(const QString& text);
+
+    /// Expands collapsed folds that hide the given range.
+    void revealRange(qce::TextCursor start, qce::TextCursor end);
+    void showSearch();
+    void showReplace();
+    void findNext(bool backwards = false);
+    /// Asks for line[:column] and moves the cursor there.
+    void goToPosition();
+
+    /// Picks the highlighter again (e.g. after the Kate syntax data was downloaded).
+    void reapplyHighlighter();
+
+    qce::CodeEdit* codeEdit() const { return m_edit; }
+    qce::SimpleTextDocument* document() const { return m_doc; }
+
 private:
-    KTextEditor::Document *m_document; ///< Managed text document
-    KTextEditor::View *m_view;         ///< Document visualization component
+    bool readFile(const QString& path, bool resetSyntax);
+    bool writeFile(const QString& path);
+    void showContextMenu(const QPoint& position);
+    void applyThemePalette();
+    qce::TextAttribute themedAttribute(const QString& style, const qce::TextAttribute& fallback) const;
+    void applyHighlighterForFile(const QString& path);
+    void applyCppHighlighter();
+    bool applyKateHighlighter(const QString& xmlPath);
+    void clearHighlighter();
+    void setPath(const QString& path);
+
+    qce::SimpleTextDocument* m_doc = nullptr;
+    qce::CodeEdit* m_edit = nullptr;
+    std::unique_ptr<qce::LineNumberGutter> m_lineNumbers;
+    std::unique_ptr<qce::FoldingGutter> m_foldGutter;
+    std::unique_ptr<qce::RulesHighlighter> m_highlighter;
+    std::unique_ptr<qce::RuleBasedFoldingProvider> m_foldProvider;
+
+    enum class SyntaxMode { Automatic, PlainText, Manual };
+    SyntaxMode m_syntaxMode = SyntaxMode::Automatic;
+    QString m_syntaxFile;
+    QString m_themeFile;
+    KateTheme m_theme;
+    QPalette m_defaultPalette;
+
+    FindBar* m_findBar = nullptr;
+
+    // How the file was stored, so that saving writes it back the same way.
+    QStringConverter::Encoding m_encoding = QStringConverter::Utf8;
+    bool m_bom = false;
+    bool m_crlf = false;
+    // The document drops the empty line after a final line break; it is added back on save.
+    bool m_finalNewline = true;
+
+    bool m_wordWrap = true;
     QDateTime m_loadedModified;
     qint64 m_loadedSize = -1;
 };

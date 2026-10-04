@@ -8,18 +8,14 @@
 
 class QVBoxLayout;
 class HexViewWidget;
+class Editor;
 
 namespace wid {
 class TextViewer;
 }
 
-namespace KTextEditor {
-class Document;
-class View;
-}
-
 // Embeddable viewer widget (can be placed in QStackedWidget)
-// Supports Text mode (wid::TextViewer or KTextEditor) and Hex mode
+// Supports Text mode (wid::TextViewer or a read-only highlighting Editor) and Hex mode
 class ViewerWidget : public QWidget
 {
     Q_OBJECT
@@ -53,15 +49,14 @@ private:
     void showTextView();
     void showHexView();
     void createTextViewer(uchar* data, qint64 size);
-    void createKTextEditorView(const QString& filePath);
+    void createCodeView(const QString& filePath);
     void createHexViewer(uchar* data, qint64 size);
     void clearViewer();
 
     std::unique_ptr<QFile> m_file;
     QByteArray m_virtualFileContent;  // For virtual files read via readAll()
     wid::TextViewer* m_textViewer = nullptr;
-    KTextEditor::Document* m_kteDocument = nullptr;
-    KTextEditor::View* m_kteView = nullptr;
+    Editor* m_codeView = nullptr;
     HexViewWidget* m_hexViewer = nullptr;
     QVBoxLayout* m_layout = nullptr;
     QString m_currentFile;

@@ -3,10 +3,13 @@
 # Build Gemini Commander .deb packages in containers
 # Supports both Docker and Podman
 #
+# Every package is the same Qt6-only build; images differ by distribution.
+#
 # Usage:
-#   ./build-in-container.sh qt5       # Build Qt5 version (Ubuntu 24.04)
-#   ./build-in-container.sh qt6       # Build Qt6 version (Debian Sid)
-#   ./build-in-container.sh all       # Build both versions
+#   ./build-in-container.sh ubuntu2404  # Build for Ubuntu 24.04 / Mint 22
+#   ./build-in-container.sh qt6         # Build for Debian Sid
+#   ./build-in-container.sh ubuntu2510  # Build for Ubuntu 25.10
+#   ./build-in-container.sh all         # Build all versions
 #   ./build-in-container.sh setup     # Build Docker images (run once)
 #   ./build-in-container.sh clean     # Remove Docker images
 #
@@ -19,7 +22,7 @@ OUTPUT_DIR="$SCRIPT_DIR/output"
 LOG_DIR="$SCRIPT_DIR/logs"
 DOCKER_DIR="$SCRIPT_DIR/docker"
 
-IMAGE_QT5="gemini-commander-build:ubuntu24.04"
+IMAGE_UBUNTU2404="gemini-commander-build:ubuntu24.04"
 IMAGE_QT6="gemini-commander-build:debian-sid"
 IMAGE_UBUNTU2510="gemini-commander-build:ubuntu25.10"
 
@@ -52,8 +55,8 @@ setup_images() {
     echo "=========================================="
 
     echo ""
-    echo "Building Qt5 image (Ubuntu 24.04)..."
-    $CONTAINER_CMD build -t "$IMAGE_QT5" -f "$DOCKER_DIR/Dockerfile.ubuntu24.04" "$DOCKER_DIR"
+    echo "Building Qt6 image (Ubuntu 24.04)..."
+    $CONTAINER_CMD build -t "$IMAGE_UBUNTU2404" -f "$DOCKER_DIR/Dockerfile.ubuntu24.04" "$DOCKER_DIR"
 
     echo ""
     echo "Building Qt6 image (Debian Sid)..."
@@ -71,39 +74,39 @@ setup_images() {
 # Clean Docker images
 clean_images() {
     echo "Removing build images..."
-    $CONTAINER_CMD rmi "$IMAGE_QT5" 2>/dev/null || true
+    $CONTAINER_CMD rmi "$IMAGE_UBUNTU2404" 2>/dev/null || true
     $CONTAINER_CMD rmi "$IMAGE_QT6" 2>/dev/null || true
     $CONTAINER_CMD rmi "$IMAGE_UBUNTU2510" 2>/dev/null || true
     echo "Done."
 }
 
-build_qt5() {
+build_ubuntu2404() {
     echo ""
     echo "=========================================="
-    echo "Building Qt5/KF5 version (Ubuntu 2.04)"
+    echo "Building Qt6 version (Ubuntu 24.04)"
     echo "=========================================="
 
-    if ! image_exists "$IMAGE_QT5"; then
+    if ! image_exists "$IMAGE_UBUNTU2404"; then
         echo "Image not found. Building..."
-        $CONTAINER_CMD build -t "$IMAGE_QT5" -f "$DOCKER_DIR/Dockerfile.ubuntu24.04" "$DOCKER_DIR"
+        $CONTAINER_CMD build -t "$IMAGE_UBUNTU2404" -f "$DOCKER_DIR/Dockerfile.ubuntu24.04" "$DOCKER_DIR"
     fi
 
     # Drop stale packages so the success check below only sees this build
     rm -f "$OUTPUT_DIR"/*ubuntu24.04*.deb
 
-    local LOG_FILE="$LOG_DIR/build-qt5-$(date +%Y%m%d-%H%M%S).log"
+    local LOG_FILE="$LOG_DIR/build-ubuntu2404-$(date +%Y%m%d-%H%M%S).log"
     echo "Log file: $LOG_FILE"
 
     $CONTAINER_CMD run --rm \
         -v "$SOURCE_DIR:/src:ro" \
         -v "$OUTPUT_DIR:/output" \
-        "$IMAGE_QT5" \
+        "$IMAGE_UBUNTU2404" \
         /bin/bash -c '
             set -e
             echo "=== Preparing source ==="
             cp -r /src /tmp/gemini-commander-build
             cd /tmp/gemini-commander-build
-            cp -r install/deb-qt5/debian .
+            cp -r install/deb/debian .
 
             echo "=== Building package ==="
             dpkg-buildpackage -us -uc -b
@@ -124,7 +127,7 @@ build_qt5() {
 
     if ls "$OUTPUT_DIR"/*ubuntu24.04*.deb 1>/dev/null 2>&1; then
         echo ""
-        echo "Qt5 package built successfully!"
+        echo "Ubuntu 24.04 package built successfully!"
     else
         echo ""
         echo "ERROR: Build failed. Check log: $LOG_FILE"
@@ -135,7 +138,7 @@ build_qt5() {
 build_ubuntu2510() {
     echo ""
     echo "=========================================="
-    echo "Building Qt6/KF6 version (Ubuntu 25.10)"
+    echo "Building Qt6 version (Ubuntu 25.10)"
     echo "=========================================="
 
     if ! image_exists "$IMAGE_UBUNTU2510"; then
@@ -190,7 +193,7 @@ build_ubuntu2510() {
 build_qt6() {
     echo ""
     echo "=========================================="
-    echo "Building Qt6/KF6 version (Debian Sid)"
+    echo "Building Qt6 version (Debian Sid)"
     echo "=========================================="
 
     if ! image_exists "$IMAGE_QT6"; then
@@ -267,8 +270,8 @@ case "${1:-help}" in
     clean)
         clean_images
         ;;
-    qt5)
-        build_qt5
+    ubuntu2404)
+        build_ubuntu2404
         show_results
         ;;
     qt6)
@@ -280,18 +283,18 @@ case "${1:-help}" in
         show_results
         ;;
     all)
-        build_qt5
+        build_ubuntu2404
         build_qt6
         build_ubuntu2510
         show_results
         ;;
     *)
-        echo "Usage: $0 {setup|qt5|qt6|ubuntu2510|all|clean}"
+        echo "Usage: $0 {setup|ubuntu2404|qt6|ubuntu2510|all|clean}"
         echo ""
         echo "  setup      - Build Docker images with dependencies (run once)"
-        echo "  qt5        - Build for Ubuntu 24.04 / Mint 22 (Qt5/KF5)"
-        echo "  qt6        - Build for Debian Sid (Qt6/KF6)"
-        echo "  ubuntu2510 - Build for Ubuntu 25.10 (Qt6/KF6)"
+        echo "  ubuntu2404 - Build for Ubuntu 24.04 / Mint 22"
+        echo "  qt6        - Build for Debian Sid"
+        echo "  ubuntu2510 - Build for Ubuntu 25.10"
         echo "  all        - Build all versions"
         echo "  clean      - Remove Docker images"
         echo ""

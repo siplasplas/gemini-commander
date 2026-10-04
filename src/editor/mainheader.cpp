@@ -25,7 +25,8 @@ void MainHeader::setupUi()
     m_layout->addWidget(m_toolBar, 0, 2);
 }
 
-QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* closeFile,
+QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* saveFile,
+                             QAction* saveFileAs, QAction* closeFile,
                              QAction* exitApp, QAction* showSpecialChars, QAction* wrapLines,
                              QAction* aboutApp, QAction* findAction, QAction* findNextAction,
                              QAction* findPrevAction, QAction* replaceAction, QAction* gotoAction)
@@ -33,6 +34,8 @@ QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* clos
     QMenu* fileMenu = m_menuBar->addMenu(tr("&File"));
     fileMenu->addAction(newFile);
     fileMenu->addAction(openFile);
+    fileMenu->addAction(saveFile);
+    fileMenu->addAction(saveFileAs);
     fileMenu->addSeparator();
     fileMenu->addAction(closeFile);
     fileMenu->addSeparator();
@@ -63,13 +66,16 @@ QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* clos
     return fileMenu;
 }
 
-void MainHeader::setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth)
+void MainHeader::setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth,
+                                QAction* updateSyntax)
 {
     QMenu* toolsMenu = new QMenu(tr("&Tools"), m_menuBar);
     m_menuBar->insertMenu(m_helpMenu->menuAction(), toolsMenu);
     toolsMenu->addAction(insertDate);
     toolsMenu->addAction(insertTime);
     toolsMenu->addAction(insertBoth);
+    toolsMenu->addSeparator();
+    toolsMenu->addAction(updateSyntax);
 }
 
 void MainHeader::setupToolBar(QAction* buildProject, QAction* runProject)

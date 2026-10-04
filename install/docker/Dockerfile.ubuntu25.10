@@ -2,6 +2,8 @@ FROM ubuntu:25.10
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# qt-extra, qcodeedit, toml++ and textviewers are fetched by CMake during the
+# build (FetchContent), so only distribution packages are installed here.
 RUN apt-get update && apt-get install -y \
     build-essential \
     debhelper \
@@ -11,18 +13,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     g++ \
     qt6-base-dev \
-    qt6-tools-dev \
-    qt6-tools-dev-tools \
-    libkf6texteditor-dev \
-    libkf6widgetsaddons-dev \
-    libkf6iconthemes-dev \
-    libkf6archive-dev \
-    libkf6coreaddons-dev \
-    libkf6i18n-dev \
-    libkf6windowsystem-dev \
-    libkf6kio-dev \
-    libkf6parts-dev \
-    extra-cmake-modules \
+    qt6-qpa-plugins \
     libgl1-mesa-dev \
     libicu-dev \
     libarchive-dev \
@@ -32,15 +23,5 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     librsvg2-bin \
     && rm -rf /var/lib/apt/lists/*
-
-# qt-extra (MruTabWidget and other shared widgets) is not packaged; build and
-# install it into /usr/local, where gemini-commander's find_package() finds it.
-ARG QT_EXTRA_TAG=v2.5.0
-RUN git clone --depth 1 --branch "$QT_EXTRA_TAG" https://github.com/siplasplas/qt-extra.git /tmp/qt-extra \
-    && cmake -S /tmp/qt-extra -B /tmp/qt-extra/build \
-        -DCMAKE_BUILD_TYPE=Release -DQT_EXTRA_BUILD_DEMO=OFF \
-    && cmake --build /tmp/qt-extra/build -j"$(nproc)" \
-    && cmake --install /tmp/qt-extra/build \
-    && rm -rf /tmp/qt-extra
 
 WORKDIR /build

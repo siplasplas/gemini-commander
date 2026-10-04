@@ -7,8 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# QT_MAJOR_VERSION is inherited from parent project
-find_package(Qt${QT_MAJOR_VERSION} REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 # Use SortedDirIterator from main project
 set(MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../src")
@@ -28,4 +27,4 @@ add_executable(MimeExplorer
 )
 
 target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR} ${LIBARCHIVE_INCLUDE_DIRS})
-target_link_libraries(MimeExplorer PRIVATE Qt${QT_MAJOR_VERSION}::Core Qt${QT_MAJOR_VERSION}::Widgets ${LIBARCHIVE_LIBRARIES})
+target_link_libraries(MimeExplorer PRIVATE Qt6::Core Qt6::Widgets ${LIBARCHIVE_LIBRARIES})

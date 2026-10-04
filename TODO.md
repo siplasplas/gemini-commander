@@ -8,6 +8,14 @@ add:
 
 # MUST-HAVE (Core File Manager Functionality)
 
+* **Editor on qcodeedit — follow-ups after leaving KTextEditor**
+    * Marker for modified documents on the tab (now only " *" in the window title).
+    * Line:column and encoding in a status bar.
+    * Encoding choice; now UTF-8 (with BOM kept) and Latin-1 fallback for invalid UTF-8.
+    * Syntax detection by MIME type / shebang, not only by file name.
+    * Remember the chosen color theme (now per tab, default palette on start).
+    * Find bar (Ctrl+F, F3) in the code view of the viewer (F3 / Quick View).
+
 * **Essential editor and viewer features**
     * Implement search text in text viewer
     * Implement Quick View (Ctrl+Q) with basic text/image support.

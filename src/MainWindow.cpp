@@ -58,7 +58,6 @@
 #ifndef _WIN32
 #include "udisks/UDisksDeviceManager.h"
 #endif
-#include <kcoreaddons_version.h>
 #include "git_version.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -663,8 +662,7 @@ void MainWindow::setupUi() {
             "<p>Version: %1 (%2)</p>"
             "<p>Build type: %3</p>"
             "<p>Qt Version: %4</p>"
-            "<p>KDE Frameworks Version: %5</p>"
-        ).arg(APP_VERSION, GIT_SHA, APP_BUILD_TYPE, qVersion(), KCOREADDONS_VERSION_STRING);
+        ).arg(APP_VERSION, GIT_SHA, APP_BUILD_TYPE, qVersion());
         QMessageBox::about(this, tr("About Gemini Commander"), aboutText);
     });
     helpMenu->addAction(aboutAction);

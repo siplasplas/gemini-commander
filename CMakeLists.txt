@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.24)
 
 project(gemini-commander VERSION 1.6.0 LANGUAGES CXX)
 
@@ -6,34 +6,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
 endif()
 
-option(USE_QT5 "Use Qt5 and KF5 instead of Qt6 and KF6" OFF)
-
-if(USE_QT5)
-    set(QT_MAJOR_VERSION 5)
-    set(KF_MAJOR_VERSION 5)
-    set(QT_MIN_VERSION "5.15.0")
-    set(KF_MIN_VERSION "5.78.0")
-    set(ECM_MIN_VERSION "5.78.0")
-    set(includeDir /usr/include/KF5/KTextEditor /usr/include/KF5/KSyntaxHighlighting
-            /usr/include/KF5/KParts /usr/include/KF5/KXmlGui)
-else()
-    set(QT_MAJOR_VERSION 6)
-    set(KF_MAJOR_VERSION 6)
-    set(QT_MIN_VERSION "6.0.0")
-    set(KF_MIN_VERSION "6.0.0")
-    set(ECM_MIN_VERSION "6.0.0")
-    set(includeDir /usr/include/KF6/KTextEditor /usr/include/KF6/KSyntaxHighlighting
-            /usr/include/KF6/KParts /usr/include/KF6/KXmlGui)
-endif()
-
-find_package(ECM ${ECM_MIN_VERSION} REQUIRED NO_MODULE)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${ECM_MODULE_PATH})
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(Qt6 6.2 REQUIRED COMPONENTS Widgets DBus Concurrent Network)
 
 # backward-cpp declares compatibility with older CMake releases.  CMake 4
 # requires opting into that legacy policy level while configuring it.
@@ -42,16 +21,84 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
 endif()
 
 include(FetchContent)
+# Fetched dependencies are only built into gemini-commander; their own install
+# rules would add libraries, headers and CMake packages to ours.
+set(fetch_exclude)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
+    set(fetch_exclude EXCLUDE_FROM_ALL)
+endif()
+
 FetchContent_Declare(
         backward
         GIT_REPOSITORY https://github.com/bombela/backward-cpp.git
         GIT_TAG 0bfd0a07a61551413ccd2ab9a9099af3bad40681
         GIT_SHALLOW TRUE
+        ${fetch_exclude}
 )
 FetchContent_MakeAvailable(backward)
 
-find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets DBus Concurrent)
-find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
+# MruTabWidget, QxFileDialog and other shared widgets come from qt-extra
+# (github.com/siplasplas/qt-extra). An installed qt-extra 2.3 or later is used;
+# otherwise CMake fetches the tag below and builds it into gemini-commander.
+FetchContent_Declare(
+        qt-extra
+        GIT_REPOSITORY https://github.com/siplasplas/qt-extra.git
+        GIT_TAG v2.3.0
+        GIT_SHALLOW TRUE
+        ${fetch_exclude}
+        # The rest of the line goes to find_package(), so this comes last.
+        FIND_PACKAGE_ARGS 2.3
+)
+FetchContent_MakeAvailable(qt-extra)
+
+# The text editor and the viewer for small files are qcodeedit widgets
+# (github.com/siplasplas/qcodeedit, LGPL-3.0-or-later), highlighted with Kate
+# syntax definitions that qcodeedit-katedata downloads at run time. Installed
+# qcodeedit packages 1.4.1 or later are used; otherwise the tag below is fetched
+# and built into gemini-commander, without its demo and tests.
+find_package(qcodeedit-katedata 1.4.1 QUIET)
+if(NOT TARGET qcodeedit::katedata)
+    set(QCE_BUILD_DEMO OFF)
+    set(QCE_BUILD_TESTS OFF)
+    set(QCE_BUILD_KATE ON)
+    set(QCE_BUILD_KATE_DOWNLOADER ON)
+    FetchContent_Declare(
+            qcodeedit
+            GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
+            GIT_TAG v1.4.1
+            GIT_SHALLOW TRUE
+            ${fetch_exclude}
+    )
+    FetchContent_MakeAvailable(qcodeedit)
+endif()
+
+# Header-only TOML parser; an installed toml++ 3 is used, otherwise it is fetched.
+FetchContent_Declare(
+        tomlplusplus
+        GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+        GIT_TAG e7aaccca3fa3dbde9818ab8313250f3da4976e37
+        ${fetch_exclude}
+        FIND_PACKAGE_ARGS 3
+)
+FetchContent_MakeAvailable(tomlplusplus)
+# toml++ is used header-only. Some distributions package it as a compiled
+# library, so only its headers are taken to avoid a needless runtime dependency.
+add_library(toml_headers INTERFACE)
+target_include_directories(toml_headers INTERFACE
+        $<TARGET_PROPERTY:tomlplusplus::tomlplusplus,INTERFACE_INCLUDE_DIRECTORIES>)
+
+# Viewer for large files (github.com/ideorg/textviewers). Its sources are
+# compiled into gemini-commander; its own CMakeLists.txt builds demo programs,
+# so SOURCE_SUBDIR points at a directory without one to only download it.
+FetchContent_Declare(
+        textviewers
+        GIT_REPOSITORY https://github.com/ideorg/textviewers.git
+        GIT_TAG 99ff988242b4992223176c850ed7ec0d18a007bf
+        SOURCE_SUBDIR none
+)
+FetchContent_MakeAvailable(textviewers)
+set(TEXTVIEWERS_DIR ${textviewers_SOURCE_DIR})
+
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 # MruTabWidget and other shared widgets come from the qt-extra library
 # (https://github.com/siplasplas/qt-extra.git, tag v2.5.0), installed to the system.
@@ -65,10 +112,6 @@ if(NOT BOTAN_FOUND)
 endif()
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
 find_package(nlohmann_json 3.2.0 REQUIRED)
-
-set(TOMLPLUSPLUS_INCLUDE_DIR
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/tomlplusplus/include
-)
 
 add_library(core
         src/utils.cpp
@@ -95,11 +138,11 @@ add_executable(toml_json_converter
 
 target_include_directories(toml_json_converter PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${TOMLPLUSPLUS_INCLUDE_DIR}
 )
 
 target_link_libraries(toml_json_converter PRIVATE
         core
+        toml_headers
         nlohmann_json::nlohmann_json
 )
 
@@ -109,11 +152,11 @@ add_executable(stub_generator
 
 target_include_directories(stub_generator PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${TOMLPLUSPLUS_INCLUDE_DIR}
 )
 
 target_link_libraries(stub_generator PRIVATE
         core
+        toml_headers
 )
 
 add_executable(${PROJECT_NAME}
@@ -143,6 +186,11 @@ add_executable(${PROJECT_NAME}
         src/SearchWorker.h
         src/editor/editor.cpp
         src/editor/editor.h
+        src/editor/FindBar.cpp
+        src/editor/FindBar.h
+        src/editor/ReplaceCommand.h
+        src/editor/SyntaxData.cpp
+        src/editor/SyntaxData.h
         src/editor/EditorFrame.cpp
         src/editor/EditorFrame.h
         src/editor/mainheader.cpp
@@ -156,18 +204,18 @@ add_executable(${PROJECT_NAME}
         src/editor/ViewerWidget.h
         src/editor/HexViewWidget.cpp
         src/editor/HexViewWidget.h
-        external/textviewers/wid/TextViewer.cpp
-        external/textviewers/wid/PaintArea.cpp
-        external/textviewers/logic/AbstractView.cpp
-        external/textviewers/logic/Wrap.cpp
-        external/textviewers/logic/LineView.cpp
-        external/textviewers/logic/ByteView.cpp
-        external/textviewers/logic/LineDeque.cpp
-        external/textviewers/logic/ByteDeque.cpp
-        external/textviewers/logic/ByteDocument.cpp
-        external/textviewers/logic/ChangeableDocument.cpp
-        external/textviewers/logic/LineIndexedDocument.cpp
-        external/textviewers/misc/selection.cpp
+        ${TEXTVIEWERS_DIR}/wid/TextViewer.cpp
+        ${TEXTVIEWERS_DIR}/wid/PaintArea.cpp
+        ${TEXTVIEWERS_DIR}/logic/AbstractView.cpp
+        ${TEXTVIEWERS_DIR}/logic/Wrap.cpp
+        ${TEXTVIEWERS_DIR}/logic/LineView.cpp
+        ${TEXTVIEWERS_DIR}/logic/ByteView.cpp
+        ${TEXTVIEWERS_DIR}/logic/LineDeque.cpp
+        ${TEXTVIEWERS_DIR}/logic/ByteDeque.cpp
+        ${TEXTVIEWERS_DIR}/logic/ByteDocument.cpp
+        ${TEXTVIEWERS_DIR}/logic/ChangeableDocument.cpp
+        ${TEXTVIEWERS_DIR}/logic/LineIndexedDocument.cpp
+        ${TEXTVIEWERS_DIR}/misc/selection.cpp
         src/Config.cpp
         src/Config.h
         src/ConfigDialog.cpp
@@ -198,28 +246,22 @@ add_executable(${PROJECT_NAME}
         src/VerticalToolButton.h
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${includeDir}
-        ${CMAKE_SOURCE_DIR}/external/textviewers
-        ${TOMLPLUSPLUS_INCLUDE_DIR}
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${TEXTVIEWERS_DIR}
         ${LIBARCHIVE_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         core
         Backward::Object
-        Qt${QT_MAJOR_VERSION}::Widgets
-        Qt${QT_MAJOR_VERSION}::DBus
-        Qt${QT_MAJOR_VERSION}::Concurrent
-        KF${KF_MAJOR_VERSION}::TextEditor
-        KF${KF_MAJOR_VERSION}::CoreAddons
-        KF${KF_MAJOR_VERSION}::I18n
-        KF${KF_MAJOR_VERSION}::WidgetsAddons
-        KF${KF_MAJOR_VERSION}::WindowSystem
-        KF${KF_MAJOR_VERSION}::KIOCore
-        KF${KF_MAJOR_VERSION}::KIOFileWidgets
-        KF${KF_MAJOR_VERSION}::KIOWidgets
-        KF${KF_MAJOR_VERSION}::Parts
+        Qt6::Widgets
+        Qt6::DBus
+        Qt6::Concurrent
         qt-extra
+        qcodeedit::qcodeedit
+        qcodeedit::kate
+        qcodeedit::katedata
+        toml_headers
         ICU::uc ICU::i18n
         ${LIBARCHIVE_LIBRARIES}
  )
@@ -248,11 +290,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         APP_BUILD_TYPE="$<IF:$<CONFIG:Debug>,Debug,Release>"
 )
 
-if(QT_MAJOR_VERSION EQUAL 5)
-    qt5_add_resources(APP_RESOURCES res/resources.qrc)
-else()
-    qt_add_resources(APP_RESOURCES res/resources.qrc)
-endif()
+qt_add_resources(APP_RESOURCES res/resources.qrc)
 target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
 
 # Installation

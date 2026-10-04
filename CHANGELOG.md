@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Only Qt6 is needed: KDE Frameworks (KF5/KF6) and the Qt5 build are gone
+- The editor and the code view of the viewer use the qcodeedit widget instead of
+  KTextEditor, with Kate syntax definitions downloaded on first use
+  (Tools > Update Syntax Definitions), folding and per-tab syntax/theme choice
+- qt-extra, qcodeedit, toml++ and textviewers are fetched by CMake (FetchContent)
+  instead of git submodules or manual installation; installed qt-extra and
+  qcodeedit packages are used when present
+- .deb packages are built with Qt6 for Ubuntu 24.04 too; `install/deb-qt5` removed
+
+### Added
+- Editor: inline find/replace bar (regular expressions, whole words, match case,
+  in selection, preserve case, replace all in one undo step), F3/Shift+F3,
+  Go to Line/Column (Ctrl+G), Save As, edit context menu
+- Editor: Wrap Lines and Show Special Characters are remembered
+- Editor keeps line endings (CRLF), UTF-8 BOM, the final newline and
+  non-UTF-8 bytes (read as Latin-1) when saving
+
 ## [1.5.0] - 2026-01-02
 
 ### Added

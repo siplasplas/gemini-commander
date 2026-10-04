@@ -179,7 +179,8 @@ public:
   void setCompareToolIndex(int idx) { m_compareToolIndex = idx; }
   QString compareToolPath() const { return m_compareTools.value(m_compareToolIndex); }
 
-  // KTextEditor threshold (in MB, decimal) - files smaller than this use KTextEditor
+  // Viewer threshold (in MB, decimal) - files smaller than this are shown in
+  // the highlighting code view, larger ones in TextViewer
   double kteThresholdMB() const { return m_kteThresholdMB; }
   void setKteThresholdMB(double mb) { m_kteThresholdMB = mb; }
 
@@ -188,6 +189,15 @@ public:
   void setEditorMruMaxCount(int n) { m_editorMruMaxCount = qMax(1, n); }
   QStringList editorMruPaths() const { return m_editorMruPaths; }
   void setEditorMruPaths(const QStringList& paths) { m_editorMruPaths = paths; }
+
+  // Editor view options
+  bool editorWordWrap() const { return m_editorWordWrap; }
+  void setEditorWordWrap(bool wrap) { m_editorWordWrap = wrap; }
+  bool editorShowWhitespace() const { return m_editorShowWhitespace; }
+  void setEditorShowWhitespace(bool show) { m_editorShowWhitespace = show; }
+  // The user declined downloading Kate syntax definitions; don't ask on startup again
+  bool syntaxDownloadDeclined() const { return m_syntaxDownloadDeclined; }
+  void setSyntaxDownloadDeclined(bool declined) { m_syntaxDownloadDeclined = declined; }
 
   // Large file copy mode
   CopyMode copyMode() const { return m_copyMode; }
@@ -294,6 +304,9 @@ private:
   // Editor MRU
   int m_editorMruMaxCount = 15;
   QStringList m_editorMruPaths;
+  bool m_editorWordWrap = true;
+  bool m_editorShowWhitespace = false;
+  bool m_syntaxDownloadDeclined = false;
 };
 
 #endif

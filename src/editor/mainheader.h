@@ -35,13 +35,15 @@ public:
      * @param findNextAction Action for Find Next (F3)
      * @param findPrevAction Action for Find Previous (Shift+F3)
      */
-    QMenu* setupMenus(QAction* newFile, QAction* openFile, QAction* closeFile,
+    QMenu* setupMenus(QAction* newFile, QAction* openFile, QAction* saveFile,
+                    QAction* saveFileAs, QAction* closeFile,
                     QAction* exitApp, QAction* showSpecialChars, QAction* wrapLines,
                     QAction* aboutApp, QAction* findAction = nullptr,
                     QAction* findNextAction = nullptr, QAction* findPrevAction = nullptr,
                     QAction* replaceAction = nullptr, QAction* gotoAction = nullptr);
 
-    void setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth);
+    void setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth,
+                        QAction* updateSyntax);
 
     /**
      * @brief Configures toolbar buttons

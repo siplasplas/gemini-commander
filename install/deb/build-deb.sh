@@ -57,23 +57,16 @@ install_build_deps() {
         devscripts \
         cmake \
         g++ \
+        git \
+        ca-certificates \
         qt6-base-dev \
-        qt6-tools-dev \
-        qt6-tools-dev-tools \
-        libkf6texteditor-dev \
-        libkf6widgetsaddons-dev \
-        libkf6iconthemes-dev \
-        libkf6archive-dev \
-        libkf6coreaddons-dev \
-        libkf6i18n-dev \
-        libkf6windowsystem-dev \
-        libkf6kio-dev \
-        libkf6parts-dev \
-        extra-cmake-modules \
+        qt6-qpa-plugins \
         libgl1-mesa-dev \
         libicu-dev \
         libarchive-dev \
         libbotan-2-dev \
+        libgtest-dev \
+        nlohmann-json3-dev \
         pkg-config
     echo "Build dependencies installed."
 }

@@ -623,14 +623,14 @@ void ConfigDialog::createGeneralPage()
 
     layout->addWidget(behaviorGroup);
 
-    // Quick View threshold for KTextEditor
+    // Quick View threshold for the highlighting code view
     auto* viewerGroup = new QGroupBox(tr("Quick View (Ctrl+Q)"), page);
     auto* viewerLayout = new QFormLayout(viewerGroup);
 
     m_kteThreshold = new QLineEdit(viewerGroup);
     m_kteThreshold->setPlaceholderText("1.0");
     m_kteThreshold->setMaximumWidth(100);
-    viewerLayout->addRow(tr("KTextEditor threshold (MB):"), m_kteThreshold);
+    viewerLayout->addRow(tr("Code view threshold (MB):"), m_kteThreshold);
 
     m_kteThresholdInfo = new QLabel(viewerGroup);
     m_kteThresholdInfo->setWordWrap(true);
@@ -1072,7 +1072,7 @@ void ConfigDialog::validateKteThreshold()
         m_kteThresholdInfo->setStyleSheet("QLabel { color: orange; }");
     } else {
         m_kteThresholdInfo->setText(
-            tr("Files < %1 MB use KTextEditor, larger use TextViewer. Max: %2 MB (10% of %3 MB RAM).")
+            tr("Files < %1 MB use the highlighting code view, larger use TextViewer. Max: %2 MB (10% of %3 MB RAM).")
                 .arg(enteredMB, 0, 'f', 3)
                 .arg(maxAllowedMB, 0, 'f', 1)
                 .arg(ramMB, 0, 'f', 0));

@@ -11,10 +11,8 @@
 class QAction;
 class QMenu;
 class QVBoxLayout;
-
-namespace KTextEditor {
-    class View;
-}
+class QStatusBar;
+namespace qce::kate { class KateDataDownloader; }
 
 class Editor;
 
@@ -37,7 +35,7 @@ public:
     /// @brief Loads registered build system plugins
     void loadPlugins();
 
-    /// @brief Releases the document of an editor tab that is being closed
+    /// @brief Records the file of an editor tab that is being closed in the recent list
     void actionsBeforeTabClose(QWidget* page);
 
     void tabAboutToClose(QWidget* page, bool askPin, bool &allow_close);
@@ -58,6 +56,8 @@ protected:
 private slots:
     void onNewFileTriggered();
     void onOpenFileTriggered();
+    void onSaveTriggered();
+    void onSaveAsTriggered();
     void onCloseCurrentTabTriggered();
     void onAboutTriggered();
     void onToggleSpecialChars(bool checked);
@@ -70,6 +70,7 @@ private slots:
     void onInsertDateTriggered();
     void onInsertTimeTriggered();
     void onInsertBothTriggered();
+    void onUpdateSyntaxTriggered();
 
 private:
     MruTabWidget *m_editorTabWidget;
@@ -80,6 +81,8 @@ private:
     // Menu Actions
     QAction *m_newFileAction;
     QAction *m_openFileAction;
+    QAction *m_saveAction;
+    QAction *m_saveAsAction;
     QAction *m_viewFileAction;
     QAction *m_closeAction;
     QAction *m_exitAction;
@@ -94,6 +97,16 @@ private:
     QAction *m_insertDateAction;
     QAction *m_insertTimeAction;
     QAction *m_insertBothAction;
+    QAction *m_updateSyntaxAction;
+
+    QStatusBar* m_statusBar = nullptr;
+    qce::kate::KateDataDownloader* m_downloader = nullptr;
+    bool m_syntaxDownloadOffered = false;
+
+    /// Adds a new editor as a tab and applies the frame's view options to it.
+    void addEditorTab(Editor* editor, const QString& tabTitle, const QString& popupText);
+    qce::kate::KateDataDownloader* downloader();
+    void offerSyntaxDownload();
 
     void updateWindowTitle();
     void viewFileInEditor(const QString& filePath);
