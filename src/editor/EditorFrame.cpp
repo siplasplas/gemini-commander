@@ -12,6 +12,7 @@
 #include <qxfiledialog.h>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QPushButton>
 #include "../quitls.h"
 #include <QInputDialog>
 #include <QShortcut>
@@ -71,6 +72,9 @@ EditorFrame::EditorFrame(QWidget* parent)
     // tabAboutToClose writes to allow_close, so it needs a direct connection
     connect(m_editorTabWidget, &MruTabWidget::tabAboutToClose,
             this, &EditorFrame::tabAboutToClose, Qt::DirectConnection);
+    // Asked before a new tab is added (makeRoomForNewTab); writes to action
+    connect(m_editorTabWidget, &MruTabWidget::tabLimitReached,
+            this, &EditorFrame::tabLimitReached, Qt::DirectConnection);
     connect(m_editorTabWidget, &MruTabWidget::tabContextMenuRequested,
             this, &EditorFrame::extendTabContextMenu);
     connect(m_editorTabWidget, &MruTabWidget::currentChanged,
@@ -231,6 +235,10 @@ void EditorFrame::openFile(const QString& fileName)
         return;
     }
 
+    // Make room before anything is created, so that Cancel opens nothing
+    if (!m_editorTabWidget->makeRoomForNewTab())
+        return;
+
     KTextEditor::Document* doc = KTextEditor::Editor::instance()->createDocument(nullptr);
     if (doc)
     {
@@ -250,9 +258,7 @@ void EditorFrame::openFile(const QString& fileName)
     }
     Editor* newEditor = new Editor(doc, m_editorTabWidget);
     QString tabTitle = generateUniqueTabTitle(newEditor->filePath());
-    int newIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
-    int removedCount = m_editorTabWidget->enforceTabLimit();
-    int finalIndex = newIndex - removedCount;
+    int finalIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
     m_editorTabWidget->setCurrentIndex(finalIndex);
     // Ctrl+Tab popup shows the last two path components (e.g. dir1/file.txt)
     m_editorTabWidget->setTabPopupText(finalIndex, qLastPathComponents(newEditor->filePath()));
@@ -292,6 +298,10 @@ void EditorFrame::newFile()
 
 void EditorFrame::onNewFileTriggered()
 {
+    // Make room before anything is created, so that Cancel opens nothing
+    if (!m_editorTabWidget->makeRoomForNewTab())
+        return;
+
     KTextEditor::Document* doc = KTextEditor::Editor::instance()->createDocument(nullptr);
     if (!doc) {
         qWarning() << "Failed to create new KTextEditor::Document!";
@@ -300,9 +310,7 @@ void EditorFrame::onNewFileTriggered()
 
     Editor* newEditor = new Editor(doc, m_editorTabWidget);
     QString tabTitle = generateUniqueTabTitle(QString());
-    int newIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
-    int removedCount = m_editorTabWidget->enforceTabLimit();
-    int finalIndex = newIndex - removedCount;
+    int finalIndex = m_editorTabWidget->addTab(newEditor, tabTitle);
     m_editorTabWidget->setCurrentIndex(finalIndex);
     // Untitled document has no path, so the popup just mirrors the tab title
     m_editorTabWidget->setTabPopupText(finalIndex, tabTitle);
@@ -408,10 +416,56 @@ void EditorFrame::actionsBeforeTabClose(QWidget* page)
     }
 }
 
+void EditorFrame::tabLimitReached(QWidget* page, MruTabWidget::LimitAction &action)
+{
+    auto* editor = qobject_cast<Editor*>(page);
+    const bool deleted = editor && !editor->filePath().isEmpty()
+                         && !QFileInfo::exists(editor->filePath());
+    if (!editor || (!editor->isModified() && !deleted)) {
+        // Nothing would be lost: close it without asking
+        m_limitClosePage = page;
+        return;
+    }
+
+    // Show the tab in question, so the user sees what is being decided about
+    m_editorTabWidget->setCurrentWidget(page);
+    const QString reason = editor->isModified()
+        ? tr("\"%1\" has unsaved changes.").arg(editor->baseFileName())
+        : tr("\"%1\" has been deleted on disk.").arg(editor->baseFileName());
+    QMessageBox box(QMessageBox::Question, tr("Too Many Tabs"),
+                    tr("The new tab needs room: the least recently used tab has to close.\n\n%1")
+                        .arg(reason),
+                    QMessageBox::NoButton, this);
+    QPushButton* save = box.addButton(tr("&Save and Close"), QMessageBox::AcceptRole);
+    QPushButton* discard = box.addButton(tr("Close &Without Saving"), QMessageBox::DestructiveRole);
+    QPushButton* keep = box.addButton(tr("&Keep Open (Pin)"), QMessageBox::ActionRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(save);
+    box.exec();
+
+    QAbstractButton* clicked = box.clickedButton();
+    if (clicked == keep) {
+        action = MruTabWidget::LimitAction::Keep;
+    } else if (clicked == discard) {
+        m_limitClosePage = page;
+    } else if (clicked == save && editor->saveFile()) {
+        m_limitClosePage = page;
+    } else {
+        // Cancel, Escape, or saving failed or was cancelled: don't open the new tab
+        action = MruTabWidget::LimitAction::Cancel;
+    }
+}
+
 void EditorFrame::tabAboutToClose(QWidget* page, bool askPin, bool &allow_close)
 {
     if (!allow_close)
         return;
+    if (page == m_limitClosePage) {
+        // Already decided in tabLimitReached
+        m_limitClosePage = nullptr;
+        allow_close = true;
+        return;
+    }
     auto* editor = qobject_cast<Editor*>(page);
     if (editor && editor->isModified())
     {

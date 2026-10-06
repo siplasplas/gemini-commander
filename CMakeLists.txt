@@ -54,9 +54,10 @@ find_package(Qt${QT_MAJOR_VERSION} ${QT_MIN_VERSION} REQUIRED COMPONENTS Widgets
 find_package(KF${KF_MAJOR_VERSION} ${KF_MIN_VERSION} REQUIRED COMPONENTS TextEditor CoreAddons I18n WidgetsAddons WindowSystem KIO Parts)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 # MruTabWidget and other shared widgets come from the qt-extra library
-# (https://github.com/siplasplas/qt-extra.git, tag v2.0.0), installed to the system.
-# See README "Building" for how to build and install it first.
-find_package(qt-extra 2 REQUIRED)
+# (https://github.com/siplasplas/qt-extra.git, tag v2.5.0), installed to the system.
+# See README "Building" for how to build and install it first. 2.5 asks before a new
+# editor tab is added over the tab limit (makeRoomForNewTab).
+find_package(qt-extra 2.5 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(BOTAN botan-2)
 if(NOT BOTAN_FOUND)

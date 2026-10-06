@@ -140,6 +140,14 @@ bool Editor::saveFile() {
         return false;
     }
 
+    // An untitled document has no URL to save to: ask for a name
+    if (m_document->url().isEmpty()) {
+        if (!m_document->documentSaveAs())
+            return false;
+        updateFileInfo();
+        return true;
+    }
+
     // If this is the config file, validate TOML before saving
     if (Config::instance().isConfigFile(m_filePath)) {
         QString content = m_document->text();

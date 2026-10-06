@@ -4,9 +4,10 @@
 #include <QString>
 #include "mainheader.h"
 #include <QMainWindow>
+#include <QPointer>
 #include <QTimer>
+#include <mrutabwidget.h>
 
-class MruTabWidget;
 class QAction;
 class QMenu;
 class QVBoxLayout;
@@ -40,6 +41,8 @@ public:
     void actionsBeforeTabClose(QWidget* page);
 
     void tabAboutToClose(QWidget* page, bool askPin, bool &allow_close);
+    /// @brief Asks what happens to a modified tab that a new tab would push over the limit
+    void tabLimitReached(QWidget* page, MruTabWidget::LimitAction &action);
     void newFile();
     void openFile(const QString& filePath);
     void openFileInViewer(const QString &fileName);
@@ -108,5 +111,7 @@ private:
 
     bool m_geometryRestored = false;
     QTimer* m_fileWatchTimer = nullptr;
+    // Tab that tabLimitReached decided to close; tabAboutToClose does not ask about it again
+    QPointer<QWidget> m_limitClosePage;
 };
 #endif // EDITORFRAME_H

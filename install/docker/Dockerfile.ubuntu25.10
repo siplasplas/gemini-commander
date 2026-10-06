@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y \
 
 # qt-extra (MruTabWidget and other shared widgets) is not packaged; build and
 # install it into /usr/local, where gemini-commander's find_package() finds it.
-ARG QT_EXTRA_TAG=v2.0.0
+ARG QT_EXTRA_TAG=v2.5.0
 RUN git clone --depth 1 --branch "$QT_EXTRA_TAG" https://github.com/siplasplas/qt-extra.git /tmp/qt-extra \
     && cmake -S /tmp/qt-extra -B /tmp/qt-extra/build \
         -DCMAKE_BUILD_TYPE=Release -DQT_EXTRA_BUILD_DEMO=OFF \
