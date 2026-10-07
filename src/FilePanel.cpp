@@ -186,6 +186,26 @@ QString stripLeadingDot(const QString &s) {
     return s;
 }
 
+// Recolor a monochrome (symbolic) icon with the palette's text colors, the way
+// KIconThemes did while KDE Frameworks were linked: Text for normal rows,
+// HighlightedText for the selected row. Plain Qt draws symbolic theme icons
+// (e.g. Yaru's go-up-symbolic) in their fixed dark color.
+QIcon paletteTintedIcon(const QIcon &src, const QPalette &pal) {
+    const auto tinted = [&src](int size, const QColor &color) {
+        QPixmap pm = src.pixmap(size, size);
+        QPainter p(&pm);
+        p.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        p.fillRect(pm.rect(), color);
+        return pm;
+    };
+    QIcon icon;
+    for (int size : {16, 22, 24, 32, 48, 64}) {
+        icon.addPixmap(tinted(size, pal.color(QPalette::Text)), QIcon::Normal);
+        icon.addPixmap(tinted(size, pal.color(QPalette::HighlightedText)), QIcon::Selected);
+    }
+    return icon;
+}
+
 void MarkedItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
     QStyleOptionViewItem opt(option);
     initStyleOption(&opt, index); // takes into account QSS, selection, etc.
@@ -283,7 +303,18 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
                 return QString();
         }
         if (role == Qt::DecorationRole && colName == "Name") {
-            return m_panel->style()->standardIcon(QStyle::SP_FileDialogToParent);
+            // Rebuilt only when the palette's text colors change (e.g. theme switch)
+            static QIcon icon;
+            static QRgb text = 0, highlightedText = 0;
+            const QPalette pal = m_panel->palette();
+            if (icon.isNull() || pal.color(QPalette::Text).rgba() != text
+                || pal.color(QPalette::HighlightedText).rgba() != highlightedText) {
+                text = pal.color(QPalette::Text).rgba();
+                highlightedText = pal.color(QPalette::HighlightedText).rgba();
+                icon = paletteTintedIcon(
+                    m_panel->style()->standardIcon(QStyle::SP_FileDialogToParent), pal);
+            }
+            return icon;
         }
         if (role == Qt::UserRole && colName == "Name") {
             return QString(); // empty fullName for [..]
