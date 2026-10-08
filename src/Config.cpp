@@ -495,7 +495,7 @@ bool Config::save() const
     generalTbl.insert("compare_tools", toolsArr);
     generalTbl.insert("compare_tool_index", static_cast<int64_t>(m_compareToolIndex));
     generalTbl.insert("kte_threshold_mb", m_kteThresholdMB);
-    const char* copyModeStr = "chunked_sha";
+    const char* copyModeStr = "chunked";
     switch (m_copyMode) {
         case CopyMode::System: copyModeStr = "system"; break;
         case CopyMode::Chunked: copyModeStr = "chunked"; break;

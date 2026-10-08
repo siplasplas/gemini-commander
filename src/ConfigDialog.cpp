@@ -653,7 +653,8 @@ void ConfigDialog::createGeneralPage()
     m_copyMode = new QComboBox(copyGroup);
     m_copyMode->addItem(tr("System (no progress)"), static_cast<int>(CopyMode::System));
     m_copyMode->addItem(tr("Chunked with progress"), static_cast<int>(CopyMode::Chunked));
-    m_copyMode->addItem(tr("Chunked + SHA-256 verification"), static_cast<int>(CopyMode::ChunkedSha));
+    m_copyMode->addItem(tr("Chunked + SHA-256 verification (reads both files again)"),
+                        static_cast<int>(CopyMode::ChunkedSha));
     m_copyMode->addItem(tr("Chunked + sync per chunk (slow but no progress freeze)"), static_cast<int>(CopyMode::ChunkedSync));
     copyLayout->addRow(tr("Copy mode:"), m_copyMode);
 

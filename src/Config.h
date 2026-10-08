@@ -16,8 +16,8 @@ struct FavoriteDir {
 // Large file copy mode
 enum class CopyMode {
     System,         // QFile::copy(), no progress
-    Chunked,        // Chunked with progress, no SHA, no sync per chunk
-    ChunkedSha,     // Chunked with SHA at end (fast if RAM > file size)
+    Chunked,        // Chunked with progress, no SHA, no sync per chunk (default)
+    ChunkedSha,     // Chunked, then SHA-256 of source and copy compared (optional)
     ChunkedSync     // Chunked with sync per chunk (honest progress, slower)
 };
 
@@ -308,7 +308,7 @@ private:
   double m_kteThresholdMB = 1.0;
 
   // Large file copy settings
-  CopyMode m_copyMode = CopyMode::ChunkedSha;  // Default: chunked with SHA
+  CopyMode m_copyMode = CopyMode::Chunked;  // Default: chunked, no SHA
   qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MiB
   qint64 m_copyChunkSize = 5 * 1024 * 1024;  // 5 MiB
   double m_syncBatchThresholdMB = 10.0;  // batch sync of small files per 10 MB

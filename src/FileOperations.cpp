@@ -25,9 +25,13 @@
 #include <io.h>
 #include <windows.h>
 #else
+#include <cerrno>
 #include <fcntl.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
+#endif
+#ifdef Q_OS_LINUX
+#include <sys/sendfile.h>
 #endif
 
 #include <limits>
@@ -377,13 +381,60 @@ QMessageBox::StandardButton askOverwriteSingle(QWidget *parent, const QString &n
     return reply;
 }
 
+#ifdef Q_OS_LINUX
+// Copies up to `len` bytes from the current offset of `in` to the current offset
+// of `out`, advancing both. The data stays in the kernel: copy_file_range() (which
+// may also share blocks on btrfs/XFS), or sendfile() when that is not possible -
+// copy_file_range() refuses to copy between different filesystems (EXDEV), which
+// is the usual case when copying to a USB drive. Returns the number of bytes
+// copied, 0 at the end of the source, or -1 on error.
+static qint64 copyInKernel(int in, int out, qint64 len, bool& tryCopyFileRange) {
+    if (tryCopyFileRange) {
+        ssize_t n = ::copy_file_range(in, nullptr, out, nullptr, static_cast<size_t>(len), 0);
+        if (n >= 0)
+            return n;
+        if (errno != EXDEV && errno != EINVAL && errno != ENOSYS && errno != EOPNOTSUPP)
+            return -1;
+        tryCopyFileRange = false;  // not supported here: sendfile() from now on
+    }
+    return ::sendfile(out, in, nullptr, static_cast<size_t>(len));
+}
+#endif
+
+// Copies the next chunk (at most `len` bytes) of an open source file to the temp
+// file. Returns the number of bytes copied, 0 at the end of the source, or -1.
+static qint64 copyChunk(QFile& src, QFile& dst, qint64 len, [[maybe_unused]] bool& tryCopyFileRange) {
+#ifdef Q_OS_LINUX
+    return copyInKernel(src.handle(), dst.handle(), len, tryCopyFileRange);
+#else
+    QByteArray buffer = src.read(len);
+    if (buffer.isEmpty())
+        return src.atEnd() ? 0 : -1;
+    return dst.write(buffer) == buffer.size() ? buffer.size() : -1;
+#endif
+}
+
+// SHA-256 of a whole file, or an empty result when it cannot be read.
+static QByteArray fileSha256(const QString& path, qint64 chunkSize) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    while (!file.atEnd()) {
+        hash.addData(file.read(chunkSize));
+        QCoreApplication::processEvents();
+    }
+    return hash.result();
+}
+
 // Copy file in chunks with optional SHA-256 verification and sync per chunk
 // Uses temp file + atomic rename for safety.
 // Reports per-chunk progress to the dialog (top bar) when provided.
 bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mode,
                      FileOperationProgressDialog* progress) {
+    // Unbuffered: on Linux the data is copied through the descriptors, not QFile.
     QFile srcFile(srcPath);
-    if (!srcFile.open(QIODevice::ReadOnly)) {
+    if (!srcFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
         QMessageBox::warning(nullptr, QObject::tr("Error"),
                              QObject::tr("Failed to open source file:\n%1").arg(srcPath));
         return false;
@@ -402,7 +453,7 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
 
     // Open temp file for actual writing
     QFile tempFile(tempPath);
-    if (!tempFile.open(QIODevice::WriteOnly)) {
+    if (!tempFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QMessageBox::warning(nullptr, QObject::tr("Error"),
                              QObject::tr("Failed to create temp file:\n%1").arg(tempPath));
         dstFile.close();
@@ -411,30 +462,18 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
     }
 
     const qint64 chunkSize = Config::instance().copyChunkSize();
-    QByteArray buffer;
-    QCryptographicHash srcHash(QCryptographicHash::Sha256);
     bool useSha = (mode == CopyMode::ChunkedSha);
     bool useSync = (mode == CopyMode::ChunkedSync);
+    bool tryCopyFileRange = true;
     qint64 written = 0;
 
-    while (!srcFile.atEnd()) {
-        buffer = srcFile.read(chunkSize);
-        if (buffer.isEmpty() && !srcFile.atEnd()) {
+    for (;;) {
+        const qint64 copied = copyChunk(srcFile, tempFile, chunkSize, tryCopyFileRange);
+        if (copied == 0)
+            break;
+        if (copied < 0) {
             QMessageBox::warning(nullptr, QObject::tr("Error"),
-                                 QObject::tr("Failed to read from source file:\n%1").arg(srcPath));
-            tempFile.close();
-            tempFile.remove();
-            dstFile.close();
-            dstFile.remove();
-            return false;
-        }
-
-        if (useSha)
-            srcHash.addData(buffer);
-
-        if (tempFile.write(buffer) != buffer.size()) {
-            QMessageBox::warning(nullptr, QObject::tr("Error"),
-                                 QObject::tr("Failed to write to temp file:\n%1").arg(tempPath));
+                                 QObject::tr("Failed to copy:\n%1\nto\n%2").arg(srcPath, tempPath));
             tempFile.close();
             tempFile.remove();
             dstFile.close();
@@ -443,7 +482,6 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
         }
 
         if (useSync) {
-            tempFile.flush();
 #ifdef _WIN32
             FlushFileBuffers(reinterpret_cast<HANDLE>(_get_osfhandle(tempFile.handle())));
 #else
@@ -451,9 +489,9 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
 #endif
         }
 
-        written += buffer.size();
+        written += copied;
         if (progress) {
-            progress->addTransferred(buffer.size());
+            progress->addTransferred(copied);
             progress->addFileBytes(written);
             if (progress->wasCanceled()) {
                 tempFile.close();
@@ -482,25 +520,18 @@ bool copyFileChunked(const QString& srcPath, const QString& dstPath, CopyMode mo
         return false;
     }
 
-    // Verify SHA-256 if enabled (verify final file after rename)
+    // Verify SHA-256 if enabled: the copy never passes through this process, so
+    // both the source and the final file (after rename) are read again.
     if (useSha) {
-        QFile dstCheck(dstPath);
-        if (!dstCheck.open(QIODevice::ReadOnly)) {
+        const QByteArray dstHash = fileSha256(dstPath, chunkSize);
+        if (dstHash.isEmpty()) {
             QMessageBox::warning(nullptr, QObject::tr("Error"),
                                  QObject::tr("Failed to verify destination file:\n%1").arg(dstPath));
             QFile::remove(dstPath);
             return false;
         }
 
-        QCryptographicHash dstHash(QCryptographicHash::Sha256);
-        while (!dstCheck.atEnd()) {
-            buffer = dstCheck.read(chunkSize);
-            dstHash.addData(buffer);
-            QCoreApplication::processEvents();
-        }
-        dstCheck.close();
-
-        if (srcHash.result() != dstHash.result()) {
+        if (fileSha256(srcPath, chunkSize) != dstHash) {
             QMessageBox::warning(nullptr, QObject::tr("Error"),
                                  QObject::tr("SHA-256 verification failed!\n"
                                              "Source and destination files do not match:\n%1").arg(dstPath));
