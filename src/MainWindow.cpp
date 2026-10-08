@@ -25,6 +25,7 @@
 #include <QHeaderView>
 #include <QTimer>
 #include <QActionGroup>
+#include <QApplication>
 #include <QMenuBar>
 #include <QMenu>
 #include <QToolBar>
@@ -646,6 +647,30 @@ void MainWindow::setupUi() {
     QMenu* showMenu = menuBar()->addMenu(tr("&Show"));
     QMenu* configMenu = menuBar()->addMenu(tr("C&onfiguration"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+
+    // A menu closed without choosing anything (Escape) leaves QMenuBar in
+    // keyboard mode holding the focus, so a second Escape was needed. Give
+    // the focus back at once to where it was before the menu opened.
+    for (QMenu* menu : {fileMenu, markMenu, commandsMenu, navigateMenu, showMenu, configMenu, helpMenu}) {
+        connect(menu, &QMenu::aboutToShow, this, [this] {
+            QWidget* focus = QApplication::focusWidget();
+            if (focus && focus != menuBar() && !qobject_cast<QMenu*>(focus))
+                m_focusBeforeMenu = focus;
+        });
+        connect(menu, &QMenu::aboutToHide, this, [this] {
+            QTimer::singleShot(0, this, [this] {
+                for (QAction* action : menuBar()->actions())
+                    if (action->menu() && action->menu()->isVisible())
+                        return;  // moved to the next menu (Left/Right)
+                if (QApplication::focusWidget() != menuBar())
+                    return;  // an action moved the focus already
+                if (m_focusBeforeMenu)
+                    m_focusBeforeMenu->setFocus(Qt::PopupFocusReason);
+                else if (FilePanel* panel = currentFilePanel())
+                    panel->setFocus(Qt::PopupFocusReason);
+            });
+        });
+    }
 
     // Mark menu
     QAction* compareDirectoriesAction = new QAction(tr("Compare directories"), this);

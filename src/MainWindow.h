@@ -107,6 +107,7 @@ private:
     // Directory monitoring
     QFileSystemWatcher* m_dirWatcher = nullptr;
     bool m_suppressDirWatcher = false;  // Suppress reload during file operations
+    QPointer<QWidget> m_focusBeforeMenu;  // focus to restore when a menu closes unused
     QTimer* m_dirChangeDebounceTimer = nullptr;
     QSet<QString> m_pendingDirChanges;  // Paths waiting for debounced reload
     void updateWatchedDirectories();
