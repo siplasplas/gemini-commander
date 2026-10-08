@@ -29,6 +29,8 @@
 #include <QToolBar>
 #include <QAction>
 #include <QInputDialog>
+#include <QCheckBox>
+#include <QDialogButtonBox>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QMessageBox>
@@ -1706,22 +1708,53 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
         ? (hasMarked ? tr("Move %1 items to:").arg(markedNames.size()) : tr("Move to:"))
         : (hasMarked ? tr("Copy %1 items to:").arg(markedNames.size()) : tr("Copy to:"));
 
-    QInputDialog dlg(this);
+    QDialog dlg(this);
     dlg.setWindowTitle(title);
-    dlg.setLabelText(label);
-    dlg.setTextValue(suggested);
+    auto* layout = new QVBoxLayout(&dlg);
+    layout->addWidget(new QLabel(label, &dlg));
+    auto* destEdit = new QLineEdit(suggested, &dlg);
+    destEdit->selectAll();
+    layout->addWidget(destEdit);
+
+    // Copying a directory or several entries can skip what .gitignore files
+    // ignore, as Find Files does; not offered for a single file, nor for a
+    // move (it would remove the source with the skipped entries).
+    const QFileInfo firstInfo(QDir(srcPanel->currentPath).absoluteFilePath(names.first()));
+    const bool singleFile = names.size() == 1 && !(firstInfo.isDir() && !firstInfo.isSymLink());
+    QCheckBox* gitignoreCheck = nullptr;
+    if (!isMove && !singleFile) {
+        gitignoreCheck = new QCheckBox(tr("Skip what .gitignore files ignore"), &dlg);
+        gitignoreCheck->setToolTip(tr("Reads .gitignore from the source directory down; deeper "
+                                      "files add rules, ! includes again. The .git directory is "
+                                      "skipped too."));
+        gitignoreCheck->setChecked(Config::instance().copyUseGitignore());
+        layout->addWidget(gitignoreCheck);
+    }
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    layout->addWidget(buttons);
     dlg.resize(500, dlg.sizeHint().height());
 
-    if (dlg.exec() != QDialog::Accepted || dlg.textValue().isEmpty())
+    if (dlg.exec() != QDialog::Accepted || destEdit->text().isEmpty())
         return {};
 
-    QString destInput = dlg.textValue();
+    QString destInput = destEdit->text();
 
     FileOperations::Params params;
     params.valid = true;
     params.srcPath = srcPanel->currentPath;
     params.names = names;
     params.destPath = destInput;
+    if (gitignoreCheck) {
+        params.useGitignore = gitignoreCheck->isChecked();
+        auto& config = Config::instance();
+        if (config.copyUseGitignore() != params.useGitignore) {
+            config.setCopyUseGitignore(params.useGitignore);
+            config.save();
+        }
+    }
     return params;
 }
 

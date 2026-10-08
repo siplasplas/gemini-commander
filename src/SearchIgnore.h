@@ -11,7 +11,7 @@
 
 /**
  * @class SearchIgnore
- * @brief Decides which entries a file search skips (and does not descend into)
+ * @brief Decides which entries a file search or a copy skips (and does not descend into)
  *
  * Two sources:
  * - name patterns for directories and for files, with `*` and `?`, matched
@@ -20,7 +20,7 @@
  *   files add rules, the last matching rule wins and `!` re-includes. The
  *   `.git` directory is skipped too.
  *
- * Not thread-safe; a search worker owns one.
+ * Not thread-safe; a search worker or a copy operation owns one.
  */
 class SearchIgnore {
 public:

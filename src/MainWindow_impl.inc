@@ -375,7 +375,7 @@ bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
-        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
+        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this, params.useGitignore);
         QString srcPath;
         if (params.names.size() == 1)
             srcPath = params.names[0];
@@ -390,7 +390,7 @@ bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
     if (panel) {
         auto params = askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
-        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this);
+        auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this, params.useGitignore);
         QString srcPath;
         if (params.names.size() == 1)
             srcPath = params.names[0];

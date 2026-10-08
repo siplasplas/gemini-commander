@@ -9,6 +9,7 @@
 class QWidget;
 class QProgressDialog;
 class FileOperationProgressDialog;
+class SearchIgnore;
 
 namespace FileOperations {
 
@@ -19,6 +20,7 @@ struct Params {
     QString srcPath;
     QStringList names;
     QString destPath;
+    bool useGitignore = false;  ///< copy: skip what .gitignore files ignore
 };
 
 struct CopyStats {
@@ -60,16 +62,19 @@ void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* 
 // Count the actual copy work (regular files and their logical bytes) for the
 // given entries, used to drive byte-proportional progress. Uses SortedDirIterator
 // so it does not follow symbolic links. Updates the progress dialog while scanning.
+// Entries `ignore` skips are not counted (directories not entered).
 void countCopyWork(const QString& basePath, const QStringList& names,
                    quint64& outFiles, quint64& outBytes,
-                   FileOperationProgressDialog* progress);
+                   FileOperationProgressDialog* progress, SearchIgnore* ignore = nullptr);
 
 // Copy directory recursively with byte-proportional progress tracking.
 // stats.symlinks is updated if symlinks are skipped (cross-FS).
+// Entries `ignore` skips are not copied (directories not entered).
 QMessageBox::Button copyOrMoveDirectoryRecursive(const QString& srcRoot, const QString& dstRoot,
                             bool move, bool sameFs,
                             QMessageBox::Button askPolice, CopyStats& stats,
-                            FileOperationProgressDialog& progress, DestSync& sync);
+                            FileOperationProgressDialog& progress, DestSync& sync,
+                            SearchIgnore* ignore = nullptr);
 
 // Check if target is invalid (same path or subdirectory of source)
 bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPath);
@@ -80,9 +85,11 @@ EnsureDirResult ensureDestDirExists(const QString& dstPath, QWidget* parent);
 // Check if destination input indicates a directory
 bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 
+// useGitignore (copy only): skip what .gitignore files ignore, read from
+// currentPath down, exactly as Find Files does (SearchIgnore).
 QString executeCopyOrMove(const QString& currentPath, const QStringList& names,
                     const QString& destInput, bool move,
-                    QWidget* parent);
+                    QWidget* parent, bool useGitignore = false);
 
 } // namespace FileOperations
 

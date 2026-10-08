@@ -166,6 +166,8 @@ bool Config::load(const QString& path)
             }
             if (auto threshold = general["large_file_threshold"].value<int64_t>())
                 m_largeFileThreshold = *threshold;
+            if (auto b = general["copy_use_gitignore"].value<bool>())
+                m_copyUseGitignore = *b;
             if (auto chunkSize = general["copy_chunk_size"].value<int64_t>())
                 m_copyChunkSize = *chunkSize;
             if (auto syncBatch = general["sync_batch_threshold_mb"].value<double>())
@@ -505,6 +507,7 @@ bool Config::save() const
     generalTbl.insert("copy_mode", copyModeStr);
     generalTbl.insert("large_file_threshold", static_cast<int64_t>(m_largeFileThreshold));
     generalTbl.insert("copy_chunk_size", static_cast<int64_t>(m_copyChunkSize));
+    generalTbl.insert("copy_use_gitignore", m_copyUseGitignore);
     generalTbl.insert("sync_batch_threshold_mb", m_syncBatchThresholdMB);
     generalTbl.insert("sync_batch_interval_ms", static_cast<int64_t>(m_syncBatchIntervalMs));
     tbl.insert("general", generalTbl);

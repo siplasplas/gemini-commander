@@ -219,6 +219,10 @@ public:
   void setLargeFileThreshold(qint64 bytes) { m_largeFileThreshold = bytes; }
   qint64 copyChunkSize() const { return m_copyChunkSize; }
   void setCopyChunkSize(qint64 bytes) { m_copyChunkSize = bytes; }
+  // Copy (F5) of directories / several entries: skip what .gitignore files
+  // ignore, as Find Files does. Set in the copy dialog.
+  bool copyUseGitignore() const { return m_copyUseGitignore; }
+  void setCopyUseGitignore(bool use) { m_copyUseGitignore = use; }
 
   // Batched flush threshold (in MB, decimal). While copying many small files,
   // the destination filesystem is synced only once this many bytes have piled
@@ -311,6 +315,7 @@ private:
   CopyMode m_copyMode = CopyMode::Chunked;  // Default: chunked, no SHA
   qint64 m_largeFileThreshold = 5 * 1024 * 1024;  // 5 MiB
   qint64 m_copyChunkSize = 5 * 1024 * 1024;  // 5 MiB
+  bool m_copyUseGitignore = false;
   double m_syncBatchThresholdMB = 10.0;  // batch sync of small files per 10 MB
   int m_syncBatchIntervalMs = 1000;      // ...or at least once this often
 

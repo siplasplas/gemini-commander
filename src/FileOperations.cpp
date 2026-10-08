@@ -9,6 +9,7 @@
 #include "FileOperations.h"
 #include "Config.h"
 #include "FileOperationProgressDialog.h"
+#include "SearchIgnore.h"
 #include "SortedDirIterator.h"
 #include "quitls.h"
 
@@ -35,6 +36,7 @@
 #endif
 
 #include <limits>
+#include <optional>
 
 namespace FileOperations {
 
@@ -322,7 +324,7 @@ void calculateEntriesSize(const QString& basePath, const QStringList& names, Cop
 
 void countCopyWork(const QString& basePath, const QStringList& names,
                    quint64& outFiles, quint64& outBytes,
-                   FileOperationProgressDialog* progress) {
+                   FileOperationProgressDialog* progress, SearchIgnore* ignore) {
     QDir dir(basePath);
     int counter = 0;
     for (const QString& name : names) {
@@ -333,7 +335,7 @@ void countCopyWork(const QString& basePath, const QStringList& names,
         QFileInfo fi(absPath);
 
         // Symlinks are copied as links / skipped cross-FS: negligible bytes.
-        if (fi.isSymLink())
+        if (fi.isSymLink() || (ignore && ignore->isIgnored(fi)))
             continue;
 
         if (fi.isFile()) {
@@ -346,6 +348,8 @@ void countCopyWork(const QString& basePath, const QStringList& names,
             // Recurse without following symlinks (same iterator as size info).
             SortedDirIterator it(absPath,
                 QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+            if (ignore)
+                it.setEntryFilter([ignore](const QFileInfo& entry) { return !ignore->isIgnored(entry); });
             while (it.hasNext()) {
                 if (progress && progress->wasCanceled())
                     return;
@@ -695,7 +699,8 @@ void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *
 
 QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, bool move,
                                                  bool sameFs, QMessageBox::Button askPolice, CopyStats &stats,
-                                                 FileOperationProgressDialog &progress, DestSync &sync) {
+                                                 FileOperationProgressDialog &progress, DestSync &sync,
+                                                 SearchIgnore *ignore) {
     if (askPolice == QMessageBox::Abort)
         return QMessageBox::Abort;
 
@@ -720,6 +725,8 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
     for (const QFileInfo &fi: entries) {
         if (progress.wasCanceled())
             return QMessageBox::Abort;
+        if (ignore && ignore->isIgnored(fi))
+            continue;
 
         const QString srcPath = fi.absoluteFilePath();
         const QString dstPath = QDir(dstRoot).filePath(fi.fileName());
@@ -750,7 +757,8 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
         }
         // Handle directories (recursive)
         else if (fi.isDir()) {
-            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress, sync);
+            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress, sync,
+                                                     ignore);
 
             if (askPolice == QMessageBox::Abort)
                 return QMessageBox::Abort;
@@ -848,9 +856,16 @@ void removeExisting(const QString &path) {
 }
 
 QString executeCopyOrMove(const QString &currentPath, const QStringList &names, const QString &destInput,
-                            bool move, QWidget *parent) {
+                            bool move, QWidget *parent, bool useGitignore) {
     if (names.isEmpty())
         return {};
+
+    // Skipping is for copies only: a move would leave the skipped entries
+    // behind and then remove the source directory together with them.
+    std::optional<SearchIgnore> ignoreStorage;
+    if (useGitignore && !move)
+        ignoreStorage.emplace(currentPath, QStringList(), QStringList(), true);
+    SearchIgnore* ignore = ignoreStorage ? &*ignoreStorage : nullptr;
 
     CopyStats stats;
     QString dstPath = resolveDstPath(currentPath, destInput);
@@ -884,7 +899,7 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         // byte-proportional. Uses SortedDirIterator (does not follow symlinks).
         quint64 totalFiles = 0;
         quint64 totalBytes = 0;
-        countCopyWork(currentPath, names, totalFiles, totalBytes, &progressDlg);
+        countCopyWork(currentPath, names, totalFiles, totalBytes, &progressDlg, ignore);
         if (progressDlg.wasCanceled())
             return {};
         progressDlg.setTotals(totalFiles, totalBytes);
@@ -901,6 +916,8 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         QFileInfo srcInfo(srcPath);
 
         if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
+            continue;
+        if (ignore && ignore->isIgnored(srcInfo))
             continue;
 
         if (progressDlg.wasCanceled())
@@ -987,7 +1004,7 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         }
         else if (srcInfo.isDir()) {
             askPolice = copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
-                                             sameFs, askPolice, stats, progressDlg, destSync);
+                                             sameFs, askPolice, stats, progressDlg, destSync, ignore);
             if (askPolice != QMessageBox::Abort) {
                 // Carry source directory metadata (times, permissions) to the copy
                 // while the source still exists, then drop the source if moving.
