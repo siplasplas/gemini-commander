@@ -21,9 +21,9 @@ cd install
 ```
 
 Packages will be in `install/output/`:
-- `gemini-commander_2.1.0_amd64_ubuntu24.04.deb` - Ubuntu 24.04, Mint 22
-- `gemini-commander_2.1.0_amd64_ubuntu25.10.deb` - Ubuntu 25.10
-- `gemini-commander_2.1.0_amd64_debian-sid.deb` - Debian Sid
+- `gemini-commander_2.1.1_amd64_ubuntu24.04.deb` - Ubuntu 24.04, Mint 22
+- `gemini-commander_2.1.1_amd64_ubuntu25.10.deb` - Ubuntu 25.10
+- `gemini-commander_2.1.1_amd64_debian-sid.deb` - Debian Sid
 
 ## Container Build Commands
 
