@@ -38,16 +38,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(backward)
 
 # MruTabWidget, QxFileDialog and other shared widgets come from qt-extra
-# (github.com/siplasplas/qt-extra). An installed qt-extra 2.3 or later is used;
-# otherwise CMake fetches the tag below and builds it into gemini-commander.
+# (github.com/siplasplas/qt-extra). An installed qt-extra 2.5 or later is used
+# (MruTabWidget's tab limit, LimitAction); otherwise CMake fetches the tag below
+# and builds it into gemini-commander.
 FetchContent_Declare(
         qt-extra
         GIT_REPOSITORY https://github.com/siplasplas/qt-extra.git
-        GIT_TAG v2.3.0
+        GIT_TAG v2.5.0
         GIT_SHALLOW TRUE
         ${fetch_exclude}
         # The rest of the line goes to find_package(), so this comes last.
-        FIND_PACKAGE_ARGS 2.3
+        FIND_PACKAGE_ARGS 2.5
 )
 FetchContent_MakeAvailable(qt-extra)
 
