@@ -782,8 +782,8 @@ void FilePanel::trigger(const QString &name) {
                 loadDirectory();
                 selectFirstEntry();
             } else {
-                // Open file with full path
-                run(entry->info.absoluteFilePath());
+                // Open file with full path (escaped: run() parses a command line)
+                run(qEscapePathForShell(entry->info.absoluteFilePath()));
             }
         }
         return;
@@ -819,9 +819,11 @@ void FilePanel::trigger(const QString &name) {
                 return;
             }
 
-            // Regular file: open with system default application
+            // Regular file: run it, or open it with the system default
+            // application. The full path, so that an executable here runs
+            // (./name), not a program of that name found in PATH.
             selectedName = name;
-            run(qEscapePathForShell(name));
+            run(qEscapePathForShell(fullPath));
         }
     }
     loadDirectory();
@@ -863,8 +865,11 @@ void FilePanel::run(const QString &commandLine) {
     QString execPath = resolveExecutable(program, currentPath);
 
     if (!execPath.isEmpty()) {
-        // It's an executable - run it without waiting
-        QProcess::startDetached(execPath, args, currentPath);
+        // It's an executable - run it without waiting. A file given by its
+        // path that cannot run (e.g. a document with the execute bit, as on
+        // FAT/USB drives) is opened with the default application instead.
+        if (!QProcess::startDetached(execPath, args, currentPath) && program.contains('/'))
+            QDesktopServices::openUrl(QUrl::fromLocalFile(execPath));
         return;
     }
 
