@@ -14,7 +14,7 @@ git clone https://github.com/siplasplas/gemini-commander
 ## Features
 
 - **Hidden file search** — Incremental search handles dot-prefixed files naturally (e.g., typing "git" finds ".gitignore")
-- **Built-in editor and viewer** — Opens instantly on top of the main window, even on Wayland where window stacking can be problematic. The editor uses the [qcodeedit](https://github.com/siplasplas/qcodeedit) widget with Kate syntax definitions, folding, an inline find/replace bar (regular expressions, whole words, in selection), go to line:column (with this session's recent positions) and recent files. The status bar shows line:column, the line breaks (Unix LF, Windows CRLF, Mac CR or Mixed), the encoding, the text's language (detected in the background, so opening is not slowed down) and the tab width. Files open in their own encoding (UTF-8/16/32 or a legacy code page such as cp1250, ISO 8859-2 or cp852, detected automatically) and are saved in it with their line breaks; characters the code page cannot store ask whether to write `?` or switch the file to UTF-8, and **Encoding** in the context menu reopens or saves the file in another encoding
+- **Built-in editor and viewer** — Opens instantly on top of the main window, even on Wayland where window stacking can be problematic. The editor uses the [qcodeedit](https://github.com/siplasplas/qcodeedit) widget with Kate syntax definitions, folding, a slightly darker background (lighter on dark themes) on the line with the caret, an inline find/replace bar (regular expressions, whole words, in selection), go to line:column (with this session's recent positions) and recent files. The status bar shows line:column, the line breaks (Unix LF, Windows CRLF, Mac CR or Mixed), the encoding, the text's language (detected in the background, so opening is not slowed down) and the tab width. Files open in their own encoding (UTF-8/16/32 or a legacy code page such as cp1250, ISO 8859-2 or cp852, detected automatically) and are saved in it with their line breaks; characters the code page cannot store ask whether to write `?` or switch the file to UTF-8, and **Encoding** in the context menu reopens or saves the file in another encoding
 - **Find Files (Alt+F7)** — Several name masks separated by `;` (e.g. `*.cpp;*.h`), text content, size and modification date range. **Skip during search** on the Advanced tab lists directory and file names to skip (with `*` and `?`, e.g. `.git;cmake-build*` and `*.o`; skipped directories are not entered) and can skip what `.gitignore` files ignore, read from the search directory down (deeper files add rules, `!` includes again); these settings are saved. **Clear** resets the search options and clears the results
 - **Copy without ignored files** — Copying a directory or several entries (F5, Shift+F5) can skip what `.gitignore` files ignore, read from the source directory down exactly as in Find Files; the checkbox is remembered. **Count** in the copy dialog shows the number and total size of the files to copy (in the background); the copy then uses that count instead of counting again, and OK pressed while counting starts the copy when the count is done
 - **Drag and drop** — Drag files from panels to other applications
@@ -110,7 +110,7 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.5)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.11.0)` and `find_package(qcodeedit-encoding 1.11.0)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.12.0)` and `find_package(qcodeedit-encoding 1.12.0)` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -118,6 +118,9 @@ If a suitable version is already installed, it is used instead:
 For libraries installed outside the default search paths, pass
 `-DCMAKE_PREFIX_PATH=/path/to/prefix`. To always use the fetched versions,
 pass `-DFETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER -DCMAKE_DISABLE_FIND_PACKAGE_qcodeedit-katedata=ON`.
+To build with a local qcodeedit checkout (e.g. uncommitted changes), pass
+`-DFETCHCONTENT_SOURCE_DIR_QCODEEDIT=/path/to/qcodeedit`; the installed qcodeedit
+packages are then not used.
 
 ### Syntax definitions
 

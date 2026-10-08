@@ -57,11 +57,15 @@ FetchContent_MakeAvailable(qt-extra)
 # syntax definitions that qcodeedit-katedata downloads at run time, and files
 # in any encoding (UTF or legacy code pages) through qcodeedit-encoding, which
 # needs cpg (fetched by qcodeedit when not installed). Installed qcodeedit
-# packages 1.11.0 or later are used (line break kinds, background language
-# detection, language hint for code pages); otherwise the tag below is
+# packages 1.12.0 or later are used (current line background, empty document
+# with one line, caret matching the text); otherwise the tag below is
 # fetched and built into gemini-commander, without its demo and tests.
-find_package(qcodeedit-katedata 1.11.0 QUIET)
-find_package(qcodeedit-encoding 1.11.0 QUIET)
+# FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
+# installed packages: they would bring targets with the same names.
+if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
+    find_package(qcodeedit-katedata 1.12.0 QUIET)
+    find_package(qcodeedit-encoding 1.12.0 QUIET)
+endif()
 if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding)
     set(QCE_BUILD_DEMO OFF)
     set(QCE_BUILD_TESTS OFF)
@@ -71,7 +75,7 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding)
     FetchContent_Declare(
             qcodeedit
             GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
-            GIT_TAG v1.11.0
+            GIT_TAG v1.12.0
             GIT_SHALLOW TRUE
             ${fetch_exclude}
     )

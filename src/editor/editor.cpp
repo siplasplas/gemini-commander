@@ -668,6 +668,11 @@ void Editor::applyThemePalette()
     m_edit->setPalette(palette);
     m_edit->area()->setPalette(palette);
     m_edit->area()->viewport()->setPalette(palette);
+    // The line with the caret: the background a little darker (white gives
+    // #F8F8F8), or lighter on a dark theme; the theme's tint stays.
+    const QColor base = palette.color(QPalette::Base);
+    m_edit->area()->setCurrentLineColor(base.lightness() > 128 ? base.darker(103)
+                                                               : base.lighter(140));
     m_edit->area()->viewport()->update();
     // Invalid colours (no theme, or missing in it) are derived from the palette.
     m_edit->setGutterColors({m_theme.iconBorder, m_theme.lineNumbers, m_theme.separator});
