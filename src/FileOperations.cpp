@@ -655,7 +655,8 @@ QMessageBox::Button copyOrMoveFileAskOverwrite(const QString &srcPath, const QSt
     return reply;
 }
 
-void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *cancelFlag) {
+void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *cancelFlag,
+                      const std::function<bool(const QFileInfo&)> &keep) {
     ok = true;
 
     QFileInfo rootInfo(srcPath);
@@ -668,6 +669,8 @@ void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *
     stats.totalDirs += 1;
 
     SortedDirIterator it(srcPath, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+    if (keep)
+        it.setEntryFilter(keep);
 
     int counter = 0;
     while (it.hasNext()) {
@@ -862,7 +865,8 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     // behind and then remove the source directory together with them.
     std::optional<SearchIgnore> ignoreStorage;
     if (useGitignore && !move)
-        ignoreStorage.emplace(currentPath, QStringList(), QStringList(), true);
+        ignoreStorage.emplace(currentPath, QStringList(), QStringList(), true,
+                              Config::instance().gitignoreOptions());
     SearchIgnore* ignore = ignoreStorage ? &*ignoreStorage : nullptr;
 
     CopyStats stats;

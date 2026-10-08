@@ -1,6 +1,8 @@
 #include "CopyDialog.h"
 
+#include "Config.h"
 #include "FileOperations.h"
+#include "GitignoreOptionsWidget.h"
 #include "SearchIgnore.h"
 #include "SizeFormat.h"
 
@@ -35,11 +37,23 @@ CopyDialog::CopyDialog(const QString& title, const QString& label, const QString
                                         "files add rules, ! includes again. The .git directory is "
                                         "skipped too."));
         layout->addWidget(m_gitignoreCheck);
+        // Shared with Show > Custom and Find Files.
+        m_gitignoreOptions = new GitignoreOptionsWidget(this);
+        layout->addWidget(m_gitignoreOptions);
         // A shown count no longer matches: count again.
-        connect(m_gitignoreCheck, &QCheckBox::toggled, this, [this] {
+        const auto recount = [this] {
             if (m_countButton && !m_countLabel->text().isEmpty())
                 startCounting();
+        };
+        connect(m_gitignoreCheck, &QCheckBox::toggled, this, [this, recount](bool checked) {
+            m_gitignoreOptions->setEnabled(checked);
+            recount();
         });
+        connect(m_gitignoreOptions, &GitignoreOptionsWidget::changed, this, [this, recount] {
+            if (m_gitignoreCheck->isChecked())
+                recount();
+        });
+        m_gitignoreOptions->setEnabled(false);
     }
 
     if (offerCount) {
@@ -95,9 +109,23 @@ void CopyDialog::setUseGitignore(bool use)
         m_gitignoreCheck->setChecked(use);
 }
 
+GitignoreOptions CopyDialog::gitignoreOptions() const
+{
+    return m_gitignoreOptions ? m_gitignoreOptions->options() : Config::instance().gitignoreOptions();
+}
+
+void CopyDialog::storeGitignoreOptions() const
+{
+    if (m_gitignoreOptions)
+        m_gitignoreOptions->storeInConfig();
+}
+
 std::optional<FileOperations::CopyTotals> CopyDialog::totals() const
 {
-    if (!m_countComplete || m_countedWithGitignore != useGitignore())
+    const GitignoreOptions options = gitignoreOptions();
+    if (!m_countComplete || m_countedWithGitignore != useGitignore()
+        || (useGitignore() && (m_countedOptions.top != options.top
+                               || m_countedOptions.skipGitDir != options.skipGitDir)))
         return std::nullopt;
     return FileOperations::CopyTotals{m_count->files.load(), m_count->bytes.load()};
 }
@@ -122,11 +150,13 @@ void CopyDialog::startCounting()
     m_countComplete = false;
     const bool gitignore = useGitignore();
     m_countedWithGitignore = gitignore;
-    m_countThread = QThread::create([state, srcDir = m_srcDir, names = m_names, gitignore] {
+    m_countedOptions = gitignoreOptions();
+    m_countThread = QThread::create([state, srcDir = m_srcDir, names = m_names, gitignore,
+                                     options = m_countedOptions] {
         // The same skipping as the copy itself (executeCopyOrMove).
         std::optional<SearchIgnore> ignore;
         if (gitignore)
-            ignore.emplace(srcDir, QStringList(), QStringList(), true);
+            ignore.emplace(srcDir, QStringList(), QStringList(), true, options);
         quint64 files = 0, bytes = 0;
         FileOperations::countCopyWork(srcDir, names, files, bytes,
             [&state](quint64 f, quint64 b) {

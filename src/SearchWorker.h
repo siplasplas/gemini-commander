@@ -7,6 +7,8 @@
 #include <QDateTime>
 #include <QVector>
 
+#include "SearchIgnore.h"
+
 enum class ItemTypeFilter {
     FilesAndDirectories,  // Search both files and directories
     FilesOnly,            // Only files
@@ -45,6 +47,7 @@ struct SearchCriteria {
     QStringList ignoreDirPatterns;
     QStringList ignoreFilePatterns;
     bool useGitignore = false;
+    SearchIgnore::Options gitignoreOptions;
 
     ItemTypeFilter itemTypeFilter = ItemTypeFilter::FilesAndDirectories;  // Replaces directoriesOnly
 

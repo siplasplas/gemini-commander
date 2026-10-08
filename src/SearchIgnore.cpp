@@ -32,12 +32,36 @@ bool anyMatch(const QVector<QRegularExpression>& patterns, const QString& name)
 } // namespace
 
 SearchIgnore::SearchIgnore(const QString& root, const QStringList& dirPatterns,
-                           const QStringList& filePatterns, bool useGitignore)
+                           const QStringList& filePatterns, bool useGitignore,
+                           const Options& options)
     : m_root(QDir::cleanPath(QFileInfo(root).absoluteFilePath()))
     , m_dirPatterns(compileNames(dirPatterns))
     , m_filePatterns(compileNames(filePatterns))
     , m_useGitignore(useGitignore)
+    , m_skipGitDir(options.skipGitDir)
 {
+    // .gitignore files above the root count too: up to the git work tree
+    // top, or up to the highest .gitignore. Below $HOME the search stops
+    // before $HOME itself: a dotfiles repository in $HOME (often ignoring
+    // "*") would otherwise swallow every directory under it.
+    m_top = m_root;
+    if (m_useGitignore) {
+        const bool highestGitignore = options.top == Options::Top::HighestGitignore;
+        const QString marker = highestGitignore ? QStringLiteral("/.gitignore") : QStringLiteral("/.git");
+        const QString home = QDir::cleanPath(QDir::homePath());
+        const bool belowHome = m_root.startsWith(withSlash(home));
+        for (QString dir = m_root;; dir = QFileInfo(dir).path()) {
+            if (belowHome && dir == home)
+                break;
+            if (QFileInfo::exists(dir + marker)) {
+                m_top = dir;
+                if (!highestGitignore)
+                    break;  // the nearest .git; for .gitignore keep going up
+            }
+            if (QDir(dir).isRoot())
+                break;
+        }
+    }
 }
 
 bool SearchIgnore::isEmpty() const
@@ -53,7 +77,7 @@ bool SearchIgnore::isIgnored(const QFileInfo& entry)
         return true;
     if (!m_useGitignore)
         return false;
-    if (isDir && name == QLatin1String(".git"))
+    if (m_skipGitDir && isDir && name == QLatin1String(".git"))
         return true;
     return gitignored(entry);
 }
@@ -142,8 +166,8 @@ std::shared_ptr<const SearchIgnore::Level> SearchIgnore::levelFor(const QString&
     if (const auto it = m_levels.constFind(dir); it != m_levels.cend())
         return it.value();
     auto level = std::make_shared<Level>();
-    // .gitignore files count from the search root down.
-    if (dir != m_root && dir.startsWith(withSlash(m_root)))
+    // .gitignore files count from the work tree top (or the root) down.
+    if (dir != m_top && dir.startsWith(withSlash(m_top)))
         level->parent = levelFor(QFileInfo(dir).path());
     level->rules = readGitignore(dir);
     std::shared_ptr<const Level> result = level;

@@ -181,6 +181,10 @@ add_executable(${PROJECT_NAME}
         src/SearchWorker.cpp
         src/SearchIgnore.cpp
         src/SearchIgnore.h
+        src/PanelFilter.cpp
+        src/PanelFilter.h
+        src/GitignoreOptionsWidget.cpp
+        src/GitignoreOptionsWidget.h
         src/DistroInfo.cpp
         src/DistroInfo.h
         src/DistroInfoDialog.cpp

@@ -13,6 +13,7 @@
 #include <QVector>
 
 class SearchWorker;
+class GitignoreOptionsWidget;
 class QDateEdit;
 
 // Raw search result data
@@ -134,6 +135,7 @@ private:
     QLineEdit* m_ignoreDirsEdit;
     QLineEdit* m_ignoreFilesEdit;
     QCheckBox* m_useGitignoreCheck;
+    GitignoreOptionsWidget* m_gitignoreOptions = nullptr;
 
     // File content filter (unified combobox)
     QComboBox* m_fileContentFilterCombo;

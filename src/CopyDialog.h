@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FileOperations.h"
+#include "SearchIgnore.h"
 
 #include <QDialog>
 #include <QStringList>
@@ -9,6 +10,7 @@
 #include <atomic>
 #include <memory>
 
+class GitignoreOptionsWidget;
 class QCheckBox;
 class QLabel;
 class QLineEdit;
@@ -38,6 +40,10 @@ public:
     /// Checkbox state; false when it is not offered.
     bool useGitignore() const;
     void setUseGitignore(bool use);
+    /// The .gitignore options shown (the configured ones when not offered).
+    GitignoreOptions gitignoreOptions() const;
+    /// Writes the shown .gitignore options to Config (without saving).
+    void storeGitignoreOptions() const;
     /// The finished count (not stopped), for the current checkbox state.
     std::optional<FileOperations::CopyTotals> totals() const;
 
@@ -58,6 +64,7 @@ private:
     QStringList m_names;
     QLineEdit* m_destEdit = nullptr;
     QCheckBox* m_gitignoreCheck = nullptr;
+    GitignoreOptionsWidget* m_gitignoreOptions = nullptr;
     QPushButton* m_countButton = nullptr;
     QPushButton* m_okButton = nullptr;
     QLabel* m_countLabel = nullptr;
@@ -65,6 +72,7 @@ private:
     std::shared_ptr<CountState> m_count;
     bool m_countComplete = false;       ///< m_count holds a finished count
     bool m_countedWithGitignore = false;
+    GitignoreOptions m_countedOptions;
     bool m_acceptWhenCounted = false;   ///< OK pressed while counting
     QTimer m_countTimer;  ///< refreshes the label while counting
 };

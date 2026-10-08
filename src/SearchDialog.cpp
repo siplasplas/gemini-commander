@@ -7,6 +7,7 @@
 #include <QGroupBox>
 #include <QDateEdit>
 #include "Config.h"
+#include "GitignoreOptionsWidget.h"
 #include <qxfiledialog.h>
 #include <QFileInfo>
 #include <QDir>
@@ -541,14 +542,18 @@ void SearchDialog::createAdvancedTab()
     skipLayout->addRow(tr("Files:"), m_ignoreFilesEdit);
     m_useGitignoreCheck = new QCheckBox(tr("Skip what .gitignore files ignore"), skipGroup);
     m_useGitignoreCheck->setToolTip(tr("Reads .gitignore from the search directory down; deeper "
-                                       "files add rules and '!' includes again. The .git "
-                                       "directory is skipped too."));
+                                       "files add rules and '!' includes again."));
     skipLayout->addRow(m_useGitignoreCheck);
+    // Shared with Show > Custom and Copy.
+    m_gitignoreOptions = new GitignoreOptionsWidget(skipGroup);
+    skipLayout->addRow(m_gitignoreOptions);
+    connect(m_useGitignoreCheck, &QCheckBox::toggled, m_gitignoreOptions, &QWidget::setEnabled);
 
     const auto& config = Config::instance();
     m_ignoreDirsEdit->setText(config.searchIgnoreDirs().join(QStringLiteral(";")));
     m_ignoreFilesEdit->setText(config.searchIgnoreFiles().join(QStringLiteral(";")));
     m_useGitignoreCheck->setChecked(config.searchUseGitignore());
+    m_gitignoreOptions->setEnabled(m_useGitignoreCheck->isChecked());
 
     layout->addWidget(skipGroup);
 
@@ -704,11 +709,14 @@ void SearchDialog::onStartSearch()
     criteria.ignoreDirPatterns = patternList(m_ignoreDirsEdit->text());
     criteria.ignoreFilePatterns = patternList(m_ignoreFilesEdit->text());
     criteria.useGitignore = m_useGitignoreCheck->isChecked();
+    criteria.gitignoreOptions = m_gitignoreOptions->options();
     {
         auto& config = Config::instance();
         config.setSearchIgnoreDirs(criteria.ignoreDirPatterns);
         config.setSearchIgnoreFiles(criteria.ignoreFilePatterns);
         config.setSearchUseGitignore(criteria.useGitignore);
+        if (criteria.useGitignore)
+            m_gitignoreOptions->storeInConfig();
         config.save();
     }
 

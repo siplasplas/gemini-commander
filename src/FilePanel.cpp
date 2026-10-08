@@ -24,6 +24,8 @@
 #include <QStandardPaths>
 #include <QCoreApplication>
 #include <QDialogButtonBox>
+#include <QCheckBox>
+#include <QFormLayout>
 #include <QDebug>
 
 #include "FilePanel.h"
@@ -37,6 +39,7 @@
 #include <QDateTime>
 #include <QMimeDatabase>
 #include "FileOperations.h"
+#include "GitignoreOptionsWidget.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -585,17 +588,43 @@ void FilePanel::loadDirectory() {
         return;
     }
     entries.clear();
+    const auto keep = filterPredicate();
     QDirIterator it(currentPath, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden,
                     QDirIterator::NoIteratorFlags);
     while (it.hasNext()) {
         it.next();
         QFileInfo info = it.fileInfo();
+        if (keep && !keep(info))
+            continue;
         PanelEntry entry(info);
         entries.append(entry);
     }
     sortEntriesApplyModel();
     emit directoryChanged(currentPath);
     emit selectionChanged();
+}
+
+std::function<bool(const QFileInfo&)> FilePanel::filterPredicate() const {
+    if (m_filter.showsAll())
+        return {};
+    // One matcher per call: it caches the .gitignore files it has read.
+    auto matcher = std::make_shared<PanelFilterMatcher>(m_filter, currentPath);
+    return [matcher](const QFileInfo& entry) { return matcher->accepts(entry); };
+}
+
+void FilePanel::setFilter(const PanelFilter& filter) {
+    m_filter = filter;
+    reloadKeepingCurrent();
+}
+
+void FilePanel::reloadKeepingCurrent() {
+    if (insideArchive)
+        return;
+    const QModelIndex idx = currentIndex();
+    const QString relPath = idx.isValid() ? getRowRelPath(idx.row()) : QString();
+    branchMode = false;
+    loadDirectory();
+    selectEntryByRelPath(relPath);
 }
 
 QString FilePanel::getRowName(int row) const {

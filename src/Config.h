@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QMap>
 #include "SizeFormat.h"
+#include "SearchIgnore.h"
 
 struct FavoriteDir {
   QString path;
@@ -175,6 +176,15 @@ public:
   bool searchUseGitignore() const { return m_searchUseGitignore; }
   void setSearchUseGitignore(bool use) { m_searchUseGitignore = use; }
 
+  // Show > Custom (Ctrl+F12): the last masks and .gitignore choice.
+  QStringList showCustomMasks() const { return m_showCustomMasks; }
+  void setShowCustomMasks(const QStringList& masks) { m_showCustomMasks = masks; }
+  bool showCustomGitignore() const { return m_showCustomGitignore; }
+  void setShowCustomGitignore(bool use) { m_showCustomGitignore = use; }
+  // How .gitignore files are used everywhere (panel, Find Files, Copy); set in Show > Custom.
+  SearchIgnore::Options gitignoreOptions() const { return m_gitignoreOptions; }
+  void setGitignoreOptions(const SearchIgnore::Options& options) { m_gitignoreOptions = options; }
+
   // Compare directories settings
   bool compareIgnoreTime() const { return m_compareIgnoreTime; }
   void setCompareIgnoreTime(bool ignore) { m_compareIgnoreTime = ignore; }
@@ -328,6 +338,9 @@ private:
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;
   bool m_searchUseGitignore = false;
+  QStringList m_showCustomMasks;
+  bool m_showCustomGitignore = false;
+  SearchIgnore::Options m_gitignoreOptions;
   bool m_syntaxDownloadDeclined = false;
 };
 

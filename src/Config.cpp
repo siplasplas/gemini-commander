@@ -325,6 +325,21 @@ bool Config::load(const QString& path)
                 m_searchUseGitignore = *b;
         }
 
+        // [show] section (Show > Custom)
+        if (tbl.contains("show") && tbl["show"].is_table()) {
+            auto& show = *tbl["show"].as_table();
+            if (auto s = show["custom_masks"].value<std::string>())
+                m_showCustomMasks = QString::fromStdString(*s).split(';', Qt::SkipEmptyParts);
+            if (auto b = show["custom_gitignore"].value<bool>())
+                m_showCustomGitignore = *b;
+            if (auto s = show["gitignore_top"].value<std::string>())
+                m_gitignoreOptions.top = *s == "highest_gitignore"
+                    ? SearchIgnore::Options::Top::HighestGitignore
+                    : SearchIgnore::Options::Top::NearestGit;
+            if (auto b = show["gitignore_skip_git_dir"].value<bool>())
+                m_gitignoreOptions.skipGitDir = *b;
+        }
+
         // [viewer] section (position relative to main window)
         if (tbl.contains("viewer")) {
             auto& viewer = *tbl["viewer"].as_table();
@@ -585,6 +600,16 @@ bool Config::save() const
     searchTbl.insert("ignore_files", ignoreFilesArr);
     searchTbl.insert("use_gitignore", m_searchUseGitignore);
     tbl.insert("search", searchTbl);
+
+    // [show] section (Show > Custom)
+    toml::table showTbl;
+    showTbl.insert("custom_masks", m_showCustomMasks.join(';').toStdString());
+    showTbl.insert("custom_gitignore", m_showCustomGitignore);
+    showTbl.insert("gitignore_top",
+                   m_gitignoreOptions.top == SearchIgnore::Options::Top::HighestGitignore
+                       ? "highest_gitignore" : "nearest_git");
+    showTbl.insert("gitignore_skip_git_dir", m_gitignoreOptions.skipGitDir);
+    tbl.insert("show", showTbl);
 
     // [viewer] section (position relative to main window)
     toml::table viewerTbl;

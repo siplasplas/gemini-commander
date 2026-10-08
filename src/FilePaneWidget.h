@@ -39,6 +39,9 @@ public:
   void setCurrentPathRaw(const QString& path);
   void setCurrentPath(const QString& path);
   QString currentPath() const;
+  /// Shows the panel path, followed by "/[filter]" when a Show filter is on
+  /// (not while the path is being edited).
+  void showPath();
 
    Q_INVOKABLE bool doLocalSearch(QObject *obj, QKeyEvent *keyEvent);
 

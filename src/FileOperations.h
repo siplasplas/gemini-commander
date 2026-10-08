@@ -8,6 +8,7 @@
 #include <functional>
 #include <optional>
 
+class QFileInfo;
 class QWidget;
 class QProgressDialog;
 class FileOperationProgressDialog;
@@ -65,8 +66,10 @@ struct AtomicStats {
 // Calculate size with atomic stats for thread-safe progress updates
 void calculateEntrySizeAtomic(const QString& path, AtomicStats& stats, quint64 clusterSize, std::atomic<bool>* cancelFlag);
 
-// Collect statistics about directory to copy (file count, total size)
-void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag = nullptr);
+// Collect statistics about directory to copy (file count, total size).
+// Entries `keep` rejects are not counted (directories not entered).
+void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* cancelFlag = nullptr,
+                      const std::function<bool(const QFileInfo&)>& keep = {});
 
 // Count the actual copy work (regular files and their logical bytes) for the
 // given entries, used to drive byte-proportional progress. Uses SortedDirIterator

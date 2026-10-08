@@ -995,6 +995,34 @@ void MainWindow::setupUi() {
         showToolbarContextMenu(menuBar()->mapToGlobal(pos));
     });
 
+    // Show menu - which files the current panel shows (keys in keys.toml)
+    auto* filterGroup = new QActionGroup(this);
+    const auto addFilterAction = [&](const QString& text, QKeyCombination key, PanelFilter::Mode mode,
+                                     bool (FilePanel::*handler)(QObject*, QKeyEvent*)) {
+        QAction* action = filterGroup->addAction(text);
+        action->setCheckable(true);
+        action->setShortcut(QKeySequence(key));
+        action->setData(static_cast<int>(mode));
+        connect(action, &QAction::triggered, this, [this, handler]() {
+            if (FilePanel* panel = currentFilePanel())
+                (panel->*handler)(nullptr, nullptr);
+        });
+        showMenu->addAction(action);
+    };
+    addFilterAction(tr("All Files"), Qt::CTRL | Qt::Key_F10, PanelFilter::Mode::AllFiles,
+                    &FilePanel::doShowAllFiles);
+    addFilterAction(tr("Programs"), Qt::CTRL | Qt::Key_F11, PanelFilter::Mode::Programs,
+                    &FilePanel::doShowPrograms);
+    addFilterAction(tr("Custom..."), Qt::CTRL | Qt::Key_F12, PanelFilter::Mode::Custom,
+                    &FilePanel::doShowCustom);
+    connect(showMenu, &QMenu::aboutToShow, this, [this, filterGroup]() {
+        FilePanel* panel = currentFilePanel();
+        const int mode = static_cast<int>(panel ? panel->filter().mode : PanelFilter::Mode::AllFiles);
+        for (QAction* action : filterGroup->actions())
+            action->setChecked(action->data().toInt() == mode);
+    });
+    showMenu->addSeparator();
+
     // Show menu - Quick View
     QAction* quickViewAction = new QAction(tr("Quick View"), this);
     quickViewAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q));
@@ -1733,10 +1761,10 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
     if (offerGitignore) {
         params.useGitignore = dlg.useGitignore();
         auto& config = Config::instance();
-        if (config.copyUseGitignore() != params.useGitignore) {
-            config.setCopyUseGitignore(params.useGitignore);
-            config.save();
-        }
+        config.setCopyUseGitignore(params.useGitignore);
+        // Shared .gitignore options: the copy (executeCopyOrMove) reads them from Config.
+        dlg.storeGitignoreOptions();
+        config.save();
     }
     return params;
 }

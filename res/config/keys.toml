@@ -25,6 +25,10 @@ keys = [
 
     { key = "Insert",              handler = "doToggleMarkDown" },
 
+    { key = "Ctrl+F10",            handler = "doShowAllFiles" },
+    { key = "Ctrl+F11",            handler = "doShowPrograms" },
+    { key = "Ctrl+F12",            handler = "doShowCustom" },
+
     { key = "Ctrl+F3",             handler = "doSortByName" },
     { key = "Ctrl+F4",             handler = "doSortByExt" },
     { key = "Ctrl+F5",             handler = "doSortByDate" },

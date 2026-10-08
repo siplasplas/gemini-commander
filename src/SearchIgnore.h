@@ -9,23 +9,42 @@
 
 #include <memory>
 
+/// How .gitignore files are used (Show > Custom sets them, for all uses).
+struct GitignoreOptions {
+    /// Where .gitignore files start counting above the root. Below $HOME
+    /// neither search goes up to $HOME itself.
+    enum class Top {
+        NearestGit,       ///< the nearest directory with .git (the git work tree)
+        HighestGitignore  ///< the highest directory with a .gitignore, e.g. one
+                          ///< for a group of repositories
+    };
+    Top top = Top::NearestGit;
+    bool skipGitDir = true;  ///< also skip .git directories
+};
+
 /**
  * @class SearchIgnore
- * @brief Decides which entries a file search or a copy skips (and does not descend into)
+ * @brief Decides which entries a file search, a copy or a file panel skips
+ *        (and does not descend into)
  *
  * Two sources:
  * - name patterns for directories and for files, with `*` and `?`, matched
  *   against the entry name only (no paths), e.g. `.git`, `cmake-build*`;
- * - optionally the `.gitignore` files from the search root down: deeper
- *   files add rules, the last matching rule wins and `!` re-includes. The
- *   `.git` directory is skipped too.
+ * - optionally the `.gitignore` files from the search root down, and above
+ *   it up to the top of the git work tree the root is in (or up to the
+ *   highest .gitignore, see Options): deeper files add rules, the last
+ *   matching rule wins and `!` re-includes. The `.git` directory is skipped
+ *   too, unless Options say otherwise.
  *
- * Not thread-safe; a search worker or a copy operation owns one.
+ * Not thread-safe; a search worker, a copy operation or a panel owns one.
  */
 class SearchIgnore {
 public:
+    using Options = GitignoreOptions;
+
     SearchIgnore(const QString& root, const QStringList& dirPatterns,
-                 const QStringList& filePatterns, bool useGitignore);
+                 const QStringList& filePatterns, bool useGitignore,
+                 const Options& options = {});
 
     /// True when nothing would ever be skipped.
     bool isEmpty() const;
@@ -56,6 +75,8 @@ private:
     bool gitignored(const QFileInfo& entry);
 
     QString m_root;
+    QString m_top; ///< where .gitignore files start counting (see Options::Top)
+    bool m_skipGitDir = true;
     QVector<QRegularExpression> m_dirPatterns, m_filePatterns;
     bool m_useGitignore = false;
     QHash<QString, std::shared_ptr<const Level>> m_levels; ///< by directory path

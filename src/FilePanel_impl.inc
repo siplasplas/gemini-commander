@@ -36,14 +36,17 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
     if (!basePath.endsWith('/'))
         basePath += '/';
 
-    QDirIterator it(currentPath,
-                    QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden,
-                    QDirIterator::Subdirectories);
+    // Only the files the Show filter shows; directories it hides are not entered.
+    SortedDirIterator it(currentPath, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+    if (const auto keep = filterPredicate())
+        it.setEntryFilter(keep);
 
     int count = 0;
     while (it.hasNext() && !m_cancelOperation) {
         it.next();
         QFileInfo info = it.fileInfo();
+        if (info.isDir() || !info.exists())
+            continue;  // a directory, or only filtered entries were left
 
         // Calculate branch (relative path from currentPath to file's directory)
         QString filePath = info.absolutePath();
@@ -281,6 +284,70 @@ bool FilePanel::doSelectSameExtension(QObject *obj, QKeyEvent *keyEvent) {
     return false;
 }
 
+bool FilePanel::doShowAllFiles(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    setFilter(PanelFilter{});
+    return true;
+}
+
+bool FilePanel::doShowCustom(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    auto& config = Config::instance();
+
+    QDialog dialog(window());
+    dialog.setWindowTitle(tr("Show Custom"));
+    auto* form = new QFormLayout(&dialog);
+    auto* masksEdit = new QLineEdit(config.showCustomMasks().join(';'), &dialog);
+    masksEdit->setPlaceholderText(tr("e.g. *.cpp;*.h (empty = all files)"));
+    masksEdit->setToolTip(tr("File name masks with * and ?, separated by ';'. "
+                             "Directories are always shown."));
+    masksEdit->selectAll();
+    form->addRow(tr("Files:"), masksEdit);
+    auto* gitignoreCheck = new QCheckBox(tr("Hide what .gitignore files ignore"), &dialog);
+    gitignoreCheck->setToolTip(tr("Hides files and directories as Find Files and Copy skip them; "
+                                  "directory sizes (Space, Alt+Shift+Enter) leave them out too."));
+    gitignoreCheck->setChecked(config.showCustomGitignore());
+    form->addRow(gitignoreCheck);
+
+    // How .gitignore files are used: shared with Copy and Find Files.
+    auto* gitignoreOptions = new GitignoreOptionsWidget(&dialog);
+    form->addRow(gitignoreOptions);
+    gitignoreOptions->setEnabled(gitignoreCheck->isChecked());
+    connect(gitignoreCheck, &QCheckBox::toggled, gitignoreOptions, &QWidget::setEnabled);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    form->addRow(buttons);
+    dialog.resize(450, dialog.sizeHint().height());
+    if (dialog.exec() != QDialog::Accepted)
+        return true;
+
+    PanelFilter filter;
+    filter.mode = PanelFilter::Mode::Custom;
+    for (const QString& mask : masksEdit->text().split(';', Qt::SkipEmptyParts))
+        if (!mask.trimmed().isEmpty())
+            filter.masks << mask.trimmed();
+    filter.useGitignore = gitignoreCheck->isChecked();
+    config.setShowCustomMasks(filter.masks);
+    config.setShowCustomGitignore(filter.useGitignore);
+    gitignoreOptions->storeInConfig();
+    config.save();
+    setFilter(filter);
+    return true;
+}
+
+bool FilePanel::doShowPrograms(QObject *obj, QKeyEvent *keyEvent) {
+    Q_UNUSED(obj);
+    Q_UNUSED(keyEvent);
+    PanelFilter filter;
+    filter.mode = PanelFilter::Mode::Programs;
+    setFilter(filter);
+    return true;
+}
+
 bool FilePanel::doSortByDate(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -385,7 +452,8 @@ bool FilePanel::doToggleMarkTotalSize(QObject *obj, QKeyEvent *keyEvent) {
 
             entry->hasTotalSize = TotalSizeStatus::InPogress;
             model->refreshRow(row);
-            FileOperations::collectCopyStats(entry->info.absoluteFilePath(), stats, ok, &m_cancelOperation);
+            FileOperations::collectCopyStats(entry->info.absoluteFilePath(), stats, ok, &m_cancelOperation,
+                                             filterPredicate());
             if (ok) {
                 entry->totalSizeBytes = static_cast<std::size_t>(stats.totalBytes);
                 entry->hasTotalSize = TotalSizeStatus::Has;
@@ -410,6 +478,8 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
     m_cancelOperation = false;
     KeyRouter::instance().setOperationInProgress(true);
 
+    // Sizes of what the Show filter shows; one matcher for all directories.
+    const auto keep = filterPredicate();
     const int count = model->rowCount();
     for (int row = 0; row < count; ++row) {
         if (m_cancelOperation)
@@ -444,7 +514,7 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
         model->refreshRow(row);
         QApplication::processEvents();
 
-        collectCopyStats(entry.info.absoluteFilePath(), stats, ok, &m_cancelOperation);
+        collectCopyStats(entry.info.absoluteFilePath(), stats, ok, &m_cancelOperation, keep);
 
         if (m_cancelOperation) {
             entry.hasTotalSize = TotalSizeStatus::Unknown;
@@ -469,6 +539,13 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
     }
 
     KeyRouter::instance().setOperationInProgress(false);
+
+    // Sort again in the panel's order (e.g. largest first by size), keeping
+    // the cursor on the same entry; also after Escape, with the sizes so far.
+    const QString currentRel = getRowRelPath(currentIndex().row());
+    sortEntriesApplyModel();
+    selectEntryByRelPath(currentRel);
+
     emit selectionChanged();
     return true;
 }

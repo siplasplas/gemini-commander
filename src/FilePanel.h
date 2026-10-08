@@ -2,6 +2,7 @@
 #define PANEL_H
 
 #include "Archives.h"
+#include "PanelFilter.h"
 
 #include <QAbstractTableModel>
 #include <QDir>
@@ -174,6 +175,12 @@ public:
     bool updateEntryBranch(const QString& relPath, const QString& newBranch);
     bool addEntryFromPath(const QString& fullPath, const QString& branch = QString());
 
+    // Show menu: which files the panel shows (and counts in directory sizes)
+    const PanelFilter& filter() const { return m_filter; }
+    void setFilter(const PanelFilter& filter);
+    /// Keeps the entries the filter shows, for iterating below the panel directory.
+    std::function<bool(const QFileInfo&)> filterPredicate() const;
+
     // Archive browsing mode
     void enterArchive(const QString& archivePath);
     void exitArchive();
@@ -200,6 +207,8 @@ private:
     void updateRowMarking(int row, bool marked);
     int m_lastSelectedRow = -1;
     bool m_cancelOperation = false;  // Flag for canceling long-running operations
+    PanelFilter m_filter;
+    void reloadKeepingCurrent();
 
 signals:
     void selectionChanged();

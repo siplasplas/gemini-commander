@@ -16,6 +16,9 @@
     Q_INVOKABLE bool doSelectAll(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSelectGroup(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSelectSameExtension(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doShowAllFiles(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doShowCustom(QObject *obj, QKeyEvent *keyEvent);
+    Q_INVOKABLE bool doShowPrograms(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSortByDate(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSortByExt(QObject *obj, QKeyEvent *keyEvent);
     Q_INVOKABLE bool doSortByName(QObject *obj, QKeyEvent *keyEvent);

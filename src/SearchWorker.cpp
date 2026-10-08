@@ -120,7 +120,8 @@ void SearchWorker::startSearch()
     SortedDirIterator it(m_criteria.searchPath, filters);
     // Ignored entries are skipped, and ignored directories not entered.
     SearchIgnore ignore(m_criteria.searchPath, m_criteria.ignoreDirPatterns,
-                        m_criteria.ignoreFilePatterns, m_criteria.useGitignore);
+                        m_criteria.ignoreFilePatterns, m_criteria.useGitignore,
+                        m_criteria.gitignoreOptions);
     if (!ignore.isEmpty())
         it.setEntryFilter([&ignore](const QFileInfo& entry) { return !ignore.isIgnored(entry); });
 

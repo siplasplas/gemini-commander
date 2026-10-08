@@ -12,6 +12,7 @@
 #include <QFileInfo>
 #include <QMenu>
 #include <QEvent>
+#include <QTimer>
 #include <QTabWidget>
 #include <mrutabwidget.h>
 
@@ -132,30 +133,44 @@ FilePaneWidget::FilePaneWidget(Side side, QWidget* parent)
 
 void FilePaneWidget::setCurrentPathRaw(const QString& path)
 {
-    m_pathEdit->setText(path);
     if (m_filePanel->currentPath != path) {
         m_filePanel->currentPath = path;
     }
+    showPath();
 }
 
 void FilePaneWidget::setCurrentPath(const QString& path)
 {
-    m_pathEdit->setText(path);
     if (m_filePanel->currentPath != path) {
         m_filePanel->currentPath = path;
         m_filePanel->loadDirectory();
     }
+    showPath();
 }
 
 QString FilePaneWidget::currentPath() const
 {
-    return m_pathEdit->text();
+    return m_filePanel->currentPath;
+}
+
+void FilePaneWidget::showPath()
+{
+    // While the path is edited it stays a plain path.
+    if (m_pathEdit->hasFocus())
+        return;
+    QString text = m_filePanel->currentPath;
+    // Show menu filter: say that not everything is listed, e.g. "/src/[*.cpp]".
+    const QString filter = m_filePanel->filter().description();
+    if (!filter.isEmpty())
+        text += (text.endsWith('/') ? QString() : QStringLiteral("/")) + '[' + filter + ']';
+    m_pathEdit->setText(text);
 }
 
 void FilePaneWidget::onDirectoryChanged(const QString& path)
 {
-    m_pathEdit->setText(path);
-    addToHistory(path);
+    Q_UNUSED(path);
+    showPath();
+    addToHistory(m_filePanel->currentPath);
 
     // Update tab title to last path component
     // QTabWidget uses internal QStackedWidget, so we need to traverse up
@@ -424,6 +439,10 @@ void FilePaneWidget::navigateToHistoryIndex(int index)
 
 bool FilePaneWidget::eventFilter(QObject *obj, QEvent *event)
 {
+    if (obj == m_pathEdit && event->type() == QEvent::FocusIn && m_filePanel) {
+        // Edit the plain path, without the "/[filter]" shown after it.
+        m_pathEdit->setText(m_filePanel->currentPath);
+    }
     if (obj == m_pathEdit && event->type() == QEvent::FocusOut) {
         // Restore path edit to current panel path on focus loss
         restorePathEdit();
@@ -435,6 +454,9 @@ void FilePaneWidget::restorePathEdit()
 {
     if (m_pathEdit && m_filePanel) {
         m_pathEdit->setText(m_filePanel->currentPath);
+        // After focus loss (or Escape with the focus going back to the
+        // panel) the filter is shown again.
+        QTimer::singleShot(0, this, &FilePaneWidget::showPath);
     }
 }
 
