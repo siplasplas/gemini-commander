@@ -293,6 +293,8 @@ bool Config::load(const QString& path)
                 m_editorWordWrap = *b;
             if (auto b = editor["show_whitespace"].value<bool>())
                 m_editorShowWhitespace = *b;
+            if (auto s = editor["legacy_language"].value<std::string>())
+                m_editorLegacyLanguage = QString::fromStdString(*s);
             if (auto b = editor["syntax_download_declined"].value<bool>())
                 m_syntaxDownloadDeclined = *b;
             m_editorMruPaths.clear();
@@ -544,6 +546,7 @@ bool Config::save() const
     editorTbl.insert("mru_max_count", static_cast<int64_t>(m_editorMruMaxCount));
     editorTbl.insert("word_wrap", m_editorWordWrap);
     editorTbl.insert("show_whitespace", m_editorShowWhitespace);
+    editorTbl.insert("legacy_language", m_editorLegacyLanguage.toStdString());
     editorTbl.insert("syntax_download_declined", m_syntaxDownloadDeclined);
     toml::array mruArr;
     for (const QString& p : m_editorMruPaths)

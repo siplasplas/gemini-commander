@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "SizeFormat.h"
 #include "StringListEditorDialog.h"
+#include <qce/encoding/Encoding.h>
 
 #ifdef Q_OS_LINUX
 #include <QFile>
@@ -259,6 +260,7 @@ void ConfigDialog::setupUi()
     m_categoryList->addItem(tr("History"));
     m_categoryList->addItem(tr("General"));
     m_categoryList->addItem(tr("Comparer"));
+    m_categoryList->addItem(tr("Editor"));
     m_categoryList->setCurrentRow(0);
 
     contentLayout->addWidget(m_categoryList);
@@ -271,6 +273,7 @@ void ConfigDialog::setupUi()
     createHistoryPage();
     createGeneralPage();
     createComparerPage();
+    createEditorPage();
 
     contentLayout->addWidget(m_pagesStack, 1);
 
@@ -782,6 +785,32 @@ void ConfigDialog::createComparerPage()
     m_pagesStack->addWidget(page);
 }
 
+void ConfigDialog::createEditorPage()
+{
+    auto* page = new QWidget();
+    auto* layout = new QVBoxLayout(page);
+
+    auto* encodingGroup = new QGroupBox(tr("Encoding detection"), page);
+    auto* encodingLayout = new QFormLayout(encodingGroup);
+    m_legacyLanguage = new QComboBox(encodingGroup);
+    m_legacyLanguage->addItem(tr("Automatic"), QString());
+    for (const auto& language : qce::encoding::availableLanguages())
+        m_legacyLanguage->addItem(QStringLiteral("%1 (%2)").arg(language.name, language.code),
+                                  language.code);
+    encodingLayout->addRow(tr("Language of files not in UTF-8:"), m_legacyLanguage);
+    auto* info = new QLabel(tr("For files that are not UTF-8, only the code pages of this "
+                               "language are considered (e.g. Polish: cp1250, ISO 8859-2, "
+                               "cp852). Faster and more reliable than guessing the language "
+                               "from a few words. UTF-8 files are recognised regardless."),
+                            encodingGroup);
+    info->setWordWrap(true);
+    encodingLayout->addRow(info);
+
+    layout->addWidget(encodingGroup);
+    layout->addStretch();
+    m_pagesStack->addWidget(page);
+}
+
 void ConfigDialog::loadSettings()
 {
     const auto& cfg = Config::instance();
@@ -878,6 +907,10 @@ void ConfigDialog::loadSettings()
     m_copyChunkSize->setValue(static_cast<int>(cfg.copyChunkSize() / (1024 * 1024)));
     m_syncBatchThreshold->setValue(cfg.syncBatchThresholdMB());
     m_syncBatchInterval->setValue(cfg.syncBatchIntervalMs());
+
+    // Editor page
+    const int languageIdx = m_legacyLanguage->findData(cfg.editorLegacyLanguage());
+    m_legacyLanguage->setCurrentIndex(languageIdx >= 0 ? languageIdx : 0);
 }
 
 void ConfigDialog::saveSettings()
@@ -966,6 +999,9 @@ void ConfigDialog::saveSettings()
     cfg.setCopyChunkSize(static_cast<qint64>(m_copyChunkSize->value()) * 1024 * 1024);
     cfg.setSyncBatchThresholdMB(m_syncBatchThreshold->value());
     cfg.setSyncBatchIntervalMs(m_syncBatchInterval->value());
+
+    // Editor page
+    cfg.setEditorLegacyLanguage(m_legacyLanguage->currentData().toString());
 
     // Save to file
     cfg.save();

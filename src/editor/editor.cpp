@@ -166,8 +166,10 @@ bool Editor::readFile(const QString& path, bool resetSyntax, const QString& enco
         return false;
 
     // UTF or a legacy code page (cp1250, ISO 8859-2, ...), detected unless
-    // given; BOM, CRLF and the final line break are restored on save.
-    const auto decoded = qce::encoding::decode(bytes, encoding);
+    // given; BOM, line breaks and the final line break are restored on save.
+    // A configured language limits code pages to that language's.
+    const QString legacyLanguage = Config::instance().editorLegacyLanguage();
+    const auto decoded = qce::encoding::decode(bytes, encoding, legacyLanguage);
     if (!decoded.ok)
         return false;
 
@@ -177,14 +179,20 @@ bool Editor::readFile(const QString& path, bool resetSyntax, const QString& enco
         const QSignalBlocker block(m_encodingGuard);
         m_encodingGuard->setFormat(decoded.format);
     }
-    // The language is guessed in the background; the file is shown at once.
+    // A file not in UTF-8 is in the configured language; otherwise the
+    // language is guessed in the background and the file is shown at once.
     m_language = {};
     const int request = ++m_languageRequest;
-    qce::encoding::detectLanguageAsync(bytes, this, [this, request](const qce::encoding::Language& language) {
-        if (request != m_languageRequest) return;
-        m_language = language;
-        emit statusChanged();
-    });
+    if (!legacyLanguage.isEmpty() && !qce::encoding::isUnicode(decoded.format.encoding)) {
+        for (const auto& language : qce::encoding::availableLanguages())
+            if (language.code == legacyLanguage) m_language = language;
+    } else {
+        qce::encoding::detectLanguageAsync(bytes, this, [this, request](const qce::encoding::Language& language) {
+            if (request != m_languageRequest) return;
+            m_language = language;
+            emit statusChanged();
+        });
+    }
     emit statusChanged();
     m_edit->area()->undoStack()->clear();
     setPath(path);

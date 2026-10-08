@@ -64,6 +64,7 @@ private:
     void createHistoryPage();
     void createGeneralPage();
     void createComparerPage();
+    void createEditorPage();
 
     void loadSettings();
     void saveSettings();
@@ -143,4 +144,7 @@ private:
     QCheckBox* m_compareIgnoreSize;
     QComboBox* m_compareToolCombo;
     QPushButton* m_editToolListBtn;
+
+    // Editor page
+    QComboBox* m_legacyLanguage; ///< data: cpg language code, "" = automatic
 };

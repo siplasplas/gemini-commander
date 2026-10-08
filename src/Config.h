@@ -195,6 +195,10 @@ public:
   void setEditorWordWrap(bool wrap) { m_editorWordWrap = wrap; }
   bool editorShowWhitespace() const { return m_editorShowWhitespace; }
   void setEditorShowWhitespace(bool show) { m_editorShowWhitespace = show; }
+  // Language assumed for files not in UTF-8 (cpg code, e.g. "pl"): code page
+  // detection then considers only that language's code pages. Empty = automatic.
+  QString editorLegacyLanguage() const { return m_editorLegacyLanguage; }
+  void setEditorLegacyLanguage(const QString& code) { m_editorLegacyLanguage = code; }
   // The user declined downloading Kate syntax definitions; don't ask on startup again
   bool syntaxDownloadDeclined() const { return m_syntaxDownloadDeclined; }
   void setSyntaxDownloadDeclined(bool declined) { m_syntaxDownloadDeclined = declined; }
@@ -306,6 +310,7 @@ private:
   QStringList m_editorMruPaths;
   bool m_editorWordWrap = true;
   bool m_editorShowWhitespace = false;
+  QString m_editorLegacyLanguage;
   bool m_syntaxDownloadDeclined = false;
 };
 

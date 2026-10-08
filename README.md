@@ -108,7 +108,7 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.5)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.10.0)` and `find_package(qcodeedit-encoding 1.10.0)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.11.0)` and `find_package(qcodeedit-encoding 1.11.0)` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -127,6 +127,17 @@ downloads or updates them later). They are stored in
 programs. Without them, only C/C++ files are highlighted (built-in rules).
 The **Default** theme is Breeze Light, or Breeze Dark on a dark desktop; before
 the themes are downloaded the editor shows black text on white.
+
+### File encodings
+
+The editor detects each file's encoding. UTF-8/16/32 are recognised directly;
+for other files the code page is chosen from the text around non-ASCII
+characters. **Configuration > Editor > Language of files not in UTF-8** sets the
+language of such files (e.g. Polish): only its code pages are then considered
+(for Polish cp1250, ISO 8859-2, cp852, …), which is faster and does not misread
+a file whose national characters are only in a few comments. The status bar
+then shows that language for files not in UTF-8. **Automatic** (the default)
+guesses the language from the text.
 
 ## Building
 
