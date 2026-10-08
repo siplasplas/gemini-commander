@@ -324,11 +324,13 @@ void calculateEntriesSize(const QString& basePath, const QStringList& names, Cop
 
 void countCopyWork(const QString& basePath, const QStringList& names,
                    quint64& outFiles, quint64& outBytes,
-                   FileOperationProgressDialog* progress, SearchIgnore* ignore) {
+                   const std::function<bool(quint64, quint64)>& keepGoing, SearchIgnore* ignore) {
     QDir dir(basePath);
     int counter = 0;
+    // Reports every 200 entries; false stops counting.
+    const auto step = [&] { return ++counter % 200 != 0 || keepGoing(outFiles, outBytes); };
     for (const QString& name : names) {
-        if (progress && progress->wasCanceled())
+        if (!step())
             return;
 
         const QString absPath = dir.absoluteFilePath(name);
@@ -351,23 +353,18 @@ void countCopyWork(const QString& basePath, const QStringList& names,
             if (ignore)
                 it.setEntryFilter([ignore](const QFileInfo& entry) { return !ignore->isIgnored(entry); });
             while (it.hasNext()) {
-                if (progress && progress->wasCanceled())
-                    return;
                 it.next();
                 const QFileInfo entryInfo = it.fileInfo();
-                if (entryInfo.isSymLink())
-                    continue;
-                if (entryInfo.isFile()) {
+                if (!entryInfo.isSymLink() && entryInfo.isFile()) {
                     outFiles++;
                     outBytes += static_cast<quint64>(entryInfo.size());
                 }
-                if (progress && (++counter % 200 == 0))
-                    progress->updateCounting(outFiles, outBytes);
+                if (!step())
+                    return;
             }
         }
     }
-    if (progress)
-        progress->updateCounting(outFiles, outBytes);
+    keepGoing(outFiles, outBytes);
 }
 
 QMessageBox::StandardButton askOverwriteMulti(QWidget *parent, const QString &name) {
@@ -856,7 +853,8 @@ void removeExisting(const QString &path) {
 }
 
 QString executeCopyOrMove(const QString &currentPath, const QStringList &names, const QString &destInput,
-                            bool move, QWidget *parent, bool useGitignore) {
+                            bool move, QWidget *parent, bool useGitignore,
+                            std::optional<CopyTotals> totals) {
     if (names.isEmpty())
         return {};
 
@@ -894,12 +892,19 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     if (fastMove) {
         // Fast renames: nothing to weigh by bytes, drive progress by item count.
         progressDlg.setTotals(static_cast<quint64>(names.size()), 0);
+    } else if (totals) {
+        // Counted already (the copy dialog's "Count").
+        progressDlg.setTotals(totals->files, totals->bytes);
     } else {
         // Count the real work (files + bytes) up front so progress is
         // byte-proportional. Uses SortedDirIterator (does not follow symlinks).
         quint64 totalFiles = 0;
         quint64 totalBytes = 0;
-        countCopyWork(currentPath, names, totalFiles, totalBytes, &progressDlg, ignore);
+        countCopyWork(currentPath, names, totalFiles, totalBytes,
+                      [&progressDlg](quint64 files, quint64 bytes) {
+                          progressDlg.updateCounting(files, bytes);
+                          return !progressDlg.wasCanceled();
+                      }, ignore);
         if (progressDlg.wasCanceled())
             return {};
         progressDlg.setTotals(totalFiles, totalBytes);

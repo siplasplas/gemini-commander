@@ -5,6 +5,8 @@
 #include <QString>
 #include <QStringList>
 #include <atomic>
+#include <functional>
+#include <optional>
 
 class QWidget;
 class QProgressDialog;
@@ -15,12 +17,19 @@ namespace FileOperations {
 
 class DestSync;  // defined in FileOperations.cpp
 
+/// Regular files and their bytes to copy, as counted by countCopyWork().
+struct CopyTotals {
+    quint64 files = 0;
+    quint64 bytes = 0;
+};
+
 struct Params {
     bool valid = false;
     QString srcPath;
     QStringList names;
     QString destPath;
     bool useGitignore = false;  ///< copy: skip what .gitignore files ignore
+    std::optional<CopyTotals> totals;  ///< counted in the dialog already
 };
 
 struct CopyStats {
@@ -61,11 +70,14 @@ void collectCopyStats(const QString& srcPath, CopyStats& stats, bool& ok, bool* 
 
 // Count the actual copy work (regular files and their logical bytes) for the
 // given entries, used to drive byte-proportional progress. Uses SortedDirIterator
-// so it does not follow symbolic links. Updates the progress dialog while scanning.
+// so it does not follow symbolic links. keepGoing(files, bytes) gets the counts
+// so far every 200 entries and once at the end; counting stops when it returns
+// false. Thread-safe as long as `ignore` is used by this call only.
 // Entries `ignore` skips are not counted (directories not entered).
 void countCopyWork(const QString& basePath, const QStringList& names,
                    quint64& outFiles, quint64& outBytes,
-                   FileOperationProgressDialog* progress, SearchIgnore* ignore = nullptr);
+                   const std::function<bool(quint64, quint64)>& keepGoing,
+                   SearchIgnore* ignore = nullptr);
 
 // Copy directory recursively with byte-proportional progress tracking.
 // stats.symlinks is updated if symlinks are skipped (cross-FS).
@@ -87,9 +99,12 @@ bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 
 // useGitignore (copy only): skip what .gitignore files ignore, read from
 // currentPath down, exactly as Find Files does (SearchIgnore).
+// totals: the work counted beforehand (with the same useGitignore), so it is
+// not counted again; without it the files are counted first.
 QString executeCopyOrMove(const QString& currentPath, const QStringList& names,
                     const QString& destInput, bool move,
-                    QWidget* parent, bool useGitignore = false);
+                    QWidget* parent, bool useGitignore = false,
+                    std::optional<CopyTotals> totals = std::nullopt);
 
 } // namespace FileOperations
 

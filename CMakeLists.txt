@@ -168,6 +168,8 @@ target_link_libraries(stub_generator PRIVATE
 add_executable(${PROJECT_NAME}
         src/main.cpp
         src/MainWindow.cpp
+        src/CopyDialog.cpp
+        src/CopyDialog.h
         src/FilePanel.cpp
         src/FilePanel.h
         src/SearchDialog.cpp
