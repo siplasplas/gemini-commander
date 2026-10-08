@@ -306,6 +306,23 @@ bool Config::load(const QString& path)
             }
         }
 
+        // [search] section (Find Files: skipped entries)
+        if (tbl.contains("search") && tbl["search"].is_table()) {
+            auto& search = *tbl["search"].as_table();
+            const auto readList = [&search](const char* key) {
+                QStringList list;
+                if (search.contains(key) && search[key].is_array())
+                    for (const auto& node : *search[key].as_array())
+                        if (auto s = node.value<std::string>())
+                            list.append(QString::fromStdString(*s));
+                return list;
+            };
+            m_searchIgnoreDirs = readList("ignore_dirs");
+            m_searchIgnoreFiles = readList("ignore_files");
+            if (auto b = search["use_gitignore"].value<bool>())
+                m_searchUseGitignore = *b;
+        }
+
         // [viewer] section (position relative to main window)
         if (tbl.contains("viewer")) {
             auto& viewer = *tbl["viewer"].as_table();
@@ -553,6 +570,18 @@ bool Config::save() const
         mruArr.push_back(p.toStdString());
     editorTbl.insert("mru_paths", mruArr);
     tbl.insert("editor", editorTbl);
+
+    // [search] section (Find Files: skipped entries)
+    toml::table searchTbl;
+    toml::array ignoreDirsArr, ignoreFilesArr;
+    for (const QString& p : m_searchIgnoreDirs)
+        ignoreDirsArr.push_back(p.toStdString());
+    for (const QString& p : m_searchIgnoreFiles)
+        ignoreFilesArr.push_back(p.toStdString());
+    searchTbl.insert("ignore_dirs", ignoreDirsArr);
+    searchTbl.insert("ignore_files", ignoreFilesArr);
+    searchTbl.insert("use_gitignore", m_searchUseGitignore);
+    tbl.insert("search", searchTbl);
 
     // [viewer] section (position relative to main window)
     toml::table viewerTbl;

@@ -166,6 +166,15 @@ public:
   SizeFormat::SizeKind storageSizeFormat() const { return m_storageSizeFormat; }
   void setStorageSizeFormat(SizeFormat::SizeKind format) { m_storageSizeFormat = format; }
 
+  // Find Files (Alt+F7): entries skipped during a search, set in that dialog.
+  // Name patterns with * and ?, no paths.
+  QStringList searchIgnoreDirs() const { return m_searchIgnoreDirs; }
+  void setSearchIgnoreDirs(const QStringList& patterns) { m_searchIgnoreDirs = patterns; }
+  QStringList searchIgnoreFiles() const { return m_searchIgnoreFiles; }
+  void setSearchIgnoreFiles(const QStringList& patterns) { m_searchIgnoreFiles = patterns; }
+  bool searchUseGitignore() const { return m_searchUseGitignore; }
+  void setSearchUseGitignore(bool use) { m_searchUseGitignore = use; }
+
   // Compare directories settings
   bool compareIgnoreTime() const { return m_compareIgnoreTime; }
   void setCompareIgnoreTime(bool ignore) { m_compareIgnoreTime = ignore; }
@@ -311,6 +320,9 @@ private:
   bool m_editorWordWrap = true;
   bool m_editorShowWhitespace = false;
   QString m_editorLegacyLanguage;
+  QStringList m_searchIgnoreDirs;
+  QStringList m_searchIgnoreFiles;
+  bool m_searchUseGitignore = false;
   bool m_syntaxDownloadDeclined = false;
 };
 

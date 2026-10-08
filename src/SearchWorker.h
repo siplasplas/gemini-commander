@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QVector>
@@ -22,7 +23,7 @@ enum class FileContentFilter {
 
 struct SearchCriteria {
     QString searchPath;
-    QString fileNamePattern;      // wildcard pattern (e.g., "*.txt")
+    QString fileNamePattern;      // wildcard patterns separated by ';' (e.g., "*.cpp;*.h")
     bool fileNameCaseSensitive = false;
     bool partOfName = true;       // add * before and after pattern
     bool negateFileName = false;  // Invert filename match
@@ -34,6 +35,16 @@ struct SearchCriteria {
 
     qint64 minSize = -1;          // -1 means no limit
     qint64 maxSize = -1;          // -1 means no limit
+
+    // Modification time range; an invalid QDateTime means no limit
+    QDateTime modifiedFrom;
+    QDateTime modifiedTo;
+
+    // Skipped and not descended into: name patterns (* and ?, no paths) for
+    // directories and files, and optionally what .gitignore files ignore
+    QStringList ignoreDirPatterns;
+    QStringList ignoreFilePatterns;
+    bool useGitignore = false;
 
     ItemTypeFilter itemTypeFilter = ItemTypeFilter::FilesAndDirectories;  // Replaces directoriesOnly
 
@@ -72,12 +83,13 @@ signals:
 private:
     bool matchesFileName(const QString& fileName) const;
     bool matchesFileSize(qint64 size) const;
+    bool matchesModified(const QDateTime& modified) const;
     bool matchesContainingText(const QString& filePath) const;
     bool matchesItemType(bool isDir, bool isFile) const;
     bool matchesFileContentFilter(const QString& filePath, qint64 fileSize) const;
     bool matchesExecutableBits(const QString& filePath) const;
 
     SearchCriteria m_criteria;
-    QRegularExpression m_fileNameRegex;
+    QVector<QRegularExpression> m_fileNameRegexes; // one per ';'-separated pattern
     bool m_shouldStop;
 };

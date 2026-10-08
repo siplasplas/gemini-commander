@@ -89,6 +89,8 @@ QFileInfo SortedDirIterator::next()
         }
 
         QFileInfo fi = f.entries.at(f.index++);
+        if (m_keep && !m_keep(fi))
+            continue;  // skipped, and a directory is not entered
         if (fi.isDir()) {
             // Check if it's a symlink
             bool isSymlink = fi.isSymbolicLink();

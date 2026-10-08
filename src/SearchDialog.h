@@ -13,6 +13,7 @@
 #include <QVector>
 
 class SearchWorker;
+class QDateEdit;
 
 // Raw search result data
 struct SearchResult {
@@ -88,7 +89,6 @@ signals:
 private slots:
     void onStartSearch();
     void onStopSearch();
-    void onResetOptions();
     void onClearAll();
     void onResultFound(const QString& path, qint64 size, const QDateTime& modified);
     void onSearchFinished();
@@ -96,6 +96,8 @@ private slots:
     void onResultActivated(int row);
 
 private:
+    /// Search options back to defaults (results and skip lists stay).
+    void onResetOptions();
     void setupUi();
     void createStandardTab();
     void createAdvancedTab();
@@ -123,6 +125,15 @@ private:
     QWidget* m_advancedTab;
     QLineEdit* m_minSizeEdit;
     QLineEdit* m_maxSizeEdit;
+    QCheckBox* m_modifiedFromCheck;
+    QDateEdit* m_modifiedFromEdit;
+    QCheckBox* m_modifiedToCheck;
+    QDateEdit* m_modifiedToEdit;
+
+    // Skipped entries (saved in the configuration)
+    QLineEdit* m_ignoreDirsEdit;
+    QLineEdit* m_ignoreFilesEdit;
+    QCheckBox* m_useGitignoreCheck;
 
     // File content filter (unified combobox)
     QComboBox* m_fileContentFilterCombo;
@@ -140,7 +151,6 @@ private:
     // Control buttons
     QPushButton* m_startButton;
     QPushButton* m_stopButton;
-    QPushButton* m_resetButton;
     QPushButton* m_clearButton;
     QPushButton* m_closeButton;
 

@@ -173,6 +173,8 @@ add_executable(${PROJECT_NAME}
         src/SearchDialog.cpp
         src/SearchDialog.h
         src/SearchWorker.cpp
+        src/SearchIgnore.cpp
+        src/SearchIgnore.h
         src/DistroInfo.cpp
         src/DistroInfo.h
         src/DistroInfoDialog.cpp

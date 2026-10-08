@@ -1,4 +1,5 @@
 #include "SearchWorker.h"
+#include "SearchIgnore.h"
 #include "SortedDirIterator.h"
 #include "quitls.h"
 
@@ -12,29 +13,28 @@ SearchWorker::SearchWorker(const SearchCriteria& criteria, QObject* parent)
     , m_criteria(criteria)
     , m_shouldStop(false)
 {
-    // Convert wildcard pattern to regex
-    QString pattern = m_criteria.fileNamePattern;
-    if (pattern.isEmpty())
-        pattern = "*";
+    // Several wildcard patterns separated by ';' (e.g. "*.cpp;*.h"); a name
+    // matching any of them matches.
+    QStringList patterns;
+    for (const QString& part : m_criteria.fileNamePattern.split(';')) {
+        if (!part.trimmed().isEmpty())
+            patterns << part.trimmed();
+    }
+    if (patterns.isEmpty())
+        patterns << "*";
 
-    // Add wildcards for "part of name" mode
-    if (m_criteria.partOfName && !pattern.startsWith("*"))
-        pattern = "*" + pattern;
-    if (m_criteria.partOfName && !pattern.endsWith("*"))
-        pattern = pattern + "*";
-
-    // Escape special regex chars and convert wildcards
-    pattern.replace("\\", "\\\\");
-    pattern.replace(".", "\\.");
-    pattern.replace("*", ".*");
-    pattern.replace("?", ".");
-    pattern = "^" + pattern + "$";
-
-    QRegularExpression::PatternOption option = m_criteria.fileNameCaseSensitive
+    const QRegularExpression::PatternOption option = m_criteria.fileNameCaseSensitive
         ? QRegularExpression::NoPatternOption
         : QRegularExpression::CaseInsensitiveOption;
 
-    m_fileNameRegex = QRegularExpression(pattern, option);
+    for (QString pattern : patterns) {
+        // Add wildcards for "part of name" mode
+        if (m_criteria.partOfName && !pattern.startsWith("*"))
+            pattern = "*" + pattern;
+        if (m_criteria.partOfName && !pattern.endsWith("*"))
+            pattern = pattern + "*";
+        m_fileNameRegexes.append(QRegularExpression(SearchIgnore::globToRegex(pattern), option));
+    }
 }
 
 void SearchWorker::startSearch()
@@ -80,6 +80,9 @@ void SearchWorker::startSearch()
             if (isFile && !matchesFileSize(info.size()))
                 continue;
 
+            if (!matchesModified(info.lastModified()))
+                continue;
+
             // Text content filter (files only, directories cannot contain text)
             if (!m_criteria.containingText.isEmpty()) {
                 if (isDir)
@@ -115,12 +118,19 @@ void SearchWorker::startSearch()
     QDir::Filters filters = QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden;
 
     SortedDirIterator it(m_criteria.searchPath, filters);
+    // Ignored entries are skipped, and ignored directories not entered.
+    SearchIgnore ignore(m_criteria.searchPath, m_criteria.ignoreDirPatterns,
+                        m_criteria.ignoreFilePatterns, m_criteria.useGitignore);
+    if (!ignore.isEmpty())
+        it.setEntryFilter([&ignore](const QFileInfo& entry) { return !ignore.isIgnored(entry); });
 
     int searchedFiles = 0;
     int foundFiles = 0;
 
     while (it.hasNext() && !m_shouldStop) {
         QFileInfo info = it.next();
+        if (info.filePath().isEmpty())
+            continue;  // only ignored entries were left
 
         bool isDir = info.isDir();
         bool isFile = info.isFile();
@@ -141,6 +151,9 @@ void SearchWorker::startSearch()
         if (m_criteria.negateFileName)
             nameMatches = !nameMatches;
         if (!nameMatches)
+            continue;
+
+        if (!matchesModified(info.lastModified()))
             continue;
 
         // For files: check size, content, and advanced filters
@@ -187,7 +200,19 @@ void SearchWorker::stopSearch()
 
 bool SearchWorker::matchesFileName(const QString& fileName) const
 {
-    return m_fileNameRegex.match(fileName).hasMatch();
+    for (const auto& regex : m_fileNameRegexes)
+        if (regex.match(fileName).hasMatch())
+            return true;
+    return false;
+}
+
+bool SearchWorker::matchesModified(const QDateTime& modified) const
+{
+    if (m_criteria.modifiedFrom.isValid() && modified < m_criteria.modifiedFrom)
+        return false;
+    if (m_criteria.modifiedTo.isValid() && modified > m_criteria.modifiedTo)
+        return false;
+    return true;
 }
 
 bool SearchWorker::matchesFileSize(qint64 size) const

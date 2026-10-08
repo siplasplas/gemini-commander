@@ -32,6 +32,11 @@ public:
                       Comparator cmp = defaultComparator,
                       Options options = Options::None);
 
+    /// Entries for which `keep` returns false are neither returned nor
+    /// entered (e.g. ignored directories). next() may then return an empty
+    /// QFileInfo when only such entries were left.
+    void setEntryFilter(std::function<bool(const QFileInfo&)> keep) { m_keep = std::move(keep); }
+
     bool hasNext() const;
     QFileInfo fileInfo() {return m_fileInfo;};
     QFileInfo next();
@@ -51,6 +56,7 @@ private:
     QDir::Filters m_filters;
     Comparator m_cmp;
     Options m_options;
+    std::function<bool(const QFileInfo&)> m_keep;
     QFileInfo m_fileInfo;
 
     bool canEnter(const QString& canonicalPath) const;

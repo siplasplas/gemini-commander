@@ -5,6 +5,8 @@
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QDateEdit>
+#include "Config.h"
 #include <qxfiledialog.h>
 #include <QFileInfo>
 #include <QDir>
@@ -311,17 +313,16 @@ void SearchDialog::setupUi()
 
     m_startButton = new QPushButton(tr("Start"), this);
     m_stopButton = new QPushButton(tr("Stop"), this);
-    m_resetButton = new QPushButton(tr("Reset"), this);
     m_clearButton = new QPushButton(tr("Clear"), this);
     m_closeButton = new QPushButton(tr("Close"), this);
 
     m_stopButton->setEnabled(false);
-    m_resetButton->setToolTip(tr("Reset options to defaults (keep results)"));
-    m_clearButton->setToolTip(tr("Reset options and clear results"));
+    // One button: a new search replaces the results anyway. The skip lists
+    // are kept (they are saved settings).
+    m_clearButton->setToolTip(tr("Reset the search options and clear the results"));
 
     buttonLayout->addWidget(m_startButton);
     buttonLayout->addWidget(m_stopButton);
-    buttonLayout->addWidget(m_resetButton);
     buttonLayout->addWidget(m_clearButton);
     buttonLayout->addWidget(m_closeButton);
     buttonLayout->addStretch();
@@ -331,7 +332,6 @@ void SearchDialog::setupUi()
     // Connections
     connect(m_startButton, &QPushButton::clicked, this, &SearchDialog::onStartSearch);
     connect(m_stopButton, &QPushButton::clicked, this, &SearchDialog::onStopSearch);
-    connect(m_resetButton, &QPushButton::clicked, this, &SearchDialog::onResetOptions);
     connect(m_clearButton, &QPushButton::clicked, this, &SearchDialog::onClearAll);
     connect(m_closeButton, &QPushButton::clicked, this, &QDialog::accept);
 
@@ -365,7 +365,7 @@ void SearchDialog::createStandardTab()
     auto* fileNameLayout = new QHBoxLayout();
     fileNameLayout->addWidget(new QLabel(tr("File name:")), 0);
     m_fileNameEdit = new QLineEdit(criteriaGroup);
-    m_fileNameEdit->setPlaceholderText(tr("e.g., test or *.txt"));
+    m_fileNameEdit->setPlaceholderText(tr("e.g., test or *.txt; several separated by ';': *.cpp;*.h"));
     fileNameLayout->addWidget(m_fileNameEdit, 1);
 
     // Not checkbox for filename
@@ -480,6 +480,22 @@ void SearchDialog::createAdvancedTab()
 
     layout->addWidget(sizeGroup);
 
+    // Modification date range; each end is optional
+    auto* dateGroup = new QGroupBox(tr("Modified:"), m_advancedTab);
+    auto* dateLayout = new QFormLayout(dateGroup);
+    const auto dateRow = [&](QCheckBox*& check, QDateEdit*& edit, const QString& label) {
+        check = new QCheckBox(label, dateGroup);
+        edit = new QDateEdit(QDate::currentDate(), dateGroup);
+        edit->setCalendarPopup(true);
+        edit->setDisplayFormat(QStringLiteral("yyyy-MM-dd"));
+        edit->setEnabled(false);
+        connect(check, &QCheckBox::toggled, edit, &QWidget::setEnabled);
+        dateLayout->addRow(check, edit);
+    };
+    dateRow(m_modifiedFromCheck, m_modifiedFromEdit, tr("From:"));
+    dateRow(m_modifiedToCheck, m_modifiedToEdit, tr("To (inclusive):"));
+    layout->addWidget(dateGroup);
+
     // File content filter (unified combobox)
     auto* contentGroup = new QGroupBox(tr("File content filter:"), m_advancedTab);
     auto* contentLayout = new QFormLayout(contentGroup);
@@ -511,7 +527,42 @@ void SearchDialog::createAdvancedTab()
 
     layout->addWidget(attributesGroup);
 
+    // Skipped entries: kept in the configuration, not reset by Clear
+    auto* skipGroup = new QGroupBox(tr("Skip during search:"), m_advancedTab);
+    auto* skipLayout = new QFormLayout(skipGroup);
+    m_ignoreDirsEdit = new QLineEdit(skipGroup);
+    m_ignoreDirsEdit->setPlaceholderText(tr("e.g. .git;cmake-build*;node_modules"));
+    m_ignoreDirsEdit->setToolTip(tr("Directory names with * and ?, separated by ';' (no paths); "
+                                    "skipped together with their contents"));
+    skipLayout->addRow(tr("Directories:"), m_ignoreDirsEdit);
+    m_ignoreFilesEdit = new QLineEdit(skipGroup);
+    m_ignoreFilesEdit->setPlaceholderText(tr("e.g. *.o;*.tmp"));
+    m_ignoreFilesEdit->setToolTip(tr("File names with * and ?, separated by ';' (no paths)"));
+    skipLayout->addRow(tr("Files:"), m_ignoreFilesEdit);
+    m_useGitignoreCheck = new QCheckBox(tr("Skip what .gitignore files ignore"), skipGroup);
+    m_useGitignoreCheck->setToolTip(tr("Reads .gitignore from the search directory down; deeper "
+                                       "files add rules and '!' includes again. The .git "
+                                       "directory is skipped too."));
+    skipLayout->addRow(m_useGitignoreCheck);
+
+    const auto& config = Config::instance();
+    m_ignoreDirsEdit->setText(config.searchIgnoreDirs().join(QStringLiteral(";")));
+    m_ignoreFilesEdit->setText(config.searchIgnoreFiles().join(QStringLiteral(";")));
+    m_useGitignoreCheck->setChecked(config.searchUseGitignore());
+
+    layout->addWidget(skipGroup);
+
     layout->addStretch();
+}
+
+// "a; b;;c" -> {"a", "b", "c"}
+static QStringList patternList(const QString& text)
+{
+    QStringList list;
+    for (const QString& part : text.split(';'))
+        if (!part.trimmed().isEmpty())
+            list << part.trimmed();
+    return list;
 }
 
 void SearchDialog::createResultsTab()
@@ -641,6 +692,24 @@ void SearchDialog::onStartSearch()
     if (!m_maxSizeEdit->text().isEmpty()) {
         criteria.maxSize = m_maxSizeEdit->text().toLongLong(&ok);
         if (!ok) criteria.maxSize = -1;
+    }
+
+    // Modification date range (local dates; "To" includes the whole day)
+    if (m_modifiedFromCheck->isChecked())
+        criteria.modifiedFrom = m_modifiedFromEdit->date().startOfDay();
+    if (m_modifiedToCheck->isChecked())
+        criteria.modifiedTo = m_modifiedToEdit->date().endOfDay();
+
+    // Skipped entries; saved so the next search (and session) uses them too
+    criteria.ignoreDirPatterns = patternList(m_ignoreDirsEdit->text());
+    criteria.ignoreFilePatterns = patternList(m_ignoreFilesEdit->text());
+    criteria.useGitignore = m_useGitignoreCheck->isChecked();
+    {
+        auto& config = Config::instance();
+        config.setSearchIgnoreDirs(criteria.ignoreDirPatterns);
+        config.setSearchIgnoreFiles(criteria.ignoreFilePatterns);
+        config.setSearchUseGitignore(criteria.useGitignore);
+        config.save();
     }
 
     // File content filter
@@ -868,6 +937,8 @@ void SearchDialog::onResetOptions()
     // Advanced tab
     m_minSizeEdit->clear();
     m_maxSizeEdit->clear();
+    m_modifiedFromCheck->setChecked(false);
+    m_modifiedToCheck->setChecked(false);
     m_fileContentFilterCombo->setCurrentIndex(0);  // Any
     m_executableBitsCombo->setCurrentIndex(0);     // Not specified
 
