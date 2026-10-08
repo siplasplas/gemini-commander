@@ -34,6 +34,7 @@ target_link_libraries(editor_tests
         qt-extra
         qcodeedit::qcodeedit
         qcodeedit::kate
+        qcodeedit::encoding
         toml_headers
         GTest::gtest
 )

@@ -5,7 +5,6 @@
 #include <QString>
 #include <QDateTime>
 #include <QPalette>
-#include <QStringConverter>
 #include <memory>
 #include <qce/TextCursor.h>
 #include <qce/TextAttribute.h>
@@ -22,6 +21,8 @@ class RulesHighlighter;
 class RuleBasedFoldingProvider;
 }
 class FindBar;
+class QMenu;
+namespace qce::encoding { class EncodingGuard; }
 
 /**
  * @class Editor
@@ -38,6 +39,8 @@ signals:
     /// Emitted when the file path changes (e.g. after Save As).
     void filePathChanged();
     void modificationChanged(bool modified);
+    /// The file's encoding changed (opened, reopened, or switched for saving).
+    void encodingChanged(const QString& encoding);
 
 public:
     explicit Editor(QWidget *parent = nullptr);
@@ -64,6 +67,13 @@ public:
 
     bool isChangedOnDisk() const;
     bool reloadFromDisk();
+
+    /// Encoding the file was read in and is saved in (cpg name, e.g. cp1250).
+    QString encoding() const;
+    /// Reads the file again, decoding it as `encoding`.
+    bool reopenWithEncoding(const QString& encoding);
+    /// Saves from now on in `encoding`; the text stays as it is.
+    void setSaveEncoding(const QString& encoding);
     void updateFileInfo();
 
     void setReadOnly(bool readOnly);
@@ -88,9 +98,11 @@ public:
     qce::SimpleTextDocument* document() const { return m_doc; }
 
 private:
-    bool readFile(const QString& path, bool resetSyntax);
+    /// Empty `encoding` detects it.
+    bool readFile(const QString& path, bool resetSyntax, const QString& encoding = {});
     bool writeFile(const QString& path);
     void showContextMenu(const QPoint& position);
+    void addEncodingMenu(QMenu& menu);
     void applyThemePalette();
     qce::TextAttribute themedAttribute(const QString& style, const qce::TextAttribute& fallback) const;
     void applyHighlighterForFile(const QString& path);
@@ -115,12 +127,12 @@ private:
 
     FindBar* m_findBar = nullptr;
 
-    // How the file was stored, so that saving writes it back the same way.
-    QStringConverter::Encoding m_encoding = QStringConverter::Utf8;
-    bool m_bom = false;
-    bool m_crlf = false;
-    // The document drops the empty line after a final line break; it is added back on save.
-    bool m_finalNewline = true;
+    // How the file is stored (encoding, BOM, CRLF, final line break), so that
+    // saving writes it back the same way; also keeps typed and pasted text
+    // storable in a legacy code page.
+    qce::encoding::EncodingGuard* m_encodingGuard = nullptr;
+    // The last save was cancelled in the encoding question, not failed.
+    bool m_saveCancelled = false;
 
     bool m_wordWrap = true;
     QDateTime m_loadedModified;

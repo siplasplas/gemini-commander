@@ -25,6 +25,7 @@
 #include <qguiapplication.h>
 #include <QVBoxLayout>
 #include <QStatusBar>
+#include <QLabel>
 #include <qce/kate/KateDataDownloader.h>
 #include <qce/kate/KatePaths.h>
 
@@ -62,8 +63,13 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::tabLimitReached, Qt::DirectConnection);
     connect(m_editorTabWidget, &MruTabWidget::tabContextMenuRequested,
             this, &EditorFrame::extendTabContextMenu);
-    connect(m_editorTabWidget, &MruTabWidget::currentChanged,
-            this, [this](int) { updateWindowTitle(); });
+    connect(m_editorTabWidget, &MruTabWidget::currentChanged, this, [this](int) {
+        updateWindowTitle();
+        if (m_encodingLabel) {
+            const Editor* editor = currentEditor();
+            m_encodingLabel->setText(editor ? editor->encoding() : QString());
+        }
+    });
 
     createActions();
     QMenu* fileMenu = m_mainHeader->setupMenus(m_newFileAction, m_openFileAction,
@@ -85,6 +91,10 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
     m_statusBar = statusBar();
+    m_encodingLabel = new QLabel(this);
+    m_statusBar->addPermanentWidget(m_encodingLabel);
+    if (const Editor* editor = currentEditor())
+        m_encodingLabel->setText(editor->encoding());
 
     // --- Finish setup ---
     setMinimumSize(600, 400);
@@ -249,6 +259,12 @@ void EditorFrame::addEditorTab(Editor* editor, const QString& tabTitle, const QS
         if (editor == currentEditor())
             updateWindowTitle();
     });
+    connect(editor, &Editor::encodingChanged, this, [this, editor](const QString& encoding) {
+        if (editor == currentEditor() && m_encodingLabel)
+            m_encodingLabel->setText(encoding);
+    });
+    if (m_encodingLabel)
+        m_encodingLabel->setText(editor->encoding());
     ObjectRegistry::add(editor, "Editor");
     editor->setFocus();
 }

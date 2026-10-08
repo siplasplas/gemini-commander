@@ -18,12 +18,12 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSaveFile>
-#include <QStringDecoder>
-#include <QStringEncoder>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QUndoStack>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <functional>
 #include <optional>
 
 #include <qce/CodeEdit.h>
@@ -36,6 +36,8 @@
 #include <qce/margins/LineNumberGutter.h>
 #include <qce/kate/KatePaths.h>
 #include <qce/kate/KateXmlReader.h>
+#include <qce/encoding/Encoding.h>
+#include <qce/encoding/EncodingGuard.h>
 #include <qxfiledialog.h>
 
 #include "../Config.h"
@@ -57,6 +59,16 @@ Editor::Editor(QWidget *parent) :
     m_edit->area()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_edit->area(), &QWidget::customContextMenuRequested,
             this, &Editor::showContextMenu);
+
+    // New documents: UTF-8 ending with a line break.
+    m_encodingGuard = new qce::encoding::EncodingGuard(m_edit->area(), this);
+    m_encodingGuard->setFormat({QStringLiteral("utf8"), false, false, true});
+    connect(m_encodingGuard, &qce::encoding::EncodingGuard::encodingChanged,
+            this, [this](const QString& encoding) {
+        // Switching the encoding (e.g. to UTF-8) is a change that needs saving.
+        m_edit->area()->undoStack()->resetClean();
+        emit encodingChanged(encoding);
+    });
 
     m_lineNumbers = std::make_unique<qce::LineNumberGutter>(m_doc);
     m_lineNumbers->setFont(m_edit->area()->font());
@@ -112,10 +124,11 @@ bool Editor::loadFile(const QString& path)
     if (!QFileInfo::exists(path)) {
         // A name that does not exist yet (e.g. Shift+F4): empty document saved there.
         m_doc->setText(QString());
-        m_encoding = QStringConverter::Utf8;
-        m_bom = false;
-        m_crlf = false;
-        m_finalNewline = true;
+        {
+            const QSignalBlocker block(m_encodingGuard);
+            m_encodingGuard->setFormat({QStringLiteral("utf8"), false, false, true});
+        }
+        emit encodingChanged(encoding());
         m_edit->area()->undoStack()->clear();
         setPath(path);
         updateFileInfo();
@@ -139,7 +152,7 @@ bool Editor::isModified() const {
     return !m_edit->area()->undoStack()->isClean();
 }
 
-bool Editor::readFile(const QString& path, bool resetSyntax)
+bool Editor::readFile(const QString& path, bool resetSyntax, const QString& encoding)
 {
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly))
@@ -149,24 +162,19 @@ bool Editor::readFile(const QString& path, bool resetSyntax)
     if (f.error() != QFileDevice::NoError)
         return false;
 
-    // UTF-8 unless the bytes are not valid UTF-8; Latin-1 then keeps every
-    // byte, so saving does not destroy the file.
-    m_bom = bytes.startsWith("\xEF\xBB\xBF");
-    QStringDecoder utf8(QStringConverter::Utf8);
-    QString text = utf8.decode(bytes);
-    m_encoding = QStringConverter::Utf8;
-    if (utf8.hasError()) {
-        QStringDecoder latin1(QStringConverter::Latin1);
-        text = latin1.decode(bytes);
-        m_encoding = QStringConverter::Latin1;
-        m_bom = false;
-    }
-    m_crlf = text.contains(QLatin1String("\r\n"));
-    if (m_crlf)
-        text.replace(QLatin1String("\r\n"), QLatin1String("\n"));
-    m_finalNewline = text.endsWith(QLatin1Char('\n'));
+    // UTF or a legacy code page (cp1250, ISO 8859-2, ...), detected unless
+    // given; BOM, CRLF and the final line break are restored on save.
+    const auto decoded = qce::encoding::decode(bytes, encoding);
+    if (!decoded.ok)
+        return false;
 
-    m_doc->setText(text);
+    m_doc->setText(decoded.text);
+    {
+        // Loading is not an edit: no "modified" from the encoding change.
+        const QSignalBlocker block(m_encodingGuard);
+        m_encodingGuard->setFormat(decoded.format);
+    }
+    emit encodingChanged(this->encoding());
     m_edit->area()->undoStack()->clear();
     setPath(path);
     m_loadedModified = stamp.lastModified();
@@ -182,14 +190,14 @@ bool Editor::readFile(const QString& path, bool resetSyntax)
 
 bool Editor::writeFile(const QString& path)
 {
-    QString text = m_doc->toPlainText();
-    if (m_finalNewline)
-        text += QLatin1Char('\n');
-    if (m_crlf)
-        text.replace(QLatin1Char('\n'), QLatin1String("\r\n"));
-    QStringEncoder encoder(m_encoding, m_bom ? QStringConverter::Flag::WriteBom
-                                             : QStringConverter::Flag::Default);
-    const QByteArray bytes = encoder.encode(text);
+    // In the file's encoding; characters it cannot store bring up a choice
+    // (write '?', switch to UTF-8, or cancel the save).
+    m_saveCancelled = false;
+    QByteArray bytes;
+    if (!m_encodingGuard->encodeForSave(m_doc->toPlainText(), &bytes)) {
+        m_saveCancelled = true;
+        return false;
+    }
 
     QSaveFile f(path);
     f.setDirectWriteFallback(true);
@@ -228,6 +236,8 @@ bool Editor::saveFile() {
     }
 
     if (!writeFile(m_filePath)) {
+        if (m_saveCancelled)
+            return false;
         qWarning() << "Failed to save document:" << m_filePath;
         QMessageBox::warning(this->parentWidget(), // Show error relative to parent window
                              tr("Save Error"),
@@ -251,8 +261,9 @@ bool Editor::saveFileAs()
     if (path.isEmpty())
         return false;
     if (!writeFile(path)) {
-        QMessageBox::warning(this->parentWidget(), tr("Save Error"),
-                             tr("Failed to save file:\n%1").arg(path));
+        if (!m_saveCancelled)
+            QMessageBox::warning(this->parentWidget(), tr("Save Error"),
+                                 tr("Failed to save file:\n%1").arg(path));
         return false;
     }
     const bool renamed = path != m_filePath;
@@ -293,7 +304,8 @@ bool Editor::reloadFromDisk()
     auto* area = m_edit->area();
     const auto cursor = area->cursorPosition();
     const auto anchor = cursor == area->selectionStart() ? area->selectionEnd() : area->selectionStart();
-    if (!readFile(m_filePath, false))
+    // Keep the encoding the file was opened in; detect again if it no longer fits.
+    if (!readFile(m_filePath, false, encoding()) && !readFile(m_filePath, false))
         return false;
     // The component clamps both endpoints if lines or columns no longer exist.
     area->setSelection(anchor, cursor);
@@ -535,7 +547,63 @@ void Editor::showContextMenu(const QPoint& position)
     if (themes.isEmpty())
         themeMenu->addAction(tr("No themes installed"))->setEnabled(false);
 
+    addEncodingMenu(menu);
+
     menu.exec(area->viewport()->mapToGlobal(position));
+}
+
+void Editor::addEncodingMenu(QMenu& menu)
+{
+    // Common encodings first; the rest of cpg's list under "More".
+    static const QStringList common = {
+        "utf8", "cp1250", "iso-8859-2", "cp852", "mazovia",
+        "cp1252", "iso-8859-1", "cp1251", "utf16", "utf16be"};
+    const QString current = encoding();
+    auto* encodingMenu = menu.addMenu(tr("Encoding: %1").arg(current));
+
+    auto fill = [&](QMenu* target, const std::function<void(const QString&)>& apply) {
+        auto* group = new QActionGroup(target);
+        auto add = [&](QMenu* parent, const QString& name) {
+            auto* action = parent->addAction(name);
+            action->setCheckable(true);
+            action->setChecked(name == current);
+            group->addAction(action);
+            connect(action, &QAction::triggered, this, [apply, name]() { apply(name); });
+        };
+        for (const QString& name : common) add(target, name);
+        auto* more = target->addMenu(tr("More"));
+        for (const QString& name : qce::encoding::availableEncodings())
+            if (!common.contains(name)) add(more, name);
+    };
+
+    fill(encodingMenu->addMenu(tr("Reopen with Encoding")), [this](const QString& name) {
+        if (m_filePath.isEmpty() || !QFileInfo::exists(m_filePath)) return;
+        if (isModified() && QMessageBox::question(this, tr("Reopen with Encoding"),
+                tr("Discard unsaved edits and read the file again as %1?").arg(name))
+                != QMessageBox::Yes)
+            return;
+        if (!reopenWithEncoding(name))
+            QMessageBox::warning(this, tr("Reopen with Encoding"),
+                                 tr("The file cannot be read as %1.").arg(name));
+    });
+    fill(encodingMenu->addMenu(tr("Save with Encoding")), [this](const QString& name) {
+        setSaveEncoding(name);
+    });
+}
+
+QString Editor::encoding() const
+{
+    return m_encodingGuard->encoding();
+}
+
+bool Editor::reopenWithEncoding(const QString& encoding)
+{
+    return !m_filePath.isEmpty() && readFile(m_filePath, false, encoding);
+}
+
+void Editor::setSaveEncoding(const QString& encoding)
+{
+    m_encodingGuard->setEncoding(encoding);
 }
 
 void Editor::applyThemePalette()

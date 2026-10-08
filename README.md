@@ -14,7 +14,7 @@ git clone https://github.com/siplasplas/gemini-commander
 ## Features
 
 - **Hidden file search** — Incremental search handles dot-prefixed files naturally (e.g., typing "git" finds ".gitignore")
-- **Built-in editor and viewer** — Opens instantly on top of the main window, even on Wayland where window stacking can be problematic. The editor uses the [qcodeedit](https://github.com/siplasplas/qcodeedit) widget with Kate syntax definitions, folding, an inline find/replace bar (regular expressions, whole words, in selection), go to line:column and recent files
+- **Built-in editor and viewer** — Opens instantly on top of the main window, even on Wayland where window stacking can be problematic. The editor uses the [qcodeedit](https://github.com/siplasplas/qcodeedit) widget with Kate syntax definitions, folding, an inline find/replace bar (regular expressions, whole words, in selection), go to line:column and recent files. Files open in their own encoding (UTF-8/16/32 or a legacy code page such as cp1250, ISO 8859-2 or cp852, detected automatically and shown in the status bar) and are saved in it; characters the code page cannot store ask whether to write `?` or switch the file to UTF-8, and **Encoding** in the context menu reopens or saves the file in another encoding
 - **Drag and drop** — Drag files from panels to other applications
 - **Command line path insertion** — Like Total Commander: Ctrl+Enter inserts current file path, Ctrl+Shift+Enter inserts full path, Ctrl+P inserts current directory. Unlike Double Commander, arrow keys immediately select text in the command line for quick keyboard-only copying
 - **Safe USB copying** — Every copied file is synced to disk with fsync(), preventing data loss when unmounting USB drives
@@ -108,7 +108,7 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.5)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader | `find_package(qcodeedit-katedata 1.7.0)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.8.1)` and `find_package(qcodeedit-encoding 1.8.1)` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |

@@ -12,6 +12,7 @@ class QAction;
 class QMenu;
 class QVBoxLayout;
 class QStatusBar;
+class QLabel;
 namespace qce::kate { class KateDataDownloader; }
 
 class Editor;
@@ -100,6 +101,7 @@ private:
     QAction *m_updateSyntaxAction;
 
     QStatusBar* m_statusBar = nullptr;
+    QLabel* m_encodingLabel = nullptr; ///< encoding of the current editor's file
     qce::kate::KateDataDownloader* m_downloader = nullptr;
     bool m_syntaxDownloadOffered = false;
 
