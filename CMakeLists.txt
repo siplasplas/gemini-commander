@@ -54,10 +54,10 @@ FetchContent_MakeAvailable(qt-extra)
 # The text editor and the viewer for small files are qcodeedit widgets
 # (github.com/siplasplas/qcodeedit, LGPL-3.0-or-later), highlighted with Kate
 # syntax definitions that qcodeedit-katedata downloads at run time. Installed
-# qcodeedit packages 1.6.1 or later are used (1.6.0 hangs on YAML files);
-# otherwise the tag below is fetched and built into gemini-commander, without
-# its demo and tests.
-find_package(qcodeedit-katedata 1.6.1 QUIET)
+# qcodeedit packages 1.7.0 or later are used (Breeze default theme, gutter
+# colours, shared word boundaries); otherwise the tag below is fetched and
+# built into gemini-commander, without its demo and tests.
+find_package(qcodeedit-katedata 1.7.0 QUIET)
 if(NOT TARGET qcodeedit::katedata)
     set(QCE_BUILD_DEMO OFF)
     set(QCE_BUILD_TESTS OFF)
@@ -66,7 +66,7 @@ if(NOT TARGET qcodeedit::katedata)
     FetchContent_Declare(
             qcodeedit
             GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
-            GIT_TAG v1.6.1
+            GIT_TAG v1.7.0
             GIT_SHALLOW TRUE
             ${fetch_exclude}
     )

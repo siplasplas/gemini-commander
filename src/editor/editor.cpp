@@ -83,6 +83,9 @@ Editor::Editor(QWidget *parent) :
             this, [this](bool clean) { emit modificationChanged(!clean); });
 
     m_edit->area()->setWordWrap(m_wordWrap);
+
+    m_theme = KateTheme::loadDefault();
+    applyThemePalette();
 }
 
 Editor::~Editor()
@@ -551,6 +554,8 @@ void Editor::applyThemePalette()
     m_edit->area()->setPalette(palette);
     m_edit->area()->viewport()->setPalette(palette);
     m_edit->area()->viewport()->update();
+    // Invalid colours (no theme, or missing in it) are derived from the palette.
+    m_edit->setGutterColors({m_theme.iconBorder, m_theme.lineNumbers, m_theme.separator});
 }
 
 qce::TextAttribute Editor::themedAttribute(const QString& style,
@@ -569,6 +574,10 @@ void Editor::reapplyHighlighter()
         const auto theme = KateTheme::load(m_themeFile);
         if (theme.isValid())
             m_theme = theme;
+    } else {
+        // "Default": Breeze Light/Dark to match the desktop, or the editor's
+        // built-in black on white when the themes are not downloaded.
+        m_theme = KateTheme::loadDefault();
     }
     applyThemePalette();
     if (m_syntaxMode == SyntaxMode::PlainText) {

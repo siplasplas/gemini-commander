@@ -108,7 +108,7 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.3)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader | `find_package(qcodeedit-katedata 1.6.1)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader | `find_package(qcodeedit-katedata 1.7.0)` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -125,6 +125,8 @@ to download them from kate-editor.org (**Tools > Update Syntax Definitions**
 downloads or updates them later). They are stored in
 `~/.local/share/qcodeedit/kate-<version>/` and shared with other qcodeedit-based
 programs. Without them, only C/C++ files are highlighted (built-in rules).
+The **Default** theme is Breeze Light, or Breeze Dark on a dark desktop; before
+the themes are downloaded the editor shows black text on white.
 
 ## Building
 

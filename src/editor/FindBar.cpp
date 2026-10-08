@@ -4,6 +4,7 @@
 #include <qce/CodeEdit.h>
 #include <qce/CodeEditArea.h>
 #include <qce/SimpleTextDocument.h>
+#include <qce/WordBoundary.h>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPushButton>
@@ -200,7 +201,7 @@ void FindBar::rebuild(bool moveCursor)
     m_query->setToolTip(QString());
     if (!isHidden() && !m_query->text().isEmpty()) {
         QString pattern = m_regex->isChecked() ? m_query->text() : QRegularExpression::escape(m_query->text());
-        if (m_words->isChecked()) pattern = "(?<![\\p{L}\\p{N}_])(?:" + pattern + ")(?![\\p{L}\\p{N}_])";
+        if (m_words->isChecked()) pattern = qce::words::wholeWordPattern(pattern);
         auto options = QRegularExpression::MultilineOption | QRegularExpression::UseUnicodePropertiesOption;
         if (!m_case->isChecked()) options |= QRegularExpression::CaseInsensitiveOption;
         QRegularExpression expression(pattern, options);
