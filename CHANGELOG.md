@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-08
+
+### Added
+- Show menu: All Files (Ctrl+F10), Programs (Ctrl+F11: directories and
+  executables) and Custom (Ctrl+F12: file masks such as `*.cpp;*.h` and/or
+  hiding what `.gitignore` files ignore, directories included) for the current
+  panel; the branch view (Ctrl+B) and directory sizes (Space, Alt+Shift+Enter)
+  follow the filter, which is shown after the path, e.g. `/project/[*.cpp;!gitignore]`
+- Find Files: Skip during search, by directory and file names and by `.gitignore`
+- Copy (F5) of a directory or several entries can skip what `.gitignore` ignores
+- Copy dialog: Count shows the number and size of the files to copy in the
+  background; the copy uses it instead of counting again
+- `.gitignore` options shared by Show > Custom, Copy and Find Files: start from
+  the nearest `.git` or from the highest `.gitignore` below home (one for a group
+  of repositories), and whether `.git` directories are skipped
+- Editor: the line with the caret has a slightly darker background
+
+### Changed
+- Large files are copied in the kernel (copy_file_range, or sendfile between
+  filesystems); SHA-256 verification is optional and no longer the default
+- Alt+Shift+Enter sorts the panel again when the directory sizes are done
+- qcodeedit 1.12.0
+
+### Fixed
+- Closing a menu with Escape gives the focus back at once (a second Escape was
+  needed)
+- Editor: text typed into a new tab is shown, and the caret no longer drifts
+  away from the text (qcodeedit 1.12.0)
+
 ## [2.0.0] - 2026-10-08
 
 ### Changed
