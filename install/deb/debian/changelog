@@ -1,3 +1,14 @@
+gemini-commander (2.0.0) unstable; urgency=medium
+
+  * Replace KTextEditor with qcodeedit; Qt6 only, no KDE Frameworks or Qt5 build
+  * Open and save files in their own encoding (UTF or code pages such as cp1250)
+  * Editor status bar: position, line breaks, encoding, language, tab width
+  * Setting for the language of files not in UTF-8
+  * Breeze Light/Dark default theme, Kate-style gutter, Kate-like word wrap
+  * Go to Line/Column remembers this session's positions
+
+ -- Andrzej Borucki <borucki.andrzej@gmail.com>  Thu, 08 Oct 2026 12:00:00 +0200
+
 gemini-commander (1.6.0) unstable; urgency=medium
 
   * Reload editor files on activation and preserve cursor position

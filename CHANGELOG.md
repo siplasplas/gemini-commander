@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-08
+
 ### Changed
 - Only Qt6 is needed: KDE Frameworks (KF5/KF6) and the Qt5 build are gone
 - The editor and the code view of the viewer use the qcodeedit widget instead of
@@ -22,8 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in selection, preserve case, replace all in one undo step), F3/Shift+F3,
   Go to Line/Column (Ctrl+G), Save As, edit context menu
 - Editor: Wrap Lines and Show Special Characters are remembered
-- Editor keeps line endings (CRLF), UTF-8 BOM, the final newline and
-  non-UTF-8 bytes (read as Latin-1) when saving
+- Editor: files open in their own encoding, UTF-8/16/32 or a legacy code page
+  (cp1250, ISO 8859-2, cp852, ...), detected automatically and saved back in it
+  with BOM, line breaks (LF, CRLF or CR) and the final newline; characters the
+  code page cannot store ask whether to write `?` or switch to UTF-8; Encoding
+  in the context menu reopens or saves in another encoding
+- Editor: Configuration > Editor > Language of files not in UTF-8 limits code
+  page detection to one language (e.g. Polish)
+- Editor status bar: line:column, line breaks (Unix, Windows, Mac, Mixed),
+  encoding, the text's language (detected in the background) and tab width
+- Editor: Go to Line/Column lists this session's positions
+- Editor: Breeze Light/Dark default theme following the desktop, Kate-style
+  gutter with wrap arrows, word wrap at the same places as Kate, Ctrl+Backspace
+  and Ctrl+Delete delete words, whole-word search uses the editor's word rules
 
 ## [1.5.0] - 2026-01-02
 
