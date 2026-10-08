@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <backward.hpp>
+#include <qce/encoding/Encoding.h>
 
 #include <cstdio>
 
@@ -22,6 +23,9 @@ int main(int argc, char *argv[])
     // backward-cpp writes a stack trace to stderr after fatal signals and
     // unhandled C++ exceptions; stderr above points at the crash log.
     static backward::SignalHandling crashHandler;
+
+    // Encoding/language models load in the background, ready for the editor.
+    qce::encoding::preloadDetectionData();
 
     // Collect command line arguments (skip program name)
     QStringList startupPaths;

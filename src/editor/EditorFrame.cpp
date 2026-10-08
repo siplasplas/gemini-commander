@@ -26,6 +26,10 @@
 #include <QVBoxLayout>
 #include <QStatusBar>
 #include <QLabel>
+#include <QHash>
+#include <qce/CodeEdit.h>
+#include <qce/CodeEditArea.h>
+#include <qce/encoding/Encoding.h>
 #include <qce/kate/KateDataDownloader.h>
 #include <qce/kate/KatePaths.h>
 
@@ -65,10 +69,7 @@ EditorFrame::EditorFrame(QWidget* parent)
             this, &EditorFrame::extendTabContextMenu);
     connect(m_editorTabWidget, &MruTabWidget::currentChanged, this, [this](int) {
         updateWindowTitle();
-        if (m_encodingLabel) {
-            const Editor* editor = currentEditor();
-            m_encodingLabel->setText(editor ? editor->encoding() : QString());
-        }
+        updateStatusBar();
     });
 
     createActions();
@@ -91,10 +92,13 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
     m_statusBar = statusBar();
-    m_encodingLabel = new QLabel(this);
-    m_statusBar->addPermanentWidget(m_encodingLabel);
-    if (const Editor* editor = currentEditor())
-        m_encodingLabel->setText(editor->encoding());
+    // Status bar: line:column | line breaks | encoding | language | tab width.
+    for (QLabel** label : {&m_statusPos, &m_statusLineBreaks, &m_statusEncoding,
+                           &m_statusLanguage, &m_statusTab}) {
+        *label = new QLabel(this);
+        m_statusBar->addPermanentWidget(*label);
+    }
+    updateStatusBar();
 
     // --- Finish setup ---
     setMinimumSize(600, 400);
@@ -259,14 +263,60 @@ void EditorFrame::addEditorTab(Editor* editor, const QString& tabTitle, const QS
         if (editor == currentEditor())
             updateWindowTitle();
     });
-    connect(editor, &Editor::encodingChanged, this, [this, editor](const QString& encoding) {
-        if (editor == currentEditor() && m_encodingLabel)
-            m_encodingLabel->setText(encoding);
+    connect(editor, &Editor::statusChanged, this, [this, editor]() {
+        if (editor == currentEditor())
+            updateStatusBar();
     });
-    if (m_encodingLabel)
-        m_encodingLabel->setText(editor->encoding());
+    connect(editor->codeEdit()->area(), &qce::CodeEditArea::cursorPositionChanged, this, [this, editor]() {
+        if (editor == currentEditor())
+            updateStatusBar();
+    });
+    updateStatusBar();
     ObjectRegistry::add(editor, "Editor");
     editor->setFocus();
+}
+
+// Status bar texts for the file format reported by qcodeedit-encoding.
+static QString lineBreaksText(const qce::encoding::FileFormat& format, bool ignoreMixed = false)
+{
+    if (format.mixedLineBreaks && !ignoreMixed) return QObject::tr("Mixed");
+    if (format.cr) return QObject::tr("Mac (CR)");
+    if (format.crlf) return QObject::tr("Windows (CRLF)");
+    return QObject::tr("Unix (LF)");
+}
+
+static QString encodingText(const qce::encoding::FileFormat& format)
+{
+    static const QHash<QString, QString> unicode = {
+        {"utf8", "UTF-8"}, {"utf16", "UTF-16LE"}, {"utf16be", "UTF-16BE"},
+        {"utf32", "UTF-32LE"}, {"utf32be", "UTF-32BE"}};
+    const QString name = unicode.value(format.encoding.toLower(), format.encoding);
+    return format.bom ? name + " BOM" : name;
+}
+
+void EditorFrame::updateStatusBar()
+{
+    if (!m_statusPos) return;
+    const QList<QLabel*> labels = {m_statusPos, m_statusLineBreaks, m_statusEncoding,
+                                   m_statusLanguage, m_statusTab};
+    const Editor* editor = currentEditor();
+    if (!editor) {
+        for (QLabel* label : labels) label->clear();
+        return;
+    }
+    const auto* area = editor->codeEdit()->area();
+    const qce::TextCursor c = area->cursorPosition();
+    m_statusPos->setText(QString("%1:%2").arg(c.line + 1).arg(c.column + 1));
+    const auto format = editor->fileFormat();
+    m_statusLineBreaks->setText(lineBreaksText(format));
+    // A mixed file is saved with its most frequent kind of line break.
+    m_statusLineBreaks->setToolTip(format.mixedLineBreaks
+        ? tr("Mixed line breaks; saving uses %1").arg(lineBreaksText(format, true))
+        : QString());
+    m_statusEncoding->setText(encodingText(format));
+    m_statusLanguage->setText(editor->languageName());
+    m_statusLanguage->setToolTip(tr("Language detected from the text"));
+    m_statusTab->setText(tr("Tab: %1").arg(area->tabWidth()));
 }
 
 Editor* EditorFrame::currentEditor() const

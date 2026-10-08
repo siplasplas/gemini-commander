@@ -101,7 +101,13 @@ private:
     QAction *m_updateSyntaxAction;
 
     QStatusBar* m_statusBar = nullptr;
-    QLabel* m_encodingLabel = nullptr; ///< encoding of the current editor's file
+    // Status bar of the current editor (filled by updateStatusBar()).
+    QLabel* m_statusPos = nullptr;        ///< line:column
+    QLabel* m_statusLineBreaks = nullptr; ///< Unix (LF), Windows (CRLF), Mac (CR), Mixed
+    QLabel* m_statusEncoding = nullptr;   ///< UTF-8 or the code page
+    QLabel* m_statusLanguage = nullptr;   ///< detected in the background
+    QLabel* m_statusTab = nullptr;        ///< tab width in spaces
+    void updateStatusBar();
     qce::kate::KateDataDownloader* m_downloader = nullptr;
     bool m_syntaxDownloadOffered = false;
 

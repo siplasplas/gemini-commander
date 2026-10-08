@@ -9,6 +9,7 @@
 #include <qce/TextCursor.h>
 #include <qce/TextAttribute.h>
 #include <qce/kate/KateTheme.h>
+#include <qce/encoding/Encoding.h>
 
 #include "BaseViewer.h"
 
@@ -39,8 +40,8 @@ signals:
     /// Emitted when the file path changes (e.g. after Save As).
     void filePathChanged();
     void modificationChanged(bool modified);
-    /// The file's encoding changed (opened, reopened, or switched for saving).
-    void encodingChanged(const QString& encoding);
+    /// Encoding, line breaks or language changed (status bar refresh).
+    void statusChanged();
 
 public:
     explicit Editor(QWidget *parent = nullptr);
@@ -74,6 +75,11 @@ public:
     bool reopenWithEncoding(const QString& encoding);
     /// Saves from now on in `encoding`; the text stays as it is.
     void setSaveEncoding(const QString& encoding);
+    /// Encoding, BOM and line breaks of the file, for the status bar.
+    qce::encoding::FileFormat fileFormat() const;
+    /// Natural language of the file, detected in the background after
+    /// loading ("Polish"); empty until known.
+    QString languageName() const { return m_language.name; }
     void updateFileInfo();
 
     void setReadOnly(bool readOnly);
@@ -133,6 +139,8 @@ private:
     qce::encoding::EncodingGuard* m_encodingGuard = nullptr;
     // The last save was cancelled in the encoding question, not failed.
     bool m_saveCancelled = false;
+    qce::encoding::Language m_language;
+    int m_languageRequest = 0; // ignores results for an older load
 
     bool m_wordWrap = true;
     QDateTime m_loadedModified;

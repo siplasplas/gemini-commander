@@ -66,8 +66,9 @@ Editor::Editor(QWidget *parent) :
     connect(m_encodingGuard, &qce::encoding::EncodingGuard::encodingChanged,
             this, [this](const QString& encoding) {
         // Switching the encoding (e.g. to UTF-8) is a change that needs saving.
+        Q_UNUSED(encoding);
         m_edit->area()->undoStack()->resetClean();
-        emit encodingChanged(encoding);
+        emit statusChanged();
     });
 
     m_lineNumbers = std::make_unique<qce::LineNumberGutter>(m_doc);
@@ -128,7 +129,9 @@ bool Editor::loadFile(const QString& path)
             const QSignalBlocker block(m_encodingGuard);
             m_encodingGuard->setFormat({QStringLiteral("utf8"), false, false, true});
         }
-        emit encodingChanged(encoding());
+        m_language = {};
+        ++m_languageRequest;
+        emit statusChanged();
         m_edit->area()->undoStack()->clear();
         setPath(path);
         updateFileInfo();
@@ -174,7 +177,15 @@ bool Editor::readFile(const QString& path, bool resetSyntax, const QString& enco
         const QSignalBlocker block(m_encodingGuard);
         m_encodingGuard->setFormat(decoded.format);
     }
-    emit encodingChanged(this->encoding());
+    // The language is guessed in the background; the file is shown at once.
+    m_language = {};
+    const int request = ++m_languageRequest;
+    qce::encoding::detectLanguageAsync(bytes, this, [this, request](const qce::encoding::Language& language) {
+        if (request != m_languageRequest) return;
+        m_language = language;
+        emit statusChanged();
+    });
+    emit statusChanged();
     m_edit->area()->undoStack()->clear();
     setPath(path);
     m_loadedModified = stamp.lastModified();
@@ -207,7 +218,17 @@ bool Editor::writeFile(const QString& path)
         f.cancelWriting();
         return false;
     }
-    return f.commit();
+    if (!f.commit())
+        return false;
+    if (m_encodingGuard->format().mixedLineBreaks) {
+        // Saved with one kind of line break for every line.
+        auto format = m_encodingGuard->format();
+        format.mixedLineBreaks = false;
+        const QSignalBlocker block(m_encodingGuard);
+        m_encodingGuard->setFormat(format);
+        emit statusChanged();
+    }
+    return true;
 }
 
 /**
@@ -392,8 +413,15 @@ void Editor::goToPosition()
     QInputDialog dialog(this);
     dialog.setWindowTitle(tr("Go to Line/Column"));
     dialog.setLabelText(tr("Line[:column] (1–%1):").arg(lineCount));
-    dialog.setInputMode(QInputDialog::TextInput);
-    dialog.setTextValue(QString("%1:%2").arg(cursor.line + 1).arg(cursor.column + 1));
+    // Editable combo: the current position, then positions entered before in
+    // any editor (this session only, not saved).
+    static QStringList recentPositions;
+    QStringList items{QString("%1:%2").arg(cursor.line + 1).arg(cursor.column + 1)};
+    for (const QString& recent : recentPositions)
+        if (!items.contains(recent)) items << recent;
+    dialog.setComboBoxItems(items);
+    dialog.setComboBoxEditable(true);
+    dialog.setTextValue(items.first());
 
     auto position = [this, lineCount](const QString& text) -> std::optional<qce::TextCursor> {
         static const QRegularExpression pattern(QStringLiteral("^\\s*([1-9][0-9]*)\\s*(?::\\s*([1-9][0-9]*)\\s*)?$"));
@@ -418,6 +446,12 @@ void Editor::goToPosition()
     });
     if (dialog.exec() != QDialog::Accepted) return;
     if (const auto target = position(dialog.textValue())) {
+        // Remembered without spaces, most recent first.
+        QString entered = dialog.textValue();
+        entered.remove(QRegularExpression(QStringLiteral("\\s")));
+        recentPositions.removeAll(entered);
+        recentPositions.prepend(entered);
+        while (recentPositions.size() > 20) recentPositions.removeLast();
         revealRange(*target, *target);
         area->setCursorPosition(*target);
         area->setFocus();
@@ -589,6 +623,11 @@ void Editor::addEncodingMenu(QMenu& menu)
     fill(encodingMenu->addMenu(tr("Save with Encoding")), [this](const QString& name) {
         setSaveEncoding(name);
     });
+}
+
+qce::encoding::FileFormat Editor::fileFormat() const
+{
+    return m_encodingGuard->format();
 }
 
 QString Editor::encoding() const
