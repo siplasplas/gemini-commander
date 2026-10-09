@@ -20,6 +20,18 @@ bool SearchEdit::doReturnToPanel(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+bool SearchEdit::doReturnToPanelAndTab(QObject *obj, QKeyEvent *keyEvent) {
+    doReturnToPanel(obj, keyEvent);
+    // Back in the panel, Tab does what it does there (keys.toml: the other panel).
+    QTimer::singleShot(0, [] {
+        if (QWidget* panel = QApplication::focusWidget()) {
+            QKeyEvent tab(QEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier);
+            QCoreApplication::sendEvent(panel, &tab);
+        }
+    });
+    return true;
+}
+
 bool SearchEdit::doAccept(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);

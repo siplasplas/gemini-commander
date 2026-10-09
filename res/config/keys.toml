@@ -137,6 +137,7 @@ keys = [
 [SearchEdit]
 keys = [
     { key = "Escape",              handler = "doReturnToPanel" },
+    { key = "Tab",                 handler = "doReturnToPanelAndTab" },
     { key = "LETTERS",             handler = "default" },
     { key = "DIGITS",              handler = "default" },
     { key = "Up",                  handler = "doPrevMatch" },
