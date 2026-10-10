@@ -28,6 +28,7 @@
 
 #include <qce/CodeEdit.h>
 #include <qce/CodeEditArea.h>
+#include <qce/CodePoints.h>
 #include <qce/FoldState.h>
 #include <qce/RuleBasedFoldingProvider.h>
 #include <qce/RulesHighlighter.h>
@@ -424,7 +425,9 @@ void Editor::goToPosition()
     // Editable combo: the current position, then positions entered before in
     // any editor (this session only, not saved).
     static QStringList recentPositions;
-    QStringList items{QString("%1:%2").arg(cursor.line + 1).arg(cursor.column + 1)};
+    // Columns in characters (code points), as the status bar shows them.
+    const int currentColumn = qce::codepoints::codePointColumn(m_doc->lineAt(cursor.line), cursor.column);
+    QStringList items{QString("%1:%2").arg(cursor.line + 1).arg(currentColumn + 1)};
     for (const QString& recent : recentPositions)
         if (!items.contains(recent)) items << recent;
     dialog.setComboBoxItems(items);
@@ -438,10 +441,16 @@ void Editor::goToPosition()
         bool lineOk = false, columnOk = true;
         const int line = match.captured(1).toInt(&lineOk);
         const int column = match.captured(2).isEmpty() ? 1 : match.captured(2).toInt(&columnOk);
-        if (!lineOk || !columnOk || line > lineCount
-            || column > m_doc->lineAt(line - 1).size() + 1)
+        if (!lineOk || !columnOk || line > lineCount)
             return std::nullopt;
-        return qce::TextCursor{line - 1, column - 1};
+        // The column counts characters (code points): walk to its UTF-16 index.
+        const QString lineText = m_doc->lineAt(line - 1);
+        int index = 0;
+        for (int i = 1; i < column; ++i) {
+            if (index >= lineText.size()) return std::nullopt;
+            index = qce::codepoints::nextIndex(lineText, index);
+        }
+        return qce::TextCursor{line - 1, index};
     };
     auto validate = [&dialog, position]() {
         if (auto* buttons = dialog.findChild<QDialogButtonBox*>())

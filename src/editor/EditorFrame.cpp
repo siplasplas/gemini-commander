@@ -29,6 +29,8 @@
 #include <QHash>
 #include <qce/CodeEdit.h>
 #include <qce/CodeEditArea.h>
+#include <qce/CodePoints.h>
+#include <qce/ITextDocument.h>
 #include <qce/encoding/Encoding.h>
 #include <qce/kate/KateDataDownloader.h>
 #include <qce/kate/KatePaths.h>
@@ -92,12 +94,13 @@ EditorFrame::EditorFrame(QWidget* parent)
     m_mainLayout->addWidget(m_editorTabWidget);
     setCentralWidget(central);
     m_statusBar = statusBar();
-    // Status bar: line:column | line breaks | encoding | language | tab width.
-    for (QLabel** label : {&m_statusPos, &m_statusLineBreaks, &m_statusEncoding,
-                           &m_statusLanguage, &m_statusTab}) {
+    // Status bar: line:column | code point | line breaks | encoding | language | tab width.
+    for (QLabel** label : {&m_statusPos, &m_statusCodePoint, &m_statusLineBreaks,
+                           &m_statusEncoding, &m_statusLanguage, &m_statusTab}) {
         *label = new QLabel(this);
         m_statusBar->addPermanentWidget(*label);
     }
+    m_statusCodePoint->setTextInteractionFlags(Qt::TextSelectableByMouse);
     updateStatusBar();
 
     // --- Finish setup ---
@@ -294,11 +297,25 @@ static QString encodingText(const qce::encoding::FileFormat& format)
     return format.bom ? name + " BOM" : name;
 }
 
+// Unicode code point of the character after the caret, e.g. "U+0105"; empty
+// at the end of the line. The column is a UTF-16 index, so a character
+// outside the BMP (an emoji) is read from its surrogate pair.
+static QString codePointText(const QString& line, int column)
+{
+    if (column < 0 || column >= line.size())
+        return {};
+    char32_t codePoint = line.at(column).unicode();
+    if (QChar::isHighSurrogate(codePoint) && column + 1 < line.size()
+        && line.at(column + 1).isLowSurrogate())
+        codePoint = QChar::surrogateToUcs4(line.at(column), line.at(column + 1));
+    return QStringLiteral("U+%1").arg(static_cast<uint>(codePoint), 4, 16, QLatin1Char('0')).toUpper();
+}
+
 void EditorFrame::updateStatusBar()
 {
     if (!m_statusPos) return;
-    const QList<QLabel*> labels = {m_statusPos, m_statusLineBreaks, m_statusEncoding,
-                                   m_statusLanguage, m_statusTab};
+    const QList<QLabel*> labels = {m_statusPos, m_statusCodePoint, m_statusLineBreaks,
+                                   m_statusEncoding, m_statusLanguage, m_statusTab};
     const Editor* editor = currentEditor();
     if (!editor) {
         for (QLabel* label : labels) label->clear();
@@ -306,7 +323,11 @@ void EditorFrame::updateStatusBar()
     }
     const auto* area = editor->codeEdit()->area();
     const qce::TextCursor c = area->cursorPosition();
-    m_statusPos->setText(QString("%1:%2").arg(c.line + 1).arg(c.column + 1));
+    const QString lineText = area->document()->lineAt(c.line);
+    // The column in characters (code points): an emoji is one, not its two UTF-16 units.
+    const int column = qce::codepoints::codePointColumn(lineText, c.column);
+    m_statusPos->setText(QString("%1:%2").arg(c.line + 1).arg(column + 1));
+    m_statusCodePoint->setText(codePointText(lineText, c.column));
     const auto format = editor->fileFormat();
     m_statusLineBreaks->setText(lineBreaksText(format));
     // A mixed file is saved with its most frequent kind of line break.
