@@ -658,9 +658,7 @@ bool MainWindow::doEdit(QObject *obj, QKeyEvent *keyEvent) {
     if (!editorFrame)
         editorFrame = new EditorFrame(nullptr);
     editorFrame->openFile(fullPath);
-    editorFrame->show();
-    editorFrame->raise();
-    editorFrame->activateWindow();
+    qBringToFront(editorFrame);
     return true;
 }
 
@@ -692,9 +690,7 @@ bool MainWindow::doEditNew(QObject *obj, QKeyEvent *keyEvent) {
         editorFrame->openFile(fullPath);
     }
     QCoreApplication::processEvents();
-    editorFrame->show();
-    editorFrame->raise();
-    editorFrame->activateWindow();
+    qBringToFront(editorFrame);
     return true;
 }
 
@@ -1128,9 +1124,7 @@ bool MainWindow::doSearchGlobal(QObject *obj, QKeyEvent *keyEvent) {
 
     // Always update search path from current panel
     m_searchDialog->setSearchPath(startPath);
-    m_searchDialog->show();
-    m_searchDialog->raise();
-    m_searchDialog->activateWindow();
+    qBringToFront(m_searchDialog);
 
     return true;
 }
@@ -1292,9 +1286,7 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
         viewerFrame = new ViewerFrame(fullPath, this);
     else
         viewerFrame->openFile(fullPath);
-    viewerFrame->show();
-    viewerFrame->raise();
-    viewerFrame->activateWindow();
+    qBringToFront(viewerFrame);
     return true;
 }
 

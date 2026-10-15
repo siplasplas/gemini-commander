@@ -2303,9 +2303,7 @@ void MainWindow::openEditorForFile(const QString& filePath) {
         }
     }
 
-    editorFrame->show();
-    editorFrame->raise();
-    editorFrame->activateWindow();
+    qBringToFront(editorFrame);
 }
 
 void MainWindow::openViewerForFile(const QString& filePath) {
@@ -2317,9 +2315,7 @@ void MainWindow::openViewerForFile(const QString& filePath) {
         viewerFrame = new ViewerFrame(filePath, this);
     else
         viewerFrame->openFile(filePath);
-    viewerFrame->show();
-    viewerFrame->raise();
-    viewerFrame->activateWindow();
+    qBringToFront(viewerFrame);
 }
 
 void MainWindow::goToFile(const QString& dir, const QString& name) {

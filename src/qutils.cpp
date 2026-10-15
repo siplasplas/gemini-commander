@@ -5,7 +5,9 @@
 #include <QString>
 #include <QStringList>
 #include <QApplication>
+#include <QDebug>
 #include <QPalette>
+#include <QWidget>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -29,6 +31,25 @@ QString formatWithSeparators(std::size_t value) {
 
 bool isDarkTheme() {
     return qApp->palette().color(QPalette::Window).lightness() < 128;
+}
+
+void qBringToFront(QWidget* window) {
+    if (!window)
+        return;
+    if (qEnvironmentVariableIsSet("GC_DEBUG_ACTIVATION"))
+        qDebug() << "bringToFront" << window->metaObject()->className()
+                 << "visible" << window->isVisible() << "minimized" << window->isMinimized()
+                 << "active" << window->isActiveWindow();
+    if (!window->isVisible()) {
+        window->show();  // a newly shown window is focused by the compositor
+        return;
+    }
+    if (window->isMinimized())
+        window->showNormal();
+    if (!window->isActiveWindow()) {
+        window->raise();
+        window->activateWindow();
+    }
 }
 
 QString qEscapePathForShell(const QString& path) {
