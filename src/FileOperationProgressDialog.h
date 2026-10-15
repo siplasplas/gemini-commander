@@ -64,6 +64,8 @@ protected:
 
 private:
     void setupUi(const QString& title);
+    // Shows the dialog after a delay, unless another modal dialog is open then.
+    void scheduleShow();
     void refreshBars(bool force = false);
     // Ask the user to confirm interrupting the operation; sets m_canceled on Yes.
     void requestCancel();

@@ -26,10 +26,7 @@ FileOperationProgressDialog::FileOperationProgressDialog(const QString& title, Q
     m_repaintTimer.start();
 
     // Shown later, while the operation processes events, if it is still running.
-    QTimer::singleShot(kShowDelayMs, this, [this]() {
-        if (!isVisible())
-            show();
-    });
+    scheduleShow();
 
     // Block nested commands
     m_operationWasInProgress = KeyRouter::instance().isOperationInProgress();
@@ -47,6 +44,22 @@ FileOperationProgressDialog::~FileOperationProgressDialog()
     }
     // Restore operation state
     KeyRouter::instance().setOperationInProgress(m_operationWasInProgress);
+}
+
+void FileOperationProgressDialog::scheduleShow()
+{
+    QTimer::singleShot(kShowDelayMs, this, [this]() {
+        if (isVisible())
+            return;
+        // A question such as "Overwrite?" is open (its event loop fired this
+        // timer): appearing now, always on top, would cover it. Try later.
+        QWidget* modal = QApplication::activeModalWidget();
+        if (modal && modal != this) {
+            scheduleShow();
+            return;
+        }
+        show();
+    });
 }
 
 void FileOperationProgressDialog::showEvent(QShowEvent* event)
