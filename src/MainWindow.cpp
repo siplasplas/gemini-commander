@@ -1599,7 +1599,15 @@ void MainWindow::selectPathAfterFileOperation(FilePanel *srcPanel, FilePanel *ds
         QDir srcDir(srcPanel->currentPath);
         QString dirCanonical = QDir::cleanPath(srcPanel->currentPath);
         if (srcCanonical.startsWith(dirCanonical + "/") || srcCanonical == dirCanonical) {
-            QString relPath = srcDir.relativeFilePath(selectedPath);
+            // A target in this directory (a rename, a copy under a new name) is
+            // selected. A target elsewhere, e.g. in a subdirectory, is not: the
+            // source entry stays selected (copy, or a cancelled overwrite), and
+            // when it was moved away selectEntryByRelPath() keeps the same row,
+            // i.e. the next entry.
+            const bool targetHere = QFileInfo(selCanonical).absolutePath() == dirCanonical;
+            const bool singleSource = srcCanonical != dirCanonical;
+            QString relPath = srcDir.relativeFilePath(
+                targetHere || !singleSource ? selectedPath : srcPath);
             srcPanel->selectEntryByRelPath(relPath);
             QTimer::singleShot(50, this, [this, srcPanel]() {
                 m_suppressDirWatcher = false;

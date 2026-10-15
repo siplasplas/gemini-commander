@@ -1034,8 +1034,10 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             .arg(stats.symlinks));
     }
 
+    // The path the single entry was copied/moved to (inside dstPath when that
+    // is a directory), so that the panels can select it.
     if (names.size() == 1)
-        return dstPath;
+        return destIsDir ? QDir(dstPath).filePath(names.first()) : dstPath;
     else
         return {};
 }

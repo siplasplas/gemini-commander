@@ -104,6 +104,8 @@ bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 // currentPath down, exactly as Find Files does (SearchIgnore).
 // totals: the work counted beforehand (with the same useGitignore), so it is
 // not counted again; without it the files are counted first.
+// Returns the target path of a single entry (e.g. dir/sub/name for "sub/"),
+// empty for several.
 QString executeCopyOrMove(const QString& currentPath, const QStringList& names,
                     const QString& destInput, bool move,
                     QWidget* parent, bool useGitignore = false,
