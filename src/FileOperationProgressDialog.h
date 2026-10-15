@@ -15,7 +15,8 @@
 //   - bottom : overall progress proportional to the total bytes of all files
 //
 // Always on top, blocks nested commands, allows cancel, processes events for
-// repaint. The byte totals come from an up-front counting pass.
+// repaint. The byte totals come from an up-front counting pass. Appears only
+// when the operation takes longer than a moment (see the .cpp).
 class FileOperationProgressDialog : public QDialog {
     Q_OBJECT
 
@@ -57,6 +58,7 @@ public:
     void processEvents();
 
 protected:
+    void showEvent(QShowEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 
@@ -87,6 +89,7 @@ private:
     QString m_curFileName;
 
     QElapsedTimer m_repaintTimer;
+    QElapsedTimer m_shownClock;  // started when the dialog is first shown
 
     // Transfer clock (excludes time paused for overwrite prompts).
     QElapsedTimer m_clock;

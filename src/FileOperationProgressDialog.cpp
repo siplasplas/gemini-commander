@@ -5,13 +5,31 @@
 #include <QCloseEvent>
 #include <QKeyEvent>
 #include <QMessageBox>
+#include <QThread>
+#include <QTimer>
 #include <QVBoxLayout>
+
+namespace {
+// The dialog appears only for operations longer than this, so a quick rename
+// or move does not flash a window.
+constexpr int kShowDelayMs = 400;
+// Once shown, it stays at least this long. On Wayland a newly shown window
+// asks the compositor for an activation token; a window gone before the token
+// arrives never uses it, and GNOME then shows its busy cursor for ~15 s.
+constexpr int kMinVisibleMs = 150;
+}
 
 FileOperationProgressDialog::FileOperationProgressDialog(const QString& title, QWidget* parent)
     : QDialog(parent, Qt::Dialog | Qt::WindowStaysOnTopHint | Qt::CustomizeWindowHint | Qt::WindowTitleHint)
 {
     setupUi(title);
     m_repaintTimer.start();
+
+    // Shown later, while the operation processes events, if it is still running.
+    QTimer::singleShot(kShowDelayMs, this, [this]() {
+        if (!isVisible())
+            show();
+    });
 
     // Block nested commands
     m_operationWasInProgress = KeyRouter::instance().isOperationInProgress();
@@ -20,8 +38,22 @@ FileOperationProgressDialog::FileOperationProgressDialog(const QString& title, Q
 
 FileOperationProgressDialog::~FileOperationProgressDialog()
 {
+    // Just shown: let the activation token arrive and be used (see kMinVisibleMs).
+    if (isVisible()) {
+        while (m_shownClock.isValid() && m_shownClock.elapsed() < kMinVisibleMs) {
+            QApplication::processEvents(QEventLoop::AllEvents, 10);
+            QThread::msleep(5);
+        }
+    }
     // Restore operation state
     KeyRouter::instance().setOperationInProgress(m_operationWasInProgress);
+}
+
+void FileOperationProgressDialog::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+    if (!m_shownClock.isValid())
+        m_shownClock.start();
 }
 
 void FileOperationProgressDialog::setupUi(const QString& title)
@@ -57,9 +89,6 @@ void FileOperationProgressDialog::setupUi(const QString& title)
         requestCancel();
     });
     layout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
-
-    show();
-    processEvents();
 }
 
 void FileOperationProgressDialog::setBarFraction(QProgressBar* bar, double fraction)
