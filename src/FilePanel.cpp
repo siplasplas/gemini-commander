@@ -5,7 +5,6 @@
 
 #include <QApplication>
 #include <QComboBox>
-#include <QDesktopServices>
 #include <QDirIterator>
 #include <QDrag>
 #include <QFileInfo>
@@ -869,7 +868,7 @@ void FilePanel::run(const QString &commandLine) {
         // path that cannot run (e.g. a document with the execute bit, as on
         // FAT/USB drives) is opened with the default application instead.
         if (!QProcess::startDetached(execPath, args, currentPath) && program.contains('/'))
-            QDesktopServices::openUrl(QUrl::fromLocalFile(execPath));
+            qOpenWithDefaultApp(execPath);
         return;
     }
 
@@ -887,10 +886,10 @@ void FilePanel::run(const QString &commandLine) {
         // Check if it's an executable file (even without execute permission set)
         if (info.isFile() && info.isExecutable()) {
             if (!QProcess::startDetached(absPath, args, currentPath))
-                QDesktopServices::openUrl(QUrl::fromLocalFile(absPath)); // incorrectly set attribute executable
+                qOpenWithDefaultApp(absPath); // incorrectly set attribute executable
         } else {
             // Open with default application (documents, images, etc.)
-            QDesktopServices::openUrl(QUrl::fromLocalFile(absPath));
+            qOpenWithDefaultApp(absPath);
         }
         // Note: loadDirectory/selectEntryByName is called by trigger() if needed
     }

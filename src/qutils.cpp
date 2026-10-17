@@ -6,7 +6,11 @@
 #include <QStringList>
 #include <QApplication>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QPalette>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QUrl>
 #include <QWidget>
 
 #ifdef _WIN32
@@ -50,6 +54,24 @@ void qBringToFront(QWidget* window) {
         window->raise();
         window->activateWindow();
     }
+}
+
+void qOpenWithDefaultApp(const QString& path) {
+#if defined(Q_OS_LINUX)
+    const QString xdgOpen = QStandardPaths::findExecutable(QStringLiteral("xdg-open"));
+    if (!xdgOpen.isEmpty()) {
+        QProcess process;
+        process.setProgram(xdgOpen);
+        process.setArguments({path});
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.remove(QStringLiteral("XDG_ACTIVATION_TOKEN"));
+        env.remove(QStringLiteral("DESKTOP_STARTUP_ID"));
+        process.setProcessEnvironment(env);
+        if (process.startDetached())
+            return;
+    }
+#endif
+    QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 }
 
 QString qEscapePathForShell(const QString& path) {

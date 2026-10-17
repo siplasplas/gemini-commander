@@ -17,6 +17,14 @@ class QWidget;
 // alone. GC_DEBUG_ACTIVATION=1 logs each call.
 void qBringToFront(QWidget* window);
 
+// Opens a local file with its default application. On Linux through
+// xdg-open, without XDG_ACTIVATION_TOKEN / DESKTOP_STARTUP_ID, as from a
+// terminal: QDesktopServices::openUrl() asks for an activation token and
+// passes it on, but an application started by D-Bus activation (e.g. Loupe)
+// ignores it and the unused token keeps GNOME's busy cursor for ~15 s.
+// Falls back to QDesktopServices::openUrl() elsewhere or without xdg-open.
+void qOpenWithDefaultApp(const QString& path);
+
 QString qMakeTempPartPath(const QString& path, bool pathIsDir);
 QString qFormatSize(std::size_t value, SizeFormat::SizeKind format);
 QString formatWithSeparators(std::size_t value);
