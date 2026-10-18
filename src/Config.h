@@ -218,6 +218,12 @@ public:
   // detection then considers only their code pages. Empty = automatic.
   QStringList editorLegacyLanguages() const { return m_editorLegacyLanguages; }
   void setEditorLegacyLanguages(const QStringList& codes) { m_editorLegacyLanguages = codes; }
+  // Spell checking in the editor (on by default) and the spelling dictionaries
+  // used recently (names such as "pl_PL"), most recent first.
+  bool editorSpellCheck() const { return m_editorSpellCheck; }
+  void setEditorSpellCheck(bool check) { m_editorSpellCheck = check; }
+  QStringList editorRecentSpellDictionaries() const { return m_editorRecentSpellDictionaries; }
+  void setEditorRecentSpellDictionaries(const QStringList& names) { m_editorRecentSpellDictionaries = names; }
   // The user declined downloading Kate syntax definitions; don't ask on startup again
   bool syntaxDownloadDeclined() const { return m_syntaxDownloadDeclined; }
   void setSyntaxDownloadDeclined(bool declined) { m_syntaxDownloadDeclined = declined; }
@@ -335,6 +341,8 @@ private:
   bool m_editorWordWrap = true;
   bool m_editorShowWhitespace = false;
   QStringList m_editorLegacyLanguages;
+  bool m_editorSpellCheck = true;
+  QStringList m_editorRecentSpellDictionaries;
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;
   bool m_searchUseGitignore = false;

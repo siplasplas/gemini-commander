@@ -306,6 +306,14 @@ bool Config::load(const QString& path)
                 // Versions up to 2.x kept one language.
                 m_editorLegacyLanguages << QString::fromStdString(*s);
             }
+            if (auto b = editor["spell_check"].value<bool>())
+                m_editorSpellCheck = *b;
+            m_editorRecentSpellDictionaries.clear();
+            if (editor.contains("spell_recent") && editor["spell_recent"].is_array()) {
+                for (const auto& node : *editor["spell_recent"].as_array())
+                    if (auto s = node.value<std::string>(); s && !s->empty())
+                        m_editorRecentSpellDictionaries << QString::fromStdString(*s);
+            }
             if (auto b = editor["syntax_download_declined"].value<bool>())
                 m_syntaxDownloadDeclined = *b;
             m_editorMruPaths.clear();
@@ -594,6 +602,11 @@ bool Config::save() const
     for (const QString& code : m_editorLegacyLanguages)
         legacyLanguages.push_back(code.toStdString());
     editorTbl.insert("legacy_languages", legacyLanguages);
+    editorTbl.insert("spell_check", m_editorSpellCheck);
+    toml::array spellRecent;
+    for (const QString& name : m_editorRecentSpellDictionaries)
+        spellRecent.push_back(name.toStdString());
+    editorTbl.insert("spell_recent", spellRecent);
     editorTbl.insert("syntax_download_declined", m_syntaxDownloadDeclined);
     toml::array mruArr;
     for (const QString& p : m_editorMruPaths)

@@ -20,6 +20,7 @@ add_executable(editor_tests
         test_editor.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/editor.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/EncodingChoiceDialog.cpp
+        ${CMAKE_SOURCE_DIR}/src/editor/SpellLanguageDialog.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/BaseViewer.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/FindBar.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/SyntaxData.cpp
@@ -36,6 +37,7 @@ target_link_libraries(editor_tests
         qcodeedit::qcodeedit
         qcodeedit::kate
         qcodeedit::encoding
+        qcodeedit::spell
         toml_headers
         GTest::gtest
 )

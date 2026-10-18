@@ -56,26 +56,29 @@ FetchContent_MakeAvailable(qt-extra)
 # (github.com/siplasplas/qcodeedit, LGPL-3.0-or-later), highlighted with Kate
 # syntax definitions that qcodeedit-katedata downloads at run time, and files
 # in any encoding (UTF or legacy code pages) through qcodeedit-encoding, which
-# needs cpg (fetched by qcodeedit when not installed). Installed qcodeedit
-# packages 1.14.0 or later are used (encoding detection with confidence,
-# alternatives and preview); otherwise the tag below is fetched and built into
+# needs cpg (fetched by qcodeedit when not installed), and spell checking
+# through qcodeedit-spell, which needs hunspell (libhunspell-dev). Installed
+# qcodeedit packages 1.15.1 or later are used (spell checking,
+# CodeEditArea::cursorAt()); otherwise the tag below is fetched and built into
 # gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
-    find_package(qcodeedit-katedata 1.14.0 QUIET)
-    find_package(qcodeedit-encoding 1.14.0 QUIET)
+    find_package(qcodeedit-katedata 1.15.1 QUIET)
+    find_package(qcodeedit-encoding 1.15.1 QUIET)
+    find_package(qcodeedit-spell 1.15.1 QUIET)
 endif()
-if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding)
+if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGET qcodeedit::spell)
     set(QCE_BUILD_DEMO OFF)
     set(QCE_BUILD_TESTS OFF)
     set(QCE_BUILD_KATE ON)
     set(QCE_BUILD_KATE_DOWNLOADER ON)
     set(QCE_BUILD_ENCODING ON)
+    set(QCE_BUILD_SPELL ON)
     FetchContent_Declare(
             qcodeedit
             GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
-            GIT_TAG v1.14.0
+            GIT_TAG v1.15.1
             GIT_SHALLOW TRUE
             ${fetch_exclude}
     )
@@ -206,6 +209,8 @@ add_executable(${PROJECT_NAME}
         src/editor/editor.h
         src/editor/EncodingChoiceDialog.cpp
         src/editor/EncodingChoiceDialog.h
+        src/editor/SpellLanguageDialog.cpp
+        src/editor/SpellLanguageDialog.h
         src/editor/FindBar.cpp
         src/editor/FindBar.h
         src/editor/ReplaceCommand.h
@@ -282,6 +287,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         qcodeedit::kate
         qcodeedit::katedata
         qcodeedit::encoding
+        qcodeedit::spell
         toml_headers
         ICU::uc ICU::i18n
         ${LIBARCHIVE_LIBRARIES}

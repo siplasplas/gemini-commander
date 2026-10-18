@@ -99,6 +99,7 @@ private:
     QAction *m_insertTimeAction;
     QAction *m_insertBothAction;
     QAction *m_updateSyntaxAction;
+    QAction *m_checkSpellingAction;
 
     QStatusBar* m_statusBar = nullptr;
     // Status bar of the current editor (filled by updateStatusBar()).

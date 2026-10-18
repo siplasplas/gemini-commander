@@ -147,4 +147,5 @@ private:
 
     // Editor page
     QListWidget* m_legacyLanguages; ///< checkable; item data: cpg language code; none = automatic
+    QCheckBox* m_spellCheck;
 };

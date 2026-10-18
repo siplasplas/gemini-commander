@@ -1,6 +1,7 @@
 #include "editor.h"
 #include "EncodingChoiceDialog.h"
 #include "FindBar.h"
+#include "SpellLanguageDialog.h"
 #include "ReplaceCommand.h"
 #include "SyntaxData.h"
 
@@ -13,7 +14,9 @@
 #include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QInputDialog>
+#include <QLocale>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMap>
@@ -43,6 +46,7 @@
 #include <qce/kate/KateXmlReader.h>
 #include <qce/encoding/Encoding.h>
 #include <qce/encoding/EncodingGuard.h>
+#include <qce/spell/CodeEditSpelling.h>
 #include <qxfiledialog.h>
 
 #include "../Config.h"
@@ -75,6 +79,12 @@ Editor::Editor(QWidget *parent) :
         m_edit->area()->undoStack()->resetClean();
         emit statusChanged();
     });
+
+    // Wavy underlines under misspelled words in comments, strings and text;
+    // the language follows the file's until the user chooses.
+    m_spelling = new qce::spell::CodeEditSpelling(m_edit->area(), this);
+    m_spelling->setEnabled(Config::instance().editorSpellCheck());
+    applySpellLanguages();
 
     m_lineNumbers = std::make_unique<qce::LineNumberGutter>(m_doc);
     m_lineNumbers->setFont(m_edit->area()->font());
@@ -228,10 +238,12 @@ bool Editor::readFile(const QString& path, bool resetSyntax, const QString& enco
     if (!knownLanguage.isEmpty()) {
         m_language.code = knownLanguage;
         m_language.name = qce::encoding::languageName(knownLanguage);
+        applySpellLanguages();
     } else {
         qce::encoding::detectLanguageAsync(bytes, this, [this, request](const qce::encoding::Language& language) {
             if (request != m_languageRequest) return;
             m_language = language;
+            applySpellLanguages();
             emit statusChanged();
         });
     }
@@ -412,6 +424,110 @@ void Editor::setShowWhitespace(bool show)
     m_edit->area()->setShowWhitespace(show);
 }
 
+void Editor::setSpellCheck(bool check)
+{
+    m_spelling->setEnabled(check);
+    if (check)
+        applySpellLanguages();
+}
+
+void Editor::setSpellLanguages(const QStringList& dictionaries)
+{
+    m_spellLanguages = dictionaries;
+    // The chosen ones become the most recent in the Spelling Language menu.
+    QStringList recent = Config::instance().editorRecentSpellDictionaries();
+    for (auto it = dictionaries.crbegin(); it != dictionaries.crend(); ++it) {
+        recent.removeAll(*it);
+        recent.prepend(*it);
+    }
+    Config::instance().setEditorRecentSpellDictionaries(recent.mid(0, 6));
+    Config::instance().save();
+    applySpellLanguages();
+}
+
+void Editor::applySpellLanguages()
+{
+    // Chosen, else the file's language, else the desktop's (e.g. a new file).
+    QStringList languages = m_spellLanguages;
+    if (languages.isEmpty())
+        languages << (m_language.code.isEmpty() ? QLocale::system().name().section('_', 0, 0) : m_language.code);
+    m_spelling->setLanguages(languages);
+    if (m_spelling->isReady() || !m_spelling->isEnabled())
+        return;
+    // Said once per language: which dictionary package would add it.
+    const QString missing = languages.join(',');
+    if (missing == m_spellMissing)
+        return;
+    m_spellMissing = missing;
+    const QString name = qce::encoding::languageName(languages.front());
+    emit message(tr("No spelling dictionary for %1; install one with hunspell, e.g. sudo apt install %2")
+                     .arg(name.isEmpty() ? languages.front() : name, qce::spell::packageHint(languages.front())));
+}
+
+void Editor::addSpellingMenu(QMenu& menu, const QPoint& position)
+{
+    auto* area = m_edit->area();
+    if (m_spelling->isEnabled()) {
+        const auto word = m_spelling->misspelledWordAt(area->cursorAt(area->viewport()->mapFrom(area, position)));
+        if (word) {
+            const QStringList suggestions = m_spelling->suggestions(word->word, 8);
+            if (suggestions.isEmpty())
+                menu.addAction(tr("No suggestions"))->setEnabled(false);
+            for (const QString& suggestion : suggestions) {
+                auto* action = menu.addAction(QString(suggestion).replace("&", "&&"));
+                connect(action, &QAction::triggered, this, [this, w = *word, suggestion]() {
+                    m_spelling->replaceWord(w, suggestion);
+                });
+            }
+            menu.addSeparator();
+            connect(menu.addAction(tr("Add to Dictionary")), &QAction::triggered, this,
+                    [this, w = word->word]() { m_spelling->addToDictionary(w); });
+            connect(menu.addAction(tr("Ignore")), &QAction::triggered, this,
+                    [this, w = word->word]() { m_spelling->ignore(w); });
+            menu.addSeparator();
+        }
+    }
+
+    // Recent dictionaries and the ones in use; up to two at once.
+    auto* languageMenu = menu.addMenu(tr("Spelling Language"));
+    QHash<QString, QString> names;
+    for (const auto& dictionary : qce::spell::installedDictionaries())
+        names.insert(dictionary.name, dictionary.displayName);
+    auto* automatic = languageMenu->addAction(m_language.name.isEmpty()
+        ? tr("Automatic") : tr("Automatic (%1)").arg(m_language.name));
+    automatic->setCheckable(true);
+    automatic->setChecked(m_spellLanguages.isEmpty());
+    connect(automatic, &QAction::triggered, this, [this]() { setSpellLanguages({}); });
+    languageMenu->addSeparator();
+    QStringList candidates = Config::instance().editorRecentSpellDictionaries();
+    for (const QString& name : m_spelling->dictionaries())
+        if (!candidates.contains(name))
+            candidates << name;
+    for (const QString& name : candidates) {
+        if (!names.contains(name))
+            continue;
+        auto* action = languageMenu->addAction(QString(names.value(name)).replace("&", "&&"));
+        action->setCheckable(true);
+        action->setChecked(m_spellLanguages.contains(name));
+        connect(action, &QAction::triggered, this, [this, name](bool checked) {
+            QStringList chosen = m_spellLanguages;
+            chosen.removeAll(name);
+            if (checked)
+                chosen << name;
+            while (chosen.size() > SpellLanguageDialog::MaxLanguages)
+                chosen.removeFirst();
+            setSpellLanguages(chosen);
+        });
+    }
+    languageMenu->addSeparator();
+    connect(languageMenu->addAction(tr("More...")), &QAction::triggered, this, [this]() {
+        SpellLanguageDialog dialog(m_spellLanguages.isEmpty() ? m_spelling->dictionaries() : m_spellLanguages, this);
+        if (dialog.exec() == QDialog::Accepted)
+            setSpellLanguages(dialog.chosenDictionaries());
+    });
+    menu.addSeparator();
+}
+
 void Editor::insertAtCursor(const QString& text)
 {
     auto* area = m_edit->area();
@@ -551,6 +667,7 @@ void Editor::showContextMenu(const QPoint& position)
     paste->setEnabled(!clipboardText.isEmpty() && !area->readOnly());
     menu.addAction(tr("Select &All"), area, &qce::CodeEditArea::selectAll);
     menu.addSeparator();
+    addSpellingMenu(menu, position);
 
     auto* syntaxMenu = menu.addMenu(tr("Syntax"));
     auto* choices = new QActionGroup(&menu);

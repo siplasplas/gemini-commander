@@ -81,7 +81,7 @@ EditorFrame::EditorFrame(QWidget* parent)
                              m_aboutAction, m_findAction, m_findNextAction, m_findPrevAction,
                              m_replaceAction, m_gotoAction);
     m_mainHeader->setupToolsMenu(m_insertDateAction, m_insertTimeAction, m_insertBothAction,
-                                 m_updateSyntaxAction);
+                                 m_updateSyntaxAction, m_checkSpellingAction);
 
     // Insert "Recent Files" submenu before the separator that precedes Close
     m_recentMenu = new QMenu(tr("Recent Files"), fileMenu);
@@ -217,6 +217,17 @@ void EditorFrame::createActions()
 
     m_updateSyntaxAction = new QAction(tr("&Update Syntax Definitions"), this);
     connect(m_updateSyntaxAction, &QAction::triggered, this, &EditorFrame::onUpdateSyntaxTriggered);
+
+    m_checkSpellingAction = new QAction(tr("Check &Spelling"), this);
+    m_checkSpellingAction->setCheckable(true);
+    m_checkSpellingAction->setChecked(Config::instance().editorSpellCheck());
+    connect(m_checkSpellingAction, &QAction::toggled, this, [this](bool checked) {
+        for (int i = 0; i < m_editorTabWidget->count(); ++i)
+            if (auto* editor = qobject_cast<Editor*>(m_editorTabWidget->widget(i)))
+                editor->setSpellCheck(checked);
+        Config::instance().setEditorSpellCheck(checked);
+        Config::instance().save();
+    });
 }
 
 /**
@@ -269,6 +280,9 @@ void EditorFrame::addEditorTab(Editor* editor, const QString& tabTitle, const QS
     connect(editor, &Editor::statusChanged, this, [this, editor]() {
         if (editor == currentEditor())
             updateStatusBar();
+    });
+    connect(editor, &Editor::message, this, [this](const QString& text) {
+        m_statusBar->showMessage(text, 10000);
     });
     connect(editor->codeEdit()->area(), &qce::CodeEditArea::cursorPositionChanged, this, [this, editor]() {
         if (editor == currentEditor())

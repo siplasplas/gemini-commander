@@ -43,7 +43,7 @@ public:
                     QAction* replaceAction = nullptr, QAction* gotoAction = nullptr);
 
     void setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth,
-                        QAction* updateSyntax);
+                        QAction* updateSyntax, QAction* checkSpelling = nullptr);
 
     /**
      * @brief Configures toolbar buttons

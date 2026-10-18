@@ -64,25 +64,28 @@ On Ubuntu 24.04 LTS/25.10, Mint 22, Debian, Pop!_OS
 ```
 sudo apt update
 sudo apt install git cmake g++ pkg-config qt6-base-dev libbotan-2-dev \
-    libicu-dev nlohmann-json3-dev libarchive-dev libgtest-dev librsvg2-bin
+    libicu-dev nlohmann-json3-dev libarchive-dev libgtest-dev librsvg2-bin \
+    libhunspell-dev hunspell-en-us hunspell-pl
 ```
 
 On Fedora/RHEL-based systems:
 ```
 sudo dnf install git cmake gcc-c++ pkgconf-pkg-config qt6-qtbase-devel botan2-devel \
-    libicu-devel json-devel libarchive-devel gtest-devel librsvg2 librsvg2-tools
+    libicu-devel json-devel libarchive-devel gtest-devel librsvg2 librsvg2-tools \
+    hunspell-devel hunspell-en-US hunspell-pl
 ```
 
 On Arch-based systems (e.g., Arch Linux, Manjaro):
 ```
 sudo pacman -Syu git cmake pkgconf qt6-base botan \
-    icu nlohmann-json libarchive gtest librsvg
+    icu nlohmann-json libarchive gtest librsvg hunspell hunspell-en_us hunspell-pl
 ```
 
 On openSUSE:
 ```
 sudo zypper install git cmake gcc-c++ pkgconf-pkg-config qt6-base-devel libbotan-devel \
-    libicu-devel nlohmann_json-devel libarchive-devel gtest rsvg-convert
+    libicu-devel nlohmann_json-devel libarchive-devel gtest rsvg-convert \
+    hunspell-devel myspell-en_US myspell-pl_PL
 ```
 
 On Windows (using MSYS2 or Chocolatey; note that KDE development on Windows may require additional setup):
@@ -100,6 +103,7 @@ pacman -S mingw-w64-ucrt-x86_64-libbotan
 pacman -S mingw-w64-ucrt-x86_64-nlohmann-json
 pacman -S libarchive
 pacman -S mingw-w64-ucrt-x86_64-gtest
+pacman -S mingw-w64-ucrt-x86_64-hunspell
 ```
 
 ### Libraries fetched by CMake
@@ -111,7 +115,7 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.7)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.14.0)` and `find_package(qcodeedit-encoding 1.14.0)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.15.1)`, `qcodeedit-encoding` and `qcodeedit-spell` (needs libhunspell-dev) |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -172,6 +176,22 @@ differently; **Other encoding** adds any encoding to the comparison, and OK
 reopens the file in the chosen one (asking first about unsaved edits). **Keep**,
 or editing the text, closes the bar. **Encoding > Reopen with Encoding** in the
 context menu lists the same encodings with their probability at the top.
+
+### Spelling
+
+The editor checks spelling as you type with hunspell dictionaries (**Tools > Check
+Spelling** in the editor, or **Configuration > Editor**; on by default): misspelled
+words get a wavy red underline, in source code only in comments, strings and
+documentation, in plain text everywhere; identifiers, addresses and paths are not
+checked. Right-clicking a misspelled word offers up to 8 suggestions (choosing one
+replaces the word, undone in one step), **Add to Dictionary** (a user dictionary
+shared with other siplasplas programs, `~/.local/share/siplasplas/spell/`) and
+**Ignore** (this document, this session). The language is the file's; **Spelling
+Language** in the context menu chooses another for the document, from the recently
+used ones (saved in config.toml), up to two at once (e.g. English + Polish), or
+**More…** for every dictionary hunspell has installed. Other languages are added by
+installing a hunspell dictionary (e.g. `sudo apt install hunspell-de-de`); a
+missing one is named in the status bar.
 
 ## Building
 

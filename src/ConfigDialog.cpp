@@ -813,6 +813,17 @@ void ConfigDialog::createEditorPage()
     encodingLayout->addRow(info);
 
     layout->addWidget(encodingGroup);
+
+    auto* spellingGroup = new QGroupBox(tr("Spelling"), page);
+    auto* spellingLayout = new QVBoxLayout(spellingGroup);
+    m_spellCheck = new QCheckBox(tr("Check spelling (comments, strings and plain text)"), spellingGroup);
+    spellingLayout->addWidget(m_spellCheck);
+    auto* spellingInfo = new QLabel(tr("Misspelled words get a wavy underline; the editor's context menu "
+                                       "offers suggestions and the language (hunspell dictionaries)."),
+                                    spellingGroup);
+    spellingInfo->setWordWrap(true);
+    spellingLayout->addWidget(spellingInfo);
+    layout->addWidget(spellingGroup);
     layout->addStretch();
     m_pagesStack->addWidget(page);
 }
@@ -921,6 +932,7 @@ void ConfigDialog::loadSettings()
         item->setCheckState(legacyLanguages.contains(item->data(Qt::UserRole).toString())
                                 ? Qt::Checked : Qt::Unchecked);
     }
+    m_spellCheck->setChecked(cfg.editorSpellCheck());
 }
 
 void ConfigDialog::saveSettings()
@@ -1016,6 +1028,7 @@ void ConfigDialog::saveSettings()
         if (m_legacyLanguages->item(i)->checkState() == Qt::Checked)
             legacyLanguages << m_legacyLanguages->item(i)->data(Qt::UserRole).toString();
     cfg.setEditorLegacyLanguages(legacyLanguages);
+    cfg.setEditorSpellCheck(m_spellCheck->isChecked());
 
     // Save to file
     cfg.save();

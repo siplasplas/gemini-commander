@@ -67,7 +67,7 @@ QMenu* MainHeader::setupMenus(QAction* newFile, QAction* openFile, QAction* save
 }
 
 void MainHeader::setupToolsMenu(QAction* insertDate, QAction* insertTime, QAction* insertBoth,
-                                QAction* updateSyntax)
+                                QAction* updateSyntax, QAction* checkSpelling)
 {
     QMenu* toolsMenu = new QMenu(tr("&Tools"), m_menuBar);
     m_menuBar->insertMenu(m_helpMenu->menuAction(), toolsMenu);
@@ -76,6 +76,10 @@ void MainHeader::setupToolsMenu(QAction* insertDate, QAction* insertTime, QActio
     toolsMenu->addAction(insertBoth);
     toolsMenu->addSeparator();
     toolsMenu->addAction(updateSyntax);
+    if (checkSpelling) {
+        toolsMenu->addSeparator();
+        toolsMenu->addAction(checkSpelling);
+    }
 }
 
 void MainHeader::setupToolBar(QAction* buildProject, QAction* runProject)

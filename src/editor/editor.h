@@ -26,6 +26,7 @@ class QFrame;
 class QLabel;
 class QMenu;
 namespace qce::encoding { class EncodingGuard; }
+namespace qce::spell { class CodeEditSpelling; }
 
 /**
  * @class Editor
@@ -44,6 +45,8 @@ signals:
     void modificationChanged(bool modified);
     /// Encoding, line breaks or language changed (status bar refresh).
     void statusChanged();
+    /// A message for the status bar (e.g. a missing spelling dictionary).
+    void message(const QString& text);
 
 public:
     explicit Editor(QWidget *parent = nullptr);
@@ -92,6 +95,11 @@ public:
     void setReadOnly(bool readOnly);
     void setWordWrap(bool wrap);
     void setShowWhitespace(bool show);
+    /// Underlines misspelled words (Config::editorSpellCheck()).
+    void setSpellCheck(bool check);
+    /// Spelling dictionaries chosen for this document (e.g. en_US, pl_PL);
+    /// empty = the file's language.
+    void setSpellLanguages(const QStringList& dictionaries);
 
     /// Inserts text at the cursor (replacing the selection) as one undo step.
     void insertAtCursor(const QString& text);
@@ -120,6 +128,9 @@ private:
     void reopenAsking(const QString& encoding);
     void showEncodingNotice();
     void hideEncodingNotice();
+    /// The dictionaries for this document: chosen, or the file's language.
+    void applySpellLanguages();
+    void addSpellingMenu(QMenu& menu, const QPoint& position);
     void applyThemePalette();
     qce::TextAttribute themedAttribute(const QString& style, const qce::TextAttribute& fallback) const;
     void applyHighlighterForFile(const QString& path);
@@ -147,6 +158,9 @@ private:
     QFrame* m_encodingNotice = nullptr;
     QLabel* m_encodingNoticeText = nullptr;
     qce::encoding::EncodingDetection m_uncertain;
+    qce::spell::CodeEditSpelling* m_spelling = nullptr;
+    QStringList m_spellLanguages; // chosen for this document; empty = the file's language
+    QString m_spellMissing;       // languages whose missing dictionary was reported
 
     // How the file is stored (encoding, BOM, CRLF, final line break), so that
     // saving writes it back the same way; also keeps typed and pasted text
