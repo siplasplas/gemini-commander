@@ -115,8 +115,8 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.7)` |
-| [qceditor](https://github.com/siplasplas/qceditor) | the editor window and the viewer of small files (its editor library, the same as QCEditor's), encrypted `.een` files (with Botan) | `find_package(qceditor 1.12.0)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)), reloads as an undo step | `find_package(qcodeedit-katedata 1.29.0)`, `qcodeedit-encoding`, `qcodeedit-spell` (needs libhunspell-dev), `qcodeedit-spelldata` and `qcodeedit-diff` |
+| [qceditor](https://github.com/siplasplas/qceditor) | the editor window and the viewer of small files (its editor library, the same as QCEditor's), encrypted `.een` files (with Botan) | `find_package(qceditor 1.13.0)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)), reloads as an undo step | `find_package(qcodeedit-katedata 1.30.0)`, `qcodeedit-encoding`, `qcodeedit-spell` (needs libhunspell-dev), `qcodeedit-spelldata` and `qcodeedit-diff` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -187,7 +187,9 @@ documentation, in plain text everywhere; identifiers, addresses and paths are no
 checked. Right-clicking a misspelled word offers up to 8 suggestions (choosing one
 replaces the word, undone in one step), **Add to Dictionary** (a user dictionary
 shared with other siplasplas programs, `~/.local/share/siplasplas/spell/`) and
-**Ignore** (this document, this session). The language is the file's; **Spelling
+**Ignore** (this document, this session). The language is the file's (a new
+text, or one too short to tell, has the one chosen in **Tools > Default
+Spelling Language**, `editor.default_spell_language`, else the desktop's); **Spelling
 Language** in the context menu chooses another for the document, from the recently
 used ones (saved in config.toml), up to two at once (e.g. English + Polish), or
 **More…** for every dictionary hunspell has installed. Other languages are added by

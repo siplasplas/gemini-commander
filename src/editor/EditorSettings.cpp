@@ -15,6 +15,7 @@ const QString kTrimWhitespace = QStringLiteral("editing/trimTrailingWhitespace")
 const QString kWordFrequencies = QStringLiteral("spelling/downloadWordFrequencies");
 const QString kCorrectWhileTyping = QStringLiteral("spelling/correctWhileTyping");
 const QString kReviewCheckedAtFirst = QStringLiteral("spelling/reviewCheckedAtFirst");
+const QString kDefaultSpellLanguage = QStringLiteral("spelling/defaultLanguage");
 }
 
 QVariant EditorSettings::value(const QString& key, const QVariant& defaultValue) const
@@ -31,6 +32,7 @@ QVariant EditorSettings::value(const QString& key, const QVariant& defaultValue)
     if (key == kTrimWhitespace) return cfg.editorTrimTrailingWhitespace();
     if (key == kCorrectWhileTyping) return cfg.editorCorrectWhileTyping();
     if (key == kReviewCheckedAtFirst) return cfg.editorReviewCheckedAtFirst();
+    if (key == kDefaultSpellLanguage) return cfg.editorDefaultSpellLanguage();
     // Not asked yet: no value, so the editor asks.
     if (key == kWordFrequencies) {
         const auto download = cfg.editorDownloadWordFrequencies();
@@ -54,6 +56,7 @@ void EditorSettings::setValue(const QString& key, const QVariant& value)
     else if (key == kWordFrequencies) cfg.setEditorDownloadWordFrequencies(value.toBool());
     else if (key == kCorrectWhileTyping) cfg.setEditorCorrectWhileTyping(value.toBool());
     else if (key == kReviewCheckedAtFirst) cfg.setEditorReviewCheckedAtFirst(value.toString());
+    else if (key == kDefaultSpellLanguage) cfg.setEditorDefaultSpellLanguage(value.toString());
     else {
         m_session.insert(key, value);
         return;
@@ -76,6 +79,7 @@ void EditorSettings::remove(const QString& key)
     else if (key == kWordFrequencies) cfg.setEditorDownloadWordFrequencies(std::nullopt);
     else if (key == kCorrectWhileTyping) cfg.setEditorCorrectWhileTyping(false);
     else if (key == kReviewCheckedAtFirst) cfg.setEditorReviewCheckedAtFirst(QStringLiteral("sure"));
+    else if (key == kDefaultSpellLanguage) cfg.setEditorDefaultSpellLanguage(QString());
     else {
         m_session.remove(key);
         return;

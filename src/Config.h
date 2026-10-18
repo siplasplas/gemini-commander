@@ -243,6 +243,9 @@ public:
   void setEditorCorrectWhileTyping(bool correct) { m_editorCorrectWhileTyping = correct; }
   // What Review Spelling checks at first: "sure" corrections (default), words
   // with a "single" suggestion, or "every" word.
+  // Spelling dictionary of a new text (e.g. "pl_PL"); empty: the desktop's language.
+  QString editorDefaultSpellLanguage() const { return m_editorDefaultSpellLanguage; }
+  void setEditorDefaultSpellLanguage(const QString& dictionary) { m_editorDefaultSpellLanguage = dictionary; }
   QString editorReviewCheckedAtFirst() const { return m_editorReviewCheckedAtFirst; }
   void setEditorReviewCheckedAtFirst(const QString& mode) { m_editorReviewCheckedAtFirst = mode; }
   QString editorTrimTrailingWhitespace() const { return m_editorTrimTrailingWhitespace; }
@@ -367,6 +370,7 @@ private:
   std::optional<bool> m_editorDownloadWordFrequencies;
   bool m_editorCorrectWhileTyping = false;
   QString m_editorReviewCheckedAtFirst = QStringLiteral("sure");
+  QString m_editorDefaultSpellLanguage;
   QString m_editorTrimTrailingWhitespace = QStringLiteral("changed");
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;
