@@ -238,6 +238,9 @@ public:
   // unset until the editor has asked, then the answer.
   std::optional<bool> editorDownloadWordFrequencies() const { return m_editorDownloadWordFrequencies; }
   void setEditorDownloadWordFrequencies(std::optional<bool> download) { m_editorDownloadWordFrequencies = download; }
+  // A misspelled word with a single correction is corrected while typing; off by default.
+  bool editorCorrectWhileTyping() const { return m_editorCorrectWhileTyping; }
+  void setEditorCorrectWhileTyping(bool correct) { m_editorCorrectWhileTyping = correct; }
   QString editorTrimTrailingWhitespace() const { return m_editorTrimTrailingWhitespace; }
   void setEditorTrimTrailingWhitespace(const QString& mode) { m_editorTrimTrailingWhitespace = mode; }
 
@@ -358,6 +361,7 @@ private:
   QStringList m_editorRecentSpellDictionaries;
   bool m_editorAskToReloadModified = false;
   std::optional<bool> m_editorDownloadWordFrequencies;
+  bool m_editorCorrectWhileTyping = false;
   QString m_editorTrimTrailingWhitespace = QStringLiteral("changed");
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;

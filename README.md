@@ -115,8 +115,8 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.7)` |
-| [qceditor](https://github.com/siplasplas/qceditor) | the editor window and the viewer of small files (its editor library, the same as QCEditor's), encrypted `.een` files (with Botan) | `find_package(qceditor 1.6.0)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)), reloads as an undo step | `find_package(qcodeedit-katedata 1.23.0)`, `qcodeedit-encoding`, `qcodeedit-spell` (needs libhunspell-dev), `qcodeedit-spelldata` and `qcodeedit-diff` |
+| [qceditor](https://github.com/siplasplas/qceditor) | the editor window and the viewer of small files (its editor library, the same as QCEditor's), encrypted `.een` files (with Botan) | `find_package(qceditor 1.7.0)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)), reloads as an undo step | `find_package(qcodeedit-katedata 1.24.0)`, `qcodeedit-encoding`, `qcodeedit-spell` (needs libhunspell-dev), `qcodeedit-spelldata` and `qcodeedit-diff` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -206,6 +206,10 @@ the answer is `editor.download_word_frequencies` in config.toml.
 selection, or of the whole text, with a correction for each: words with a single
 correction are checked already, the others are checked by hand; **Correct**
 replaces the checked ones, all of them one undo step.
+**Tools > Correct Spelling While Typing** (off by default;
+`editor.correct_while_typing` in config.toml) corrects a misspelled word with a
+single correction when a space or punctuation is typed after it, not in pasted
+text; Ctrl+Z brings back the word as typed.
 
 ## Building
 
