@@ -213,8 +213,10 @@ void ViewerWidget::showTextView()
     qint64 ramLimitBytes = getSystemRamBytes() / 10;  // 10% of RAM
     qint64 effectiveThreshold = qMin(configThresholdBytes, ramLimitBytes);
 
-    // Large files (> threshold): use wid::TextViewer
-    if (fileSize > effectiveThreshold) {
+    // Large files (> threshold): use wid::TextViewer. Encrypted .een files too,
+    // as they are on disk: the code view would ask for the password, even in
+    // the panel's quick view (the editor decrypts them).
+    if (fileSize > effectiveThreshold || qceditor::EditorTab::isEncryptedFile(m_currentFile)) {
         uchar* addr = nullptr;
         if (!m_virtualFileContent.isEmpty()) {
             // Virtual file already read

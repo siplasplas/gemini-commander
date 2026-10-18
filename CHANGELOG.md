@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Encrypted `*.een` files in the editor (qceditor 1.2): the password is asked
+  when the file is opened; the formats of EdiQ and the older Editas are read,
+  and saving writes EdiQ's. The viewer shows such files as they are on disk,
+  without asking for a password
+
 ## [2.2.0] - 2026-10-18
 
 ### Changed
