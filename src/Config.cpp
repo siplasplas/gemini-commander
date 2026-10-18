@@ -297,8 +297,15 @@ bool Config::load(const QString& path)
                 m_editorWordWrap = *b;
             if (auto b = editor["show_whitespace"].value<bool>())
                 m_editorShowWhitespace = *b;
-            if (auto s = editor["legacy_language"].value<std::string>())
-                m_editorLegacyLanguage = QString::fromStdString(*s);
+            m_editorLegacyLanguages.clear();
+            if (editor.contains("legacy_languages") && editor["legacy_languages"].is_array()) {
+                for (const auto& node : *editor["legacy_languages"].as_array())
+                    if (auto s = node.value<std::string>(); s && !s->empty())
+                        m_editorLegacyLanguages << QString::fromStdString(*s);
+            } else if (auto s = editor["legacy_language"].value<std::string>(); s && !s->empty()) {
+                // Versions up to 2.x kept one language.
+                m_editorLegacyLanguages << QString::fromStdString(*s);
+            }
             if (auto b = editor["syntax_download_declined"].value<bool>())
                 m_syntaxDownloadDeclined = *b;
             m_editorMruPaths.clear();
@@ -583,7 +590,10 @@ bool Config::save() const
     editorTbl.insert("mru_max_count", static_cast<int64_t>(m_editorMruMaxCount));
     editorTbl.insert("word_wrap", m_editorWordWrap);
     editorTbl.insert("show_whitespace", m_editorShowWhitespace);
-    editorTbl.insert("legacy_language", m_editorLegacyLanguage.toStdString());
+    toml::array legacyLanguages;
+    for (const QString& code : m_editorLegacyLanguages)
+        legacyLanguages.push_back(code.toStdString());
+    editorTbl.insert("legacy_languages", legacyLanguages);
     editorTbl.insert("syntax_download_declined", m_syntaxDownloadDeclined);
     toml::array mruArr;
     for (const QString& p : m_editorMruPaths)

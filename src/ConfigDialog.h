@@ -146,5 +146,5 @@ private:
     QPushButton* m_editToolListBtn;
 
     // Editor page
-    QComboBox* m_legacyLanguage; ///< data: cpg language code, "" = automatic
+    QListWidget* m_legacyLanguages; ///< checkable; item data: cpg language code; none = automatic
 };

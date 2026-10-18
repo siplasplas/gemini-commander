@@ -793,16 +793,21 @@ void ConfigDialog::createEditorPage()
 
     auto* encodingGroup = new QGroupBox(tr("Encoding detection"), page);
     auto* encodingLayout = new QFormLayout(encodingGroup);
-    m_legacyLanguage = new QComboBox(encodingGroup);
-    m_legacyLanguage->addItem(tr("Automatic"), QString());
-    for (const auto& language : qce::encoding::availableLanguages())
-        m_legacyLanguage->addItem(QStringLiteral("%1 (%2)").arg(language.name, language.code),
-                                  language.code);
-    encodingLayout->addRow(tr("Language of files not in UTF-8:"), m_legacyLanguage);
-    auto* info = new QLabel(tr("For files that are not UTF-8, only the code pages of this "
-                               "language are considered (e.g. Polish: cp1250, ISO 8859-2, "
-                               "cp852). Faster and more reliable than guessing the language "
-                               "from a few words. UTF-8 files are recognised regardless."),
+    m_legacyLanguages = new QListWidget(encodingGroup);
+    for (const auto& language : qce::encoding::availableLanguages()) {
+        auto* item = new QListWidgetItem(QStringLiteral("%1 (%2)").arg(language.name, language.code),
+                                         m_legacyLanguages);
+        item->setData(Qt::UserRole, language.code);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(Qt::Unchecked);
+    }
+    m_legacyLanguages->setMinimumHeight(fontMetrics().height() * 10);
+    encodingLayout->addRow(tr("Languages of files not in UTF-8:"), m_legacyLanguages);
+    auto* info = new QLabel(tr("For files that are not UTF-8, only the code pages of the checked "
+                               "languages are considered (e.g. Polish and Czech: cp1250, ISO 8859-2, "
+                               "cp852, …). Faster and more reliable than guessing the language "
+                               "from a few words. With none checked the language is guessed "
+                               "(automatic). UTF-8 files are recognised regardless."),
                             encodingGroup);
     info->setWordWrap(true);
     encodingLayout->addRow(info);
@@ -910,8 +915,12 @@ void ConfigDialog::loadSettings()
     m_syncBatchInterval->setValue(cfg.syncBatchIntervalMs());
 
     // Editor page
-    const int languageIdx = m_legacyLanguage->findData(cfg.editorLegacyLanguage());
-    m_legacyLanguage->setCurrentIndex(languageIdx >= 0 ? languageIdx : 0);
+    const QStringList legacyLanguages = cfg.editorLegacyLanguages();
+    for (int i = 0; i < m_legacyLanguages->count(); ++i) {
+        QListWidgetItem* item = m_legacyLanguages->item(i);
+        item->setCheckState(legacyLanguages.contains(item->data(Qt::UserRole).toString())
+                                ? Qt::Checked : Qt::Unchecked);
+    }
 }
 
 void ConfigDialog::saveSettings()
@@ -1002,7 +1011,11 @@ void ConfigDialog::saveSettings()
     cfg.setSyncBatchIntervalMs(m_syncBatchInterval->value());
 
     // Editor page
-    cfg.setEditorLegacyLanguage(m_legacyLanguage->currentData().toString());
+    QStringList legacyLanguages;
+    for (int i = 0; i < m_legacyLanguages->count(); ++i)
+        if (m_legacyLanguages->item(i)->checkState() == Qt::Checked)
+            legacyLanguages << m_legacyLanguages->item(i)->data(Qt::UserRole).toString();
+    cfg.setEditorLegacyLanguages(legacyLanguages);
 
     // Save to file
     cfg.save();

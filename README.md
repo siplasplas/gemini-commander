@@ -154,12 +154,14 @@ beside the executable.
 
 The editor detects each file's encoding. UTF-8/16/32 are recognised directly;
 for other files the code page is chosen from the text around non-ASCII
-characters. **Configuration > Editor > Language of files not in UTF-8** sets the
-language of such files (e.g. Polish): only its code pages are then considered
-(for Polish cp1250, ISO 8859-2, cp852, …), which is faster and does not misread
-a file whose national characters are only in a few comments. The status bar
-then shows that language for files not in UTF-8. **Automatic** (the default)
-guesses the language from the text.
+characters. **Configuration > Editor > Languages of files not in UTF-8** checks
+the languages of such files (e.g. Polish and Czech): only their code pages are
+then considered (for Polish cp1250, ISO 8859-2, cp852, …), which is faster and
+does not misread a file whose national characters are only in a few comments.
+The status bar then shows the language for files not in UTF-8: the checked one,
+or with several the one detection chose. With none checked (the default) the
+language is guessed from the text. A single language set by an older version is
+kept.
 
 When detection is not confident (a few national letters are little evidence),
 the file still opens at once in the most likely encoding, and a bar above the
