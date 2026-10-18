@@ -30,11 +30,13 @@ static ToolbarArea stringToToolbarArea(const std::string& str)
 
 QString Config::defaultConfigPath() const
 {
-    QString base = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+    // ~/.config/siplasplas/gemini-commander (organization and application name
+    // are set in main()).
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     if (base.isEmpty())
-        base = QDir::homePath() + "/.config";
+        base = QDir::homePath() + "/.config/siplasplas/gemini-commander";
 
-    QDir dir(base + "/gemini-commander");
+    QDir dir(base);
     if (!dir.exists())
         dir.mkpath(".");
 

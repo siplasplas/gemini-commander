@@ -110,8 +110,8 @@ If a suitable version is already installed, it is used instead:
 
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
-| [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.5)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.12.2)` and `find_package(qcodeedit-encoding 1.12.2)` |
+| [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.7)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.13.0)` and `find_package(qcodeedit-encoding 1.13.0)` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -129,10 +129,26 @@ The editor highlights files with Kate syntax definitions and color themes. They
 are not part of the program: when the editor is opened the first time it offers
 to download them from kate-editor.org (**Tools > Update Syntax Definitions**
 downloads or updates them later). They are stored in
-`~/.local/share/qcodeedit/kate-<version>/` and shared with other qcodeedit-based
-programs. Without them, only C/C++ files are highlighted (built-in rules).
+`~/.local/share/kate-data/<version>/`, a place shared with other programs that
+read Kate data (deliberately not under `siplasplas`). Without them, only C/C++
+files are highlighted (built-in rules).
 The **Default** theme is Breeze Light, or Breeze Dark on a dark desktop; before
 the themes are downloaded the editor shows black text on white.
+
+### Where Gemini Commander keeps its files
+
+The configuration (`config.toml`: favourites, toolbars, panels and the other
+settings) is in `~/.config/siplasplas/gemini-commander/`, like the other
+siplasplas programs; data would go to `~/.local/share/siplasplas/gemini-commander/`.
+Older versions' files are moved once at start-up (qt-extra's
+`qxMigrateToSiplasplas()`): `~/.config/gemini-commander/config.toml`, recognized
+by its tables, and the emptied `~/.config/gemini-commander` is removed; files
+there that Gemini Commander does not recognize are moved only when you agree.
+`~/.config/gemini-commanderrc`, the settings of the former KTextEditor-based
+editor, is removed. Kate data from `~/.local/share/qcodeedit/kate-<version>/`
+(qcodeedit 1.12 and older) is moved to `~/.local/share/kate-data/<version>/`.
+What was moved is written to the program's log, `gemini-commander-crash.log`
+beside the executable.
 
 ### File encodings
 

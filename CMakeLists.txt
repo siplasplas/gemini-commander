@@ -38,17 +38,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(backward)
 
 # MruTabWidget, QxFileDialog and other shared widgets come from qt-extra
-# (github.com/siplasplas/qt-extra). An installed qt-extra 2.5 or later is used
-# (MruTabWidget's tab limit, LimitAction); otherwise CMake fetches the tag below
-# and builds it into gemini-commander.
+# (github.com/siplasplas/qt-extra). An installed qt-extra 2.7 or later is used
+# (qxMigrateToSiplasplas() moves older versions' files); otherwise CMake fetches
+# the tag below and builds it into gemini-commander.
 FetchContent_Declare(
         qt-extra
         GIT_REPOSITORY https://github.com/siplasplas/qt-extra.git
-        GIT_TAG v2.5.0
+        GIT_TAG v2.7.0
         GIT_SHALLOW TRUE
         ${fetch_exclude}
         # The rest of the line goes to find_package(), so this comes last.
-        FIND_PACKAGE_ARGS 2.5
+        FIND_PACKAGE_ARGS 2.7
 )
 FetchContent_MakeAvailable(qt-extra)
 
@@ -57,14 +57,14 @@ FetchContent_MakeAvailable(qt-extra)
 # syntax definitions that qcodeedit-katedata downloads at run time, and files
 # in any encoding (UTF or legacy code pages) through qcodeedit-encoding, which
 # needs cpg (fetched by qcodeedit when not installed). Installed qcodeedit
-# packages 1.12.2 or later are used (caret, columns and drawing by code point,
-# so an emoji is one character); otherwise the tag below is fetched and built
-# into gemini-commander, without its demo and tests.
+# packages 1.13.0 or later are used (Kate data in the shared
+# ~/.local/share/kate-data, migrateDataRoot()); otherwise the tag below is
+# fetched and built into gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
-    find_package(qcodeedit-katedata 1.12.2 QUIET)
-    find_package(qcodeedit-encoding 1.12.2 QUIET)
+    find_package(qcodeedit-katedata 1.13.0 QUIET)
+    find_package(qcodeedit-encoding 1.13.0 QUIET)
 endif()
 if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding)
     set(QCE_BUILD_DEMO OFF)
@@ -75,7 +75,7 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding)
     FetchContent_Declare(
             qcodeedit
             GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
-            GIT_TAG v1.12.2
+            GIT_TAG v1.13.0
             GIT_SHALLOW TRUE
             ${fetch_exclude}
     )
@@ -111,10 +111,10 @@ set(TEXTVIEWERS_DIR ${textviewers_SOURCE_DIR})
 
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 # MruTabWidget and other shared widgets come from the qt-extra library
-# (https://github.com/siplasplas/qt-extra.git, tag v2.5.0), installed to the system.
-# See README "Building" for how to build and install it first. 2.5 asks before a new
-# editor tab is added over the tab limit (makeRoomForNewTab).
-find_package(qt-extra 2.5 REQUIRED)
+# (https://github.com/siplasplas/qt-extra.git, tag v2.7.0), installed to the system.
+# See README "Building" for how to build and install it first. 2.7 moves older
+# versions' files to ~/.config/siplasplas (qxMigrateToSiplasplas).
+find_package(qt-extra 2.7 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(BOTAN botan-2)
 if(NOT BOTAN_FOUND)
