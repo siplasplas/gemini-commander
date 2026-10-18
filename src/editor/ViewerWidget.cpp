@@ -11,6 +11,7 @@
 #include <QMenu>
 #include <QContextMenuEvent>
 #include <QEvent>
+#include <QShortcut>
 #include <qce/CodeEdit.h>
 #include <qce/CodeEditArea.h>
 #include "wid/TextViewer.h"
@@ -293,6 +294,17 @@ void ViewerWidget::createCodeView(const QString& filePath)
     }
     m_codeView->setReadOnly(true);
     m_codeView->setWordWrap(Config::instance().editorWordWrap());
+    // Searching and Go to as in the editor (the viewer has no menus for them);
+    // only while the focus is in the view.
+    const auto addShortcut = [this](const QKeySequence& key, auto action) {
+        auto* shortcut = new QShortcut(key, m_codeView);
+        shortcut->setContext(Qt::WidgetWithChildrenShortcut);
+        connect(shortcut, &QShortcut::activated, m_codeView, action);
+    };
+    addShortcut(QKeySequence::Find, [this]() { m_codeView->showSearch(); });
+    addShortcut(QKeySequence(Qt::Key_F3), [this]() { m_codeView->findNext(); });
+    addShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), [this]() { m_codeView->findNext(true); });
+    addShortcut(QKeySequence(Qt::CTRL | Qt::Key_G), [this]() { m_codeView->goToPosition(); });
 
     // Install event filter on the code view and all its children
     m_codeView->installEventFilter(this);

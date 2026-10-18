@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when the file is opened; the formats of EdiQ and the older Editas are read,
   and saving writes EdiQ's. The viewer shows such files as they are on disk,
   without asking for a password
+- The viewer of small files searches (Ctrl+F, F3, Shift+F3) and goes to a
+  line:column (Ctrl+G), as the editor does
+
+### Fixed
+- Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
+  tabs
 
 ## [2.2.0] - 2026-10-18
 

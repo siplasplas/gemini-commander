@@ -93,10 +93,10 @@ set(QCEDITOR_BUILD_APP OFF)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
-        GIT_TAG v1.2.0
+        GIT_TAG v1.2.1
         GIT_SHALLOW TRUE
         ${fetch_exclude}
-        FIND_PACKAGE_ARGS 1.2.0
+        FIND_PACKAGE_ARGS 1.2.1
 )
 FetchContent_MakeAvailable(qceditor)
 
