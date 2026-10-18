@@ -468,7 +468,8 @@ void Editor::addSpellingMenu(QMenu& menu, const QPoint& position)
 {
     auto* area = m_edit->area();
     if (m_spelling->isEnabled()) {
-        const auto word = m_spelling->misspelledWordAt(area->cursorAt(area->viewport()->mapFrom(area, position)));
+        // customContextMenuRequested gives the click in the viewport's coordinates.
+        const auto word = m_spelling->misspelledWordAt(area->cursorAt(position));
         if (word) {
             const QStringList suggestions = m_spelling->suggestions(word->word, 8);
             if (suggestions.isEmpty())
