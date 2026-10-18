@@ -243,9 +243,6 @@ public:
   void setEditorCorrectWhileTyping(bool correct) { m_editorCorrectWhileTyping = correct; }
   // What Review Spelling checks at first: "sure" corrections (default), words
   // with a "single" suggestion, or "every" word.
-  // Hunspell's suggestions "always" (default) or "whenNoneFound".
-  QString editorHunspellSuggestions() const { return m_editorHunspellSuggestions; }
-  void setEditorHunspellSuggestions(const QString& when) { m_editorHunspellSuggestions = when; }
   QString editorReviewCheckedAtFirst() const { return m_editorReviewCheckedAtFirst; }
   void setEditorReviewCheckedAtFirst(const QString& mode) { m_editorReviewCheckedAtFirst = mode; }
   QString editorTrimTrailingWhitespace() const { return m_editorTrimTrailingWhitespace; }
@@ -370,7 +367,6 @@ private:
   std::optional<bool> m_editorDownloadWordFrequencies;
   bool m_editorCorrectWhileTyping = false;
   QString m_editorReviewCheckedAtFirst = QStringLiteral("sure");
-  QString m_editorHunspellSuggestions = QStringLiteral("always");
   QString m_editorTrimTrailingWhitespace = QStringLiteral("changed");
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;

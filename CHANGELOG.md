@@ -43,10 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keys, and none are offered when every word is far off (qceditor 1.9,
   qcodeedit 1.26)
 - A double click in the editor selects the word (qcodeedit 1.26)
-- **Tools > Hunspell Suggestions** in the editor: always, or only when the
-  dictionary's forms give none, about four times faster
-  (`editor.hunspell_suggestions`); Review Spelling shows the search time
-  (qceditor 1.10, qcodeedit 1.27)
+- Review Spelling shows the search time and has **Add to Dictionary** and
+  **Ignore**, which take every row of the selected word out of the list;
+  suggestions ask hunspell only when the dictionary's forms give none, about
+  four times faster with the same results (qceditor 1.12, qcodeedit 1.29)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches

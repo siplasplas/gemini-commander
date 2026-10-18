@@ -323,8 +323,6 @@ bool Config::load(const QString& path)
                 m_editorCorrectWhileTyping = *b;
             if (auto s = editor["review_checked_at_first"].value<std::string>())
                 m_editorReviewCheckedAtFirst = QString::fromStdString(*s);
-            if (auto s = editor["hunspell_suggestions"].value<std::string>())
-                m_editorHunspellSuggestions = QString::fromStdString(*s);
             if (auto s = editor["trim_trailing_whitespace"].value<std::string>())
                 m_editorTrimTrailingWhitespace = QString::fromStdString(*s);
             m_editorMruPaths.clear();
@@ -622,7 +620,6 @@ bool Config::save() const
     editorTbl.insert("ask_reload_modified", m_editorAskToReloadModified);
     editorTbl.insert("correct_while_typing", m_editorCorrectWhileTyping);
     editorTbl.insert("review_checked_at_first", m_editorReviewCheckedAtFirst.toStdString());
-    editorTbl.insert("hunspell_suggestions", m_editorHunspellSuggestions.toStdString());
     if (m_editorDownloadWordFrequencies)
         editorTbl.insert("download_word_frequencies", *m_editorDownloadWordFrequencies);
     editorTbl.insert("trim_trailing_whitespace", m_editorTrimTrailingWhitespace.toStdString());
