@@ -19,6 +19,7 @@ gtest_discover_tests(sizeformat_tests)
 add_executable(editor_tests
         test_editor.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/editor.cpp
+        ${CMAKE_SOURCE_DIR}/src/editor/EncodingChoiceDialog.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/BaseViewer.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/FindBar.cpp
         ${CMAKE_SOURCE_DIR}/src/editor/SyntaxData.cpp

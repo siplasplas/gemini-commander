@@ -111,7 +111,7 @@ If a suitable version is already installed, it is used instead:
 | Library | Used for | Installed version used if |
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.7)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.13.0)` and `find_package(qcodeedit-encoding 1.13.0)` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)) | `find_package(qcodeedit-katedata 1.14.0)` and `find_package(qcodeedit-encoding 1.14.0)` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -160,6 +160,16 @@ language of such files (e.g. Polish): only its code pages are then considered
 a file whose national characters are only in a few comments. The status bar
 then shows that language for files not in UTF-8. **Automatic** (the default)
 guesses the language from the text.
+
+When detection is not confident (a few national letters are little evidence),
+the file still opens at once in the most likely encoding, and a bar above the
+editor says so, e.g. "Encoding uncertain: cp1250 73 %, amiga-fat 24 %".
+**Choose…** opens a dialog listing the plausible encodings with their language
+and probability, and a preview of the lines where they decode the file
+differently; **Other encoding** adds any encoding to the comparison, and OK
+reopens the file in the chosen one (asking first about unsaved edits). **Keep**,
+or editing the text, closes the bar. **Encoding > Reopen with Encoding** in the
+context menu lists the same encodings with their probability at the top.
 
 ## Building
 

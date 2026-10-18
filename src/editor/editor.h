@@ -22,6 +22,8 @@ class RulesHighlighter;
 class RuleBasedFoldingProvider;
 }
 class FindBar;
+class QFrame;
+class QLabel;
 class QMenu;
 namespace qce::encoding { class EncodingGuard; }
 
@@ -73,6 +75,11 @@ public:
     QString encoding() const;
     /// Reads the file again, decoding it as `encoding`.
     bool reopenWithEncoding(const QString& encoding);
+    /// The plausible encodings when detection was not confident on opening
+    /// (best first); empty when it was.
+    QList<qce::encoding::EncodingOption> uncertainEncodings() const { return m_uncertain.options; }
+    /// Opens the encoding choice dialog and reopens the file with the choice.
+    void chooseEncoding();
     /// Saves from now on in `encoding`; the text stays as it is.
     void setSaveEncoding(const QString& encoding);
     /// Encoding, BOM and line breaks of the file, for the status bar.
@@ -109,6 +116,10 @@ private:
     bool writeFile(const QString& path);
     void showContextMenu(const QPoint& position);
     void addEncodingMenu(QMenu& menu);
+    /// Reopens as `encoding`, asking first when there are unsaved edits.
+    void reopenAsking(const QString& encoding);
+    void showEncodingNotice();
+    void hideEncodingNotice();
     void applyThemePalette();
     qce::TextAttribute themedAttribute(const QString& style, const qce::TextAttribute& fallback) const;
     void applyHighlighterForFile(const QString& path);
@@ -132,6 +143,10 @@ private:
     QPalette m_defaultPalette;
 
     FindBar* m_findBar = nullptr;
+    // Shown above the editor when the encoding was detected without confidence.
+    QFrame* m_encodingNotice = nullptr;
+    QLabel* m_encodingNoticeText = nullptr;
+    qce::encoding::EncodingDetection m_uncertain;
 
     // How the file is stored (encoding, BOM, CRLF, final line break), so that
     // saving writes it back the same way; also keeps typed and pasted text
