@@ -55,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remembers corrections as your own (score 0, also while typing); **Tools >
   User Dictionary** lists your words and corrections (qceditor 1.14,
   qcodeedit 1.35)
+- Review Spelling no longer blocks Gemini Commander: its window is not modal
+  and only its tab is read-only meanwhile (qceditor 1.15, qcodeedit 1.37)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
