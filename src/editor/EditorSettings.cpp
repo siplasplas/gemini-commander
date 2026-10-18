@@ -14,7 +14,7 @@ const QString kDeclinedDownload = QStringLiteral("syntaxData/declinedDownload");
 const QString kTrimWhitespace = QStringLiteral("editing/trimTrailingWhitespace");
 const QString kWordFrequencies = QStringLiteral("spelling/downloadWordFrequencies");
 const QString kCorrectWhileTyping = QStringLiteral("spelling/correctWhileTyping");
-const QString kReviewChecksEveryWord = QStringLiteral("spelling/reviewChecksEveryWord");
+const QString kReviewCheckedAtFirst = QStringLiteral("spelling/reviewCheckedAtFirst");
 }
 
 QVariant EditorSettings::value(const QString& key, const QVariant& defaultValue) const
@@ -30,7 +30,7 @@ QVariant EditorSettings::value(const QString& key, const QVariant& defaultValue)
     if (key == kDeclinedDownload) return cfg.syntaxDownloadDeclined();
     if (key == kTrimWhitespace) return cfg.editorTrimTrailingWhitespace();
     if (key == kCorrectWhileTyping) return cfg.editorCorrectWhileTyping();
-    if (key == kReviewChecksEveryWord) return cfg.editorReviewChecksEveryWord();
+    if (key == kReviewCheckedAtFirst) return cfg.editorReviewCheckedAtFirst();
     // Not asked yet: no value, so the editor asks.
     if (key == kWordFrequencies) {
         const auto download = cfg.editorDownloadWordFrequencies();
@@ -53,7 +53,7 @@ void EditorSettings::setValue(const QString& key, const QVariant& value)
     else if (key == kTrimWhitespace) cfg.setEditorTrimTrailingWhitespace(value.toString());
     else if (key == kWordFrequencies) cfg.setEditorDownloadWordFrequencies(value.toBool());
     else if (key == kCorrectWhileTyping) cfg.setEditorCorrectWhileTyping(value.toBool());
-    else if (key == kReviewChecksEveryWord) cfg.setEditorReviewChecksEveryWord(value.toBool());
+    else if (key == kReviewCheckedAtFirst) cfg.setEditorReviewCheckedAtFirst(value.toString());
     else {
         m_session.insert(key, value);
         return;
@@ -75,7 +75,7 @@ void EditorSettings::remove(const QString& key)
     else if (key == kTrimWhitespace) cfg.setEditorTrimTrailingWhitespace(QStringLiteral("changed"));
     else if (key == kWordFrequencies) cfg.setEditorDownloadWordFrequencies(std::nullopt);
     else if (key == kCorrectWhileTyping) cfg.setEditorCorrectWhileTyping(false);
-    else if (key == kReviewChecksEveryWord) cfg.setEditorReviewChecksEveryWord(false);
+    else if (key == kReviewCheckedAtFirst) cfg.setEditorReviewCheckedAtFirst(QStringLiteral("sure"));
     else {
         m_session.remove(key);
         return;

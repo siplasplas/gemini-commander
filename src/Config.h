@@ -241,9 +241,10 @@ public:
   // A misspelled word with a single correction is corrected while typing; off by default.
   bool editorCorrectWhileTyping() const { return m_editorCorrectWhileTyping; }
   void setEditorCorrectWhileTyping(bool correct) { m_editorCorrectWhileTyping = correct; }
-  // Review Spelling checks every word at first, not only the sure corrections.
-  bool editorReviewChecksEveryWord() const { return m_editorReviewChecksEveryWord; }
-  void setEditorReviewChecksEveryWord(bool every) { m_editorReviewChecksEveryWord = every; }
+  // What Review Spelling checks at first: "sure" corrections (default), words
+  // with a "single" suggestion, or "every" word.
+  QString editorReviewCheckedAtFirst() const { return m_editorReviewCheckedAtFirst; }
+  void setEditorReviewCheckedAtFirst(const QString& mode) { m_editorReviewCheckedAtFirst = mode; }
   QString editorTrimTrailingWhitespace() const { return m_editorTrimTrailingWhitespace; }
   void setEditorTrimTrailingWhitespace(const QString& mode) { m_editorTrimTrailingWhitespace = mode; }
 
@@ -365,7 +366,7 @@ private:
   bool m_editorAskToReloadModified = false;
   std::optional<bool> m_editorDownloadWordFrequencies;
   bool m_editorCorrectWhileTyping = false;
-  bool m_editorReviewChecksEveryWord = false;
+  QString m_editorReviewCheckedAtFirst = QStringLiteral("sure");
   QString m_editorTrimTrailingWhitespace = QStringLiteral("changed");
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;
