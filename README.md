@@ -217,7 +217,8 @@ It shows how long finding the corrections took; **Add to Dictionary** and
 **Ignore** take the selected word out of the list, every row of it (an English
 or coined word written on purpose); **Remember Correction** keeps the selected
 word's correction as your own (from then on its only suggestion, sure, also
-while typing), and **Tools > User Dictionary** lists your words and
+while typing), **Own Correction** keeps one you type, also for a word without
+suggestions, and **Tools > User Dictionary** lists your words and
 corrections to remove those no longer wanted.
 **Tools > Correct Spelling While Typing** (off by default;
 `editor.correct_while_typing` in config.toml) corrects a misspelled word with a
