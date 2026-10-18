@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `editor.correct_while_typing`): a misspelled word with a single correction
   is corrected when a space or punctuation is typed after it; Ctrl+Z brings
   back the word as typed (qceditor 1.7, qcodeedit 1.24)
+- Review Spelling checks at first only sure corrections, or every word
+  (`editor.review_checks_every_word`), and can show only the checked words;
+  the spelling menu lists a moved space after the word's suggestions, with
+  both words ("mam yz → mamy z"); suggestions rank by hands and touching
+  keys, and none are offered when every word is far off (qceditor 1.8,
+  qcodeedit 1.25)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches

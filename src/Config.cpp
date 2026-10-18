@@ -321,6 +321,8 @@ bool Config::load(const QString& path)
             m_editorDownloadWordFrequencies = editor["download_word_frequencies"].value<bool>();
             if (auto b = editor["correct_while_typing"].value<bool>())
                 m_editorCorrectWhileTyping = *b;
+            if (auto b = editor["review_checks_every_word"].value<bool>())
+                m_editorReviewChecksEveryWord = *b;
             if (auto s = editor["trim_trailing_whitespace"].value<std::string>())
                 m_editorTrimTrailingWhitespace = QString::fromStdString(*s);
             m_editorMruPaths.clear();
@@ -617,6 +619,7 @@ bool Config::save() const
     editorTbl.insert("syntax_download_declined", m_syntaxDownloadDeclined);
     editorTbl.insert("ask_reload_modified", m_editorAskToReloadModified);
     editorTbl.insert("correct_while_typing", m_editorCorrectWhileTyping);
+    editorTbl.insert("review_checks_every_word", m_editorReviewChecksEveryWord);
     if (m_editorDownloadWordFrequencies)
         editorTbl.insert("download_word_frequencies", *m_editorDownloadWordFrequencies);
     editorTbl.insert("trim_trailing_whitespace", m_editorTrimTrailingWhitespace.toStdString());
