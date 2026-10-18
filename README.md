@@ -210,7 +210,8 @@ are the sure corrections (a single suggestion close to the word), the words
 with a single suggestion, or every word with its first correction
 (`editor.review_checked_at_first`: `sure`, `single`, `every`); **Show** lists
 all words, only the checked ones (to look over what will change) or only the
-unchecked ones (left to decide); **Correct**
+unchecked ones (left to decide); Ctrl+C copies the selected rows, separated by
+tabs; **Correct**
 replaces the checked ones, all of them one undo step.
 It shows how long finding the corrections took; **Add to Dictionary** and
 **Ignore** take the selected word out of the list, every row of it (an English
