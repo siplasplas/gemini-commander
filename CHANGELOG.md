@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Alt+Enter in the editor shows the spelling suggestions for the word at the
   cursor (qceditor 1.3.1); suggestions come from all forms of the dictionary,
   usually one, three at most (qcodeedit 1.20.1)
+- The spelling menu offers first the correction of a space missing or typed in
+  the wrong place: "n aoknie" → "na oknie", "mam yz" → "mamy z" (qceditor 1.4,
+  qcodeedit 1.21)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches

@@ -59,16 +59,16 @@ FetchContent_MakeAvailable(qt-extra)
 # encoding (qcodeedit-encoding, which needs cpg, fetched by qcodeedit when not
 # installed), spell checking (qcodeedit-spell, which needs hunspell,
 # libhunspell-dev) and reloads that are an undo step (qcodeedit-diff).
-# Installed qcodeedit packages 1.20.1 or later are used (spelling suggestions
+# Installed qcodeedit packages 1.21.0 or later are used (spelling suggestions
 # over all forms of the dictionary); otherwise the tag below
 # is fetched and built into gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
-    find_package(qcodeedit-katedata 1.20.1 QUIET)
-    find_package(qcodeedit-encoding 1.20.1 QUIET)
-    find_package(qcodeedit-spell 1.20.1 QUIET)
-    find_package(qcodeedit-diff 1.20.1 QUIET)
+    find_package(qcodeedit-katedata 1.21.0 QUIET)
+    find_package(qcodeedit-encoding 1.21.0 QUIET)
+    find_package(qcodeedit-spell 1.21.0 QUIET)
+    find_package(qcodeedit-diff 1.21.0 QUIET)
 endif()
 if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGET qcodeedit::spell
    OR NOT TARGET qcodeedit::diff)
@@ -82,7 +82,7 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGE
     FetchContent_Declare(
             qcodeedit
             GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
-            GIT_TAG v1.20.1
+            GIT_TAG v1.21.0
             GIT_SHALLOW TRUE
             ${fetch_exclude}
     )
@@ -95,10 +95,10 @@ set(QCEDITOR_BUILD_APP OFF)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
-        GIT_TAG v1.3.1
+        GIT_TAG v1.4.0
         GIT_SHALLOW TRUE
         ${fetch_exclude}
-        FIND_PACKAGE_ARGS 1.3.1
+        FIND_PACKAGE_ARGS 1.4.0
 )
 FetchContent_MakeAvailable(qceditor)
 
