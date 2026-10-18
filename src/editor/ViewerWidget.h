@@ -8,14 +8,17 @@
 
 class QVBoxLayout;
 class HexViewWidget;
-class Editor;
+namespace qceditor {
+class EditorTab;
+}
 
 namespace wid {
 class TextViewer;
 }
 
 // Embeddable viewer widget (can be placed in QStackedWidget)
-// Supports Text mode (wid::TextViewer or a read-only highlighting Editor) and Hex mode
+// Supports Text mode (wid::TextViewer, or for small files qceditor's editor,
+// read-only, with syntax colours) and Hex mode
 class ViewerWidget : public QWidget
 {
     Q_OBJECT
@@ -56,7 +59,7 @@ private:
     std::unique_ptr<QFile> m_file;
     QByteArray m_virtualFileContent;  // For virtual files read via readAll()
     wid::TextViewer* m_textViewer = nullptr;
-    Editor* m_codeView = nullptr;
+    qceditor::EditorTab* m_codeView = nullptr;
     HexViewWidget* m_hexViewer = nullptr;
     QVBoxLayout* m_layout = nullptr;
     QString m_currentFile;

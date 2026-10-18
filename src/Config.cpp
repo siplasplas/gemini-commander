@@ -316,6 +316,8 @@ bool Config::load(const QString& path)
             }
             if (auto b = editor["syntax_download_declined"].value<bool>())
                 m_syntaxDownloadDeclined = *b;
+            if (auto b = editor["ask_reload_modified"].value<bool>())
+                m_editorAskToReloadModified = *b;
             m_editorMruPaths.clear();
             if (editor.contains("mru_paths") && editor["mru_paths"].is_array()) {
                 for (const auto& node : *editor["mru_paths"].as_array()) {
@@ -608,6 +610,7 @@ bool Config::save() const
         spellRecent.push_back(name.toStdString());
     editorTbl.insert("spell_recent", spellRecent);
     editorTbl.insert("syntax_download_declined", m_syntaxDownloadDeclined);
+    editorTbl.insert("ask_reload_modified", m_editorAskToReloadModified);
     toml::array mruArr;
     for (const QString& p : m_editorMruPaths)
         mruArr.push_back(p.toStdString());

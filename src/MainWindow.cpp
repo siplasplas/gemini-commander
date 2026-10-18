@@ -8,7 +8,6 @@
 #include <mrutabwidget.h>
 
 #include "editor/EditorFrame.h"
-#include "editor/editor.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QKeyEvent>
@@ -246,7 +245,7 @@ void MainWindow::changeEvent(QEvent* event)
     QMainWindow::changeEvent(event);
     if (event->type() == QEvent::ActivationChange && isActiveWindow()) {
         if (editorFrame && editorFrame->isVisible())
-            editorFrame->checkAllTabsForExternalChanges();
+            editorFrame->checkExternalChanges();
     }
 }
 
@@ -2302,14 +2301,9 @@ void MainWindow::openEditorForFile(const QString& filePath) {
         editorFrame = new EditorFrame(nullptr);
     editorFrame->openFile(filePath);
 
-    // If opening config file, connect signal to reload config on save
-    if (Config::instance().isConfigFile(filePath)) {
-        if (Editor* editor = editorFrame->currentEditor()) {
-            connect(editor, &Editor::configFileSaved,
-                    this, &MainWindow::onConfigSaved,
-                    Qt::UniqueConnection);
-        }
-    }
+    // The configuration is read again when config.toml is saved from the editor.
+    connect(editorFrame, &EditorFrame::configFileSaved,
+            this, &MainWindow::onConfigSaved, Qt::UniqueConnection);
 
     qBringToFront(editorFrame);
 }

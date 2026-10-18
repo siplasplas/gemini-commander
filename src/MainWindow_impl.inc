@@ -1,4 +1,3 @@
-#include "editor/editor.h"
 #include "quitls.h"
 #include "utils.h"
 #include "Archives.h"

@@ -17,6 +17,7 @@
 #include <string>
 
 #include "MainWindow.h"
+#include "editor/EditorSettings.h"
 #include "git_version.h"
 
 namespace {
@@ -114,7 +115,12 @@ int main(int argc, char *argv[])
     // ~/.local/share/siplasplas/gemini-commander.
     app.setOrganizationName(QStringLiteral("siplasplas"));
     app.setApplicationName(QStringLiteral("gemini-commander"));
+    app.setApplicationVersion(QStringLiteral(APP_VERSION));
     migrateFiles(app);
+
+    // The editor (qceditor's library) keeps its settings in gemini's configuration.
+    static EditorSettings editorSettings;
+    qceditor::setSettings(&editorSettings);
 
     // Encoding/language models load in the background, ready for the editor.
     qce::encoding::preloadDetectionData();

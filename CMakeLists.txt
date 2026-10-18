@@ -52,38 +52,53 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(qt-extra)
 
-# The text editor and the viewer for small files are qcodeedit widgets
-# (github.com/siplasplas/qcodeedit, LGPL-3.0-or-later), highlighted with Kate
-# syntax definitions that qcodeedit-katedata downloads at run time, and files
-# in any encoding (UTF or legacy code pages) through qcodeedit-encoding, which
-# needs cpg (fetched by qcodeedit when not installed), and spell checking
-# through qcodeedit-spell, which needs hunspell (libhunspell-dev). Installed
-# qcodeedit packages 1.15.1 or later are used (spell checking,
-# CodeEditArea::cursorAt()); otherwise the tag below is fetched and built into
-# gemini-commander, without its demo and tests.
+# The editor window and the viewer of small files are qceditor's editor
+# library (github.com/siplasplas/qceditor), on qcodeedit's widgets
+# (github.com/siplasplas/qcodeedit, LGPL-3.0-or-later): Kate syntax
+# definitions that qcodeedit-katedata downloads at run time, files in any
+# encoding (qcodeedit-encoding, which needs cpg, fetched by qcodeedit when not
+# installed), spell checking (qcodeedit-spell, which needs hunspell,
+# libhunspell-dev) and reloads that are an undo step (qcodeedit-diff).
+# Installed qcodeedit packages 1.19 or later are used; otherwise the tag below
+# is fetched and built into gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
-    find_package(qcodeedit-katedata 1.15.1 QUIET)
-    find_package(qcodeedit-encoding 1.15.1 QUIET)
-    find_package(qcodeedit-spell 1.15.1 QUIET)
+    find_package(qcodeedit-katedata 1.19.0 QUIET)
+    find_package(qcodeedit-encoding 1.19.0 QUIET)
+    find_package(qcodeedit-spell 1.19.0 QUIET)
+    find_package(qcodeedit-diff 1.19.0 QUIET)
 endif()
-if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGET qcodeedit::spell)
+if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGET qcodeedit::spell
+   OR NOT TARGET qcodeedit::diff)
     set(QCE_BUILD_DEMO OFF)
     set(QCE_BUILD_TESTS OFF)
     set(QCE_BUILD_KATE ON)
     set(QCE_BUILD_KATE_DOWNLOADER ON)
     set(QCE_BUILD_ENCODING ON)
     set(QCE_BUILD_SPELL ON)
+    set(QCE_BUILD_DIFF ON)
     FetchContent_Declare(
             qcodeedit
             GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
-            GIT_TAG v1.15.1
+            GIT_TAG v1.19.0
             GIT_SHALLOW TRUE
             ${fetch_exclude}
     )
     FetchContent_MakeAvailable(qcodeedit)
 endif()
+# An installed qceditor 1.1.1 or later is used; otherwise the tag below is
+# fetched, its editor library only.
+set(QCEDITOR_BUILD_APP OFF)
+FetchContent_Declare(
+        qceditor
+        GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
+        GIT_TAG v1.1.1
+        GIT_SHALLOW TRUE
+        ${fetch_exclude}
+        FIND_PACKAGE_ARGS 1.1.1
+)
+FetchContent_MakeAvailable(qceditor)
 
 # Header-only TOML parser; an installed toml++ 3 is used, otherwise it is fetched.
 FetchContent_Declare(
@@ -205,24 +220,12 @@ add_executable(${PROJECT_NAME}
         src/FileOperations.cpp
         src/FileOperations.h
         src/SearchWorker.h
-        src/editor/editor.cpp
-        src/editor/editor.h
-        src/editor/EncodingChoiceDialog.cpp
-        src/editor/EncodingChoiceDialog.h
-        src/editor/SpellLanguageDialog.cpp
-        src/editor/SpellLanguageDialog.h
-        src/editor/FindBar.cpp
-        src/editor/FindBar.h
-        src/editor/ReplaceCommand.h
-        src/editor/SyntaxData.cpp
-        src/editor/SyntaxData.h
         src/editor/EditorFrame.cpp
         src/editor/EditorFrame.h
-        src/editor/mainheader.cpp
+        src/editor/EditorSettings.cpp
+        src/editor/EditorSettings.h
         src/widgets/SizeCalculationWidget.cpp
         src/utils/Ev.cpp
-        src/editor/BaseViewer.cpp
-        src/editor/BaseViewer.h
         src/editor/ViewerFrame.cpp
         src/editor/ViewerFrame.h
         src/editor/ViewerWidget.cpp
@@ -283,11 +286,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt6::DBus
         Qt6::Concurrent
         qt-extra
+        qceditor::editor
         qcodeedit::qcodeedit
         qcodeedit::kate
         qcodeedit::katedata
         qcodeedit::encoding
-        qcodeedit::spell
         toml_headers
         ICU::uc ICU::i18n
         ${LIBARCHIVE_LIBRARIES}

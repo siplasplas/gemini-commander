@@ -10,7 +10,9 @@
 #include <qce/CodeEditArea.h>
 #include <qce/SimpleTextDocument.h>
 
-#include "editor/editor.h"
+#include <qceditor/EditorTab.h>
+
+using Editor = qceditor::EditorTab;
 
 namespace {
 
@@ -43,7 +45,7 @@ void expectRoundTrip(const QString& file, const QByteArray& bytes)
     ASSERT_TRUE(editor.loadFile(file));
     EXPECT_FALSE(editor.isModified());
     QFile::remove(file);
-    ASSERT_TRUE(editor.saveFile());
+    ASSERT_TRUE(editor.save());
     EXPECT_EQ(readBytes(file), bytes);
 }
 
@@ -75,10 +77,10 @@ TEST_F(EditorTest, UndoBackToSavedStateClearsModified)
     writeBytes(path("a.txt"), "abc\n");
     Editor editor;
     ASSERT_TRUE(editor.loadFile(path("a.txt")));
-    editor.insertAtCursor(QStringLiteral("X"));
+    editor.insertText(QStringLiteral("X"));
     EXPECT_TRUE(editor.isModified());
     EXPECT_EQ(editor.document()->toPlainText(), QStringLiteral("Xabc"));
-    editor.codeEdit()->area()->undo();
+    editor.editor()->area()->undo();
     EXPECT_FALSE(editor.isModified());
     EXPECT_EQ(editor.document()->toPlainText(), QStringLiteral("abc"));
 }
@@ -88,8 +90,8 @@ TEST_F(EditorTest, SaveClearsModified)
     writeBytes(path("a.txt"), "abc\n");
     Editor editor;
     ASSERT_TRUE(editor.loadFile(path("a.txt")));
-    editor.insertAtCursor(QStringLiteral("X"));
-    ASSERT_TRUE(editor.saveFile());
+    editor.insertText(QStringLiteral("X"));
+    ASSERT_TRUE(editor.save());
     EXPECT_FALSE(editor.isModified());
     EXPECT_EQ(readBytes(path("a.txt")), QByteArray("Xabc\n"));
 }
@@ -101,8 +103,8 @@ TEST_F(EditorTest, MissingFileGivesEmptyDocumentSavedUnderItsName)
     ASSERT_TRUE(editor.loadFile(file));
     EXPECT_EQ(editor.filePath(), file);
     EXPECT_FALSE(QFile::exists(file));
-    editor.insertAtCursor(QStringLiteral("hello"));
-    ASSERT_TRUE(editor.saveFile());
+    editor.insertText(QStringLiteral("hello"));
+    ASSERT_TRUE(editor.save());
     EXPECT_EQ(readBytes(file), QByteArray("hello\n"));
 }
 
@@ -112,11 +114,11 @@ TEST_F(EditorTest, ReloadsExternalChange)
     writeBytes(file, "first\n");
     Editor editor;
     ASSERT_TRUE(editor.loadFile(file));
-    EXPECT_FALSE(editor.isChangedOnDisk());
+    EXPECT_FALSE(editor.hasExternalChanges());
     writeBytes(file, "second line\nmore\n");
-    EXPECT_TRUE(editor.isChangedOnDisk());
+    EXPECT_TRUE(editor.hasExternalChanges());
     ASSERT_TRUE(editor.reloadFromDisk());
-    EXPECT_FALSE(editor.isChangedOnDisk());
+    EXPECT_FALSE(editor.hasExternalChanges());
     EXPECT_FALSE(editor.isModified());
     EXPECT_EQ(editor.document()->toPlainText(), QStringLiteral("second line\nmore"));
 }
@@ -127,7 +129,7 @@ TEST_F(EditorTest, ReadOnlyIgnoresInsert)
     Editor editor;
     ASSERT_TRUE(editor.loadFile(path("a.txt")));
     editor.setReadOnly(true);
-    editor.insertAtCursor(QStringLiteral("X"));
+    editor.insertText(QStringLiteral("X"));
     EXPECT_FALSE(editor.isModified());
     EXPECT_EQ(editor.document()->toPlainText(), QStringLiteral("abc"));
 }

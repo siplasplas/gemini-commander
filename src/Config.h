@@ -227,6 +227,10 @@ public:
   // The user declined downloading Kate syntax definitions; don't ask on startup again
   bool syntaxDownloadDeclined() const { return m_syntaxDownloadDeclined; }
   void setSyntaxDownloadDeclined(bool declined) { m_syntaxDownloadDeclined = declined; }
+  // A file with unsaved edits that changed on disk asks whether to load the disk
+  // version; off by default: such a tab is left as it is.
+  bool editorAskToReloadModified() const { return m_editorAskToReloadModified; }
+  void setEditorAskToReloadModified(bool ask) { m_editorAskToReloadModified = ask; }
 
   // Large file copy mode
   CopyMode copyMode() const { return m_copyMode; }
@@ -343,6 +347,7 @@ private:
   QStringList m_editorLegacyLanguages;
   bool m_editorSpellCheck = true;
   QStringList m_editorRecentSpellDictionaries;
+  bool m_editorAskToReloadModified = false;
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;
   bool m_searchUseGitignore = false;

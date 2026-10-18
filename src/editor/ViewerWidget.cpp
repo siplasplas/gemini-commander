@@ -1,6 +1,6 @@
 #include "ViewerWidget.h"
 #include "HexViewWidget.h"
-#include "editor.h"
+#include <qceditor/EditorTab.h>
 #include "../Config.h"
 
 #include <QApplication>
@@ -163,7 +163,7 @@ bool ViewerWidget::eventFilter(QObject* watched, QEvent* event)
         QAction* copyAction = nullptr;
         if (m_codeView) {
             copyAction = menu.addAction(tr("Copy"));
-            copyAction->setEnabled(m_codeView->codeEdit()->area()->hasSelection());
+            copyAction->setEnabled(m_codeView->editor()->area()->hasSelection());
         } else if (m_textViewer || m_hexViewer) {
             copyAction = menu.addAction(tr("Copy"));
         }
@@ -176,7 +176,7 @@ bool ViewerWidget::eventFilter(QObject* watched, QEvent* event)
             setViewMode(ViewMode::Hex);
         } else if (selected == copyAction) {
             if (m_codeView) {
-                QApplication::clipboard()->setText(m_codeView->codeEdit()->area()->selectedText());
+                QApplication::clipboard()->setText(m_codeView->editor()->area()->selectedText());
             }
             // For TextViewer - PaintArea handles copy via its own mechanism
             // For HexViewer - TODO: implement copy
@@ -280,7 +280,7 @@ void ViewerWidget::createTextViewer(uchar* data, qint64 size)
 
 void ViewerWidget::createCodeView(const QString& filePath)
 {
-    m_codeView = new Editor(this);
+    m_codeView = new qceditor::EditorTab(this);
     if (!m_codeView->loadFile(filePath)) {
         delete m_codeView;
         m_codeView = nullptr;
