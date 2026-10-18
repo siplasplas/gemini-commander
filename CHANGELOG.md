@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   frequencies of the language are downloaded: asked once, then the lists of
   new languages follow when needed (**Tools > Download Word Frequencies for
   Spelling**, `editor.download_word_frequencies`; qceditor 1.5, qcodeedit 1.22)
+- **Tools > Review Spelling** (F7) in the editor: the misspelled words of the
+  selection or the whole text with their corrections, single ones checked
+  already, corrected together as one undo step (qceditor 1.6, qcodeedit 1.23)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
