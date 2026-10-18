@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QVector>
 #include <QMap>
+#include <optional>
 #include "SizeFormat.h"
 #include "SearchIgnore.h"
 
@@ -233,6 +234,10 @@ public:
   void setEditorAskToReloadModified(bool ask) { m_editorAskToReloadModified = ask; }
   // Trailing whitespace removed when saving: "changed" (lines changed since the
   // last save, default), "all" or "off".
+  // Lists of word frequencies for spelling suggestions downloaded when needed:
+  // unset until the editor has asked, then the answer.
+  std::optional<bool> editorDownloadWordFrequencies() const { return m_editorDownloadWordFrequencies; }
+  void setEditorDownloadWordFrequencies(std::optional<bool> download) { m_editorDownloadWordFrequencies = download; }
   QString editorTrimTrailingWhitespace() const { return m_editorTrimTrailingWhitespace; }
   void setEditorTrimTrailingWhitespace(const QString& mode) { m_editorTrimTrailingWhitespace = mode; }
 
@@ -352,6 +357,7 @@ private:
   bool m_editorSpellCheck = true;
   QStringList m_editorRecentSpellDictionaries;
   bool m_editorAskToReloadModified = false;
+  std::optional<bool> m_editorDownloadWordFrequencies;
   QString m_editorTrimTrailingWhitespace = QStringLiteral("changed");
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;

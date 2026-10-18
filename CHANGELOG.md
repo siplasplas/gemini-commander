@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The spelling menu offers first the correction of a space missing or typed in
   the wrong place: "n aoknie" → "na oknie", "mam yz" → "mamy z" (qceditor 1.4,
   qcodeedit 1.21)
+- Spelling suggestions put common words before rare ones once the word
+  frequencies of the language are downloaded: asked once, then the lists of
+  new languages follow when needed (**Tools > Download Word Frequencies for
+  Spelling**, `editor.download_word_frequencies`; qceditor 1.5, qcodeedit 1.22)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
