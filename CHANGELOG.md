@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-18
+
+### Changed
+- The editor window and the viewer of small files are QCEditor's editor
+  library (qceditor 1.1.1), so both programs have the same editor; its
+  settings stay in the `[editor]` section of `config.toml`. The editor's
+  menus are File, Search, View, Tools and Help
+- A file changed on disk is reloaded as one undo step (Ctrl+Z brings back the
+  text before it, the earlier undo history stays) and the cursor follows its
+  text; a file with unsaved edits is left as it is unless **Tools > Ask to
+  Reload Modified Files** is on (`editor.ask_reload_modified`)
+- The configuration is in `~/.config/siplasplas/gemini-commander`; an older
+  version's `config.toml` is moved there at start-up, the KTextEditor-era
+  `~/.config/gemini-commanderrc` is removed, and the Kate syntax data moves to
+  the shared `~/.local/share/kate-data`
+- **Configuration > Editor > Languages of files not in UTF-8** takes several
+  languages (`editor.legacy_languages`)
+- The copy/move progress dialog appears only for operations longer than
+  400 ms; windows are activated only when needed (no GNOME busy cursor after
+  renames or opening the editor on Wayland)
+
+### Added
+- Spell checking in the editor with hunspell (**Tools > Check Spelling**, on
+  by default): suggestions, Add to Dictionary, Ignore and the spelling
+  language in the context menu
+- A notice above the editor when the encoding was detected without
+  confidence, with a dialog comparing the plausible encodings
+- The editor's status bar shows the code point after the caret (U+0105);
+  columns count characters, also in Go to Line/Column
+- The editor's context menu has Undo, Redo, Cut, Copy, Paste, Delete and
+  Select All; Help > About in the editor
+
+### Fixed
+- Files open through xdg-open without an activation token (no busy cursor
+  while e.g. Loupe starts)
+- Copying or moving a file into a subdirectory keeps the cursor in the
+  source panel; the progress dialog no longer covers an Overwrite question
+- Alt pressed alone keeps the panel focus; Tab closes the quick search
+
 ## [2.1.1] - 2026-10-08
 
 ### Fixed
