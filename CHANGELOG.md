@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Remove Trailing Whitespace on Save**, `editor.trim_trailing_whitespace`):
   in lines changed since the last save by default, never in the cursor's
   line, as one undo step
-- Ctrl+Enter in the editor shows the spelling suggestions for the word at the
-  cursor
+- Alt+Enter in the editor shows the spelling suggestions for the word at the
+  cursor (qceditor 1.3.1); suggestions come from all forms of the dictionary,
+  usually one, three at most (qcodeedit 1.20.1)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
