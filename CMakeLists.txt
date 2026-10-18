@@ -87,16 +87,17 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGE
     )
     FetchContent_MakeAvailable(qcodeedit)
 endif()
-# An installed qceditor 1.2 or later is used (encrypted .een files, which
-# need Botan); otherwise the tag below is fetched, its editor library only.
+# An installed qceditor 1.3 or later is used (encrypted .een files, which
+# need Botan; trailing whitespace removed on save); otherwise the tag below is
+# fetched, its editor library only.
 set(QCEDITOR_BUILD_APP OFF)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
-        GIT_TAG v1.2.1
+        GIT_TAG v1.3.0
         GIT_SHALLOW TRUE
         ${fetch_exclude}
-        FIND_PACKAGE_ARGS 1.2.1
+        FIND_PACKAGE_ARGS 1.3.0
 )
 FetchContent_MakeAvailable(qceditor)
 

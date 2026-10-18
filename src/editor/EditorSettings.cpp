@@ -11,6 +11,7 @@ const QString kWordWrap = QStringLiteral("view/wordWrap");
 const QString kShowWhitespace = QStringLiteral("view/showWhitespace");
 const QString kAskToReload = QStringLiteral("files/askToReloadModified");
 const QString kDeclinedDownload = QStringLiteral("syntaxData/declinedDownload");
+const QString kTrimWhitespace = QStringLiteral("editing/trimTrailingWhitespace");
 }
 
 QVariant EditorSettings::value(const QString& key, const QVariant& defaultValue) const
@@ -24,6 +25,7 @@ QVariant EditorSettings::value(const QString& key, const QVariant& defaultValue)
     if (key == kShowWhitespace) return cfg.editorShowWhitespace();
     if (key == kAskToReload) return cfg.editorAskToReloadModified();
     if (key == kDeclinedDownload) return cfg.syntaxDownloadDeclined();
+    if (key == kTrimWhitespace) return cfg.editorTrimTrailingWhitespace();
     return m_session.value(key, defaultValue);
 }
 
@@ -38,6 +40,7 @@ void EditorSettings::setValue(const QString& key, const QVariant& value)
     else if (key == kShowWhitespace) cfg.setEditorShowWhitespace(value.toBool());
     else if (key == kAskToReload) cfg.setEditorAskToReloadModified(value.toBool());
     else if (key == kDeclinedDownload) cfg.setSyntaxDownloadDeclined(value.toBool());
+    else if (key == kTrimWhitespace) cfg.setEditorTrimTrailingWhitespace(value.toString());
     else {
         m_session.insert(key, value);
         return;
@@ -56,6 +59,7 @@ void EditorSettings::remove(const QString& key)
     else if (key == kShowWhitespace) cfg.setEditorShowWhitespace(false);
     else if (key == kAskToReload) cfg.setEditorAskToReloadModified(false);
     else if (key == kDeclinedDownload) cfg.setSyntaxDownloadDeclined(false);
+    else if (key == kTrimWhitespace) cfg.setEditorTrimTrailingWhitespace(QStringLiteral("changed"));
     else {
         m_session.remove(key);
         return;

@@ -231,6 +231,10 @@ public:
   // version; off by default: such a tab is left as it is.
   bool editorAskToReloadModified() const { return m_editorAskToReloadModified; }
   void setEditorAskToReloadModified(bool ask) { m_editorAskToReloadModified = ask; }
+  // Trailing whitespace removed when saving: "changed" (lines changed since the
+  // last save, default), "all" or "off".
+  QString editorTrimTrailingWhitespace() const { return m_editorTrimTrailingWhitespace; }
+  void setEditorTrimTrailingWhitespace(const QString& mode) { m_editorTrimTrailingWhitespace = mode; }
 
   // Large file copy mode
   CopyMode copyMode() const { return m_copyMode; }
@@ -348,6 +352,7 @@ private:
   bool m_editorSpellCheck = true;
   QStringList m_editorRecentSpellDictionaries;
   bool m_editorAskToReloadModified = false;
+  QString m_editorTrimTrailingWhitespace = QStringLiteral("changed");
   QStringList m_searchIgnoreDirs;
   QStringList m_searchIgnoreFiles;
   bool m_searchUseGitignore = false;

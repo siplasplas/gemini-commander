@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without asking for a password
 - The viewer of small files searches (Ctrl+F, F3, Shift+F3) and goes to a
   line:column (Ctrl+G), as the editor does
+- The editor removes trailing whitespace when saving (qceditor 1.3, **Tools >
+  Remove Trailing Whitespace on Save**, `editor.trim_trailing_whitespace`):
+  in lines changed since the last save by default, never in the cursor's
+  line, as one undo step
+- Ctrl+Enter in the editor shows the spelling suggestions for the word at the
+  cursor
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
