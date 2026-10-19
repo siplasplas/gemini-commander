@@ -687,7 +687,10 @@ void MainWindow::setupUi() {
             "<p>Version: %1 (%2)</p>"
             "<p>Build type: %3</p>"
             "<p>Qt Version: %4</p>"
-        ).arg(APP_VERSION, GIT_SHA, APP_BUILD_TYPE, qVersion());
+            "<p>qt-extra: %5<br>qcodeedit: %6<br>qceditor: %7</p>"
+        ).arg(APP_VERSION, GIT_SHA, APP_BUILD_TYPE, qVersion(),
+              QStringLiteral(GEMINI_QTEXTRA_VERSION), QStringLiteral(GEMINI_QCODEEDIT_VERSION),
+              QStringLiteral(GEMINI_QCEDITOR_VERSION));
         QMessageBox::about(this, tr("About Gemini Commander"), aboutText);
     });
     helpMenu->addAction(aboutAction);

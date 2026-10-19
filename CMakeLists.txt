@@ -65,6 +65,7 @@ FetchContent_MakeAvailable(qt-extra)
 # is fetched and built into gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
+set(GEMINI_QCODEEDIT_TAG v1.39.0)
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
     find_package(qcodeedit-katedata 1.39.0 QUIET)
     find_package(qcodeedit-encoding 1.39.0 QUIET)
@@ -85,7 +86,7 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGE
     FetchContent_Declare(
             qcodeedit
             GIT_REPOSITORY https://github.com/siplasplas/qcodeedit.git
-            GIT_TAG v1.39.0
+            GIT_TAG ${GEMINI_QCODEEDIT_TAG}
             GIT_SHALLOW TRUE
             ${fetch_exclude}
     )
@@ -95,10 +96,11 @@ endif()
 # need Botan; word frequencies for spelling, reviewing and correcting it); otherwise
 # the tag below is fetched, its editor library only.
 set(QCEDITOR_BUILD_APP OFF)
+set(GEMINI_QCEDITOR_TAG v1.16.0)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
-        GIT_TAG v1.16.0
+        GIT_TAG ${GEMINI_QCEDITOR_TAG}
         GIT_SHALLOW TRUE
         ${fetch_exclude}
         FIND_PACKAGE_ARGS 1.16.0
@@ -320,7 +322,26 @@ add_custom_target(git_version ALL
 add_dependencies(${PROJECT_NAME} git_version)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
+# The versions of the libraries for Help > About: an installed package's
+# version, or the tag fetched and built in.
+function(gemini_library_version out target version tag)
+    get_target_property(imported ${target} IMPORTED)
+    if(imported AND version)
+        set(${out} "${version} (installed)" PARENT_SCOPE)
+    elseif(imported)
+        set(${out} "installed" PARENT_SCOPE)
+    else()
+        set(${out} "${tag} (built in)" PARENT_SCOPE)
+    endif()
+endfunction()
+gemini_library_version(GEMINI_QTEXTRA_VERSION qt-extra "${qt-extra_VERSION}" v2.7.0)
+gemini_library_version(GEMINI_QCODEEDIT_VERSION qcodeedit::spell "${qcodeedit-spell_VERSION}" ${GEMINI_QCODEEDIT_TAG})
+gemini_library_version(GEMINI_QCEDITOR_VERSION qceditor::editor "${qceditor_VERSION}" ${GEMINI_QCEDITOR_TAG})
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE
+        GEMINI_QTEXTRA_VERSION="${GEMINI_QTEXTRA_VERSION}"
+        GEMINI_QCODEEDIT_VERSION="${GEMINI_QCODEEDIT_VERSION}"
+        GEMINI_QCEDITOR_VERSION="${GEMINI_QCEDITOR_VERSION}"
         APP_VERSION="${PROJECT_VERSION}"
         APP_BUILD_TYPE="$<IF:$<CONFIG:Debug>,Debug,Release>"
 )
