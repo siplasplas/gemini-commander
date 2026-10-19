@@ -243,7 +243,8 @@ public:
   void setEditorCorrectWhileTyping(bool correct) { m_editorCorrectWhileTyping = correct; }
   // What Review Spelling checks at first: "sure" corrections (default), words
   // with a "single" suggestion, "every" word, or only those with several
-  // suggestions ("several", "severalFirstClose") or without ("noSuggestions").
+  // suggestions ("several", "severalFirstClose") or without ("noSuggestions"),
+  // or nothing ("none").
   // Spelling dictionary of a new text (e.g. "pl_PL"); empty: the desktop's language.
   QString editorDefaultSpellLanguage() const { return m_editorDefaultSpellLanguage; }
   void setEditorDefaultSpellLanguage(const QString& dictionary) { m_editorDefaultSpellLanguage = dictionary; }

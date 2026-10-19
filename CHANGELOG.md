@@ -70,7 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the corrections; Own Correction starts from the word as typed and can
   replace it with its neighbours (qcodeedit 1.43)
 - Review Spelling's list shows the words of the kind chosen in "Checked at
-  first" (all, checked, unchecked) or every word (qcodeedit 1.44)
+  first" (all, checked, unchecked) or every word, from the start; "None"
+  checks nothing (qcodeedit 1.45)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 
