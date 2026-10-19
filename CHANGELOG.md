@@ -63,7 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   suggestions follow the word's capital and Shift held (also with AltGr) is
   cheap, a capital after a small letter is not (qcodeedit 1.39)
 - Review Spelling's "Checked at first" also picks the words with several
-  suggestions ("Several", "Several, first close"; qcodeedit 1.40)
+  suggestions ("Several", "Several, first close") or without suggestions but
+  given an own correction ("Words without suggestions"; qcodeedit 1.41)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 
