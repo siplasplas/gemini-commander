@@ -129,7 +129,8 @@ target_include_directories(toml_headers INTERFACE
 FetchContent_Declare(
         textviewers
         GIT_REPOSITORY https://github.com/ideorg/textviewers.git
-        GIT_TAG 99ff988242b4992223176c850ed7ec0d18a007bf
+        GIT_TAG v1.2
+        GIT_SHALLOW TRUE
         SOURCE_SUBDIR none
 )
 FetchContent_MakeAvailable(textviewers)
@@ -242,6 +243,7 @@ add_executable(${PROJECT_NAME}
         src/editor/HexViewWidget.h
         ${TEXTVIEWERS_DIR}/wid/TextViewer.cpp
         ${TEXTVIEWERS_DIR}/wid/PaintArea.cpp
+        ${TEXTVIEWERS_DIR}/wid/FindBar.cpp
         ${TEXTVIEWERS_DIR}/logic/AbstractView.cpp
         ${TEXTVIEWERS_DIR}/logic/Wrap.cpp
         ${TEXTVIEWERS_DIR}/logic/LineView.cpp
@@ -251,6 +253,7 @@ add_executable(${PROJECT_NAME}
         ${TEXTVIEWERS_DIR}/logic/ByteDocument.cpp
         ${TEXTVIEWERS_DIR}/logic/ChangeableDocument.cpp
         ${TEXTVIEWERS_DIR}/logic/LineIndexedDocument.cpp
+        ${TEXTVIEWERS_DIR}/logic/Searcher.cpp
         ${TEXTVIEWERS_DIR}/misc/selection.cpp
         src/Config.cpp
         src/Config.h

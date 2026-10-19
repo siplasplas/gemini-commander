@@ -84,6 +84,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tools > Statistics…** in the editor: bytes of the file in its encoding,
   code points (not UTF-16 units) and lines, and the same for the selection
   (qceditor 1.19)
+- The viewer of large files has a caret moved with the keyboard, Shift
+  selection, double-click word and triple-click line selection, and the
+  scrollbar jumps to the clicked point (textviewers 1.1)
+- The viewer of large files colours the syntax chosen by the file name, as
+  the editor does, and folds e.g. XML elements by a click in the margin; only
+  the visible part of the file is scanned (textviewers 1.2)
+- The viewer of large files searches (Ctrl+F) with a bar like the editor's:
+  results are marked in the visible part only, without a count; F3 and
+  Shift+F3 search the whole file in the background with a progress dialog
+  that can cancel it (textviewers 1.2)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches

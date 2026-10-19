@@ -14,6 +14,11 @@ class EditorTab;
 
 namespace wid {
 class TextViewer;
+class FindBar;
+}
+namespace qce {
+class RulesHighlighter;
+class RuleBasedFoldingProvider;
 }
 
 // Embeddable viewer widget (can be placed in QStackedWidget)
@@ -52,13 +57,19 @@ private:
     void showTextView();
     void showHexView();
     void createTextViewer(uchar* data, qint64 size);
+    void applyHighlighter(const QString& filePath);
     void createCodeView(const QString& filePath);
     void createHexViewer(uchar* data, qint64 size);
     void clearViewer();
 
     std::unique_ptr<QFile> m_file;
     QByteArray m_virtualFileContent;  // For virtual files read via readAll()
+    // The large-file viewer with its search bar above it, in m_textBox.
+    QWidget* m_textBox = nullptr;
     wid::TextViewer* m_textViewer = nullptr;
+    wid::FindBar* m_findBar = nullptr;
+    std::unique_ptr<qce::RulesHighlighter> m_highlighter;
+    std::unique_ptr<qce::RuleBasedFoldingProvider> m_folding;
     qceditor::EditorTab* m_codeView = nullptr;
     HexViewWidget* m_hexViewer = nullptr;
     QVBoxLayout* m_layout = nullptr;

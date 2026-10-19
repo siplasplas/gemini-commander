@@ -14,7 +14,13 @@
 #include <QShortcut>
 #include <qce/CodeEdit.h>
 #include <qce/CodeEditArea.h>
+#include <qce/RulesHighlighter.h>
+#include <qce/RuleBasedFoldingProvider.h>
+#include <qce/kate/KateTheme.h>
+#include <qce/kate/KateXmlReader.h>
+#include <qceditor/SyntaxData.h>
 #include "wid/TextViewer.h"
+#include "wid/FindBar.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -271,14 +277,41 @@ void ViewerWidget::showHexView()
 
 void ViewerWidget::createTextViewer(uchar* data, qint64 size)
 {
-    m_textViewer = new wid::TextViewer(reinterpret_cast<char*>(data), size, this);
+    m_textBox = new QWidget(this);
+    auto* boxLayout = new QVBoxLayout(m_textBox);
+    boxLayout->setContentsMargins(0, 0, 0, 0);
+    boxLayout->setSpacing(0);
+    m_textViewer = new wid::TextViewer(reinterpret_cast<char*>(data), size, m_textBox);
+    // Ctrl+F, F3 and Shift+F3 as in the code view, while the focus is in the box.
+    m_findBar = new wid::FindBar(m_textViewer, m_textBox);
+    boxLayout->addWidget(m_findBar);
+    boxLayout->addWidget(m_textViewer, 1);
+    applyHighlighter(m_currentFile);
     // Install event filter on TextViewer and all its children (including PaintArea)
     m_textViewer->installEventFilter(this);
     for (QWidget* child : m_textViewer->findChildren<QWidget*>()) {
         child->installEventFilter(this);
     }
-    m_layout->addWidget(m_textViewer);
+    m_layout->addWidget(m_textBox);
     setFocusProxy(m_textViewer);
+}
+
+// The Kate definition the editor would choose for the file name. Highlighting
+// and folding in TextViewer only cover the visible part of the file.
+void ViewerWidget::applyHighlighter(const QString& filePath)
+{
+    const auto& index = qceditor::SyntaxData::index();
+    const auto matches = index.forFileName(filePath);
+    if (matches.isEmpty())
+        return;
+    // TextViewer paints on white: the built-in light colours, not the desktop theme.
+    auto highlighter = KateXmlReader::load(index.filePath(*matches.first()), KateTheme(), index);
+    if (!highlighter)
+        return;
+    m_highlighter = std::move(highlighter);
+    m_folding = std::make_unique<qce::RuleBasedFoldingProvider>(m_highlighter.get());
+    m_textViewer->setHighlighter(m_highlighter.get());
+    m_textViewer->setFoldingProvider(m_folding.get());
 }
 
 void ViewerWidget::createCodeView(const QString& filePath)
@@ -328,11 +361,16 @@ void ViewerWidget::createHexViewer(uchar* data, qint64 size)
 
 void ViewerWidget::clearViewer()
 {
-    if (m_textViewer) {
-        m_layout->removeWidget(m_textViewer);
-        delete m_textViewer;
+    if (m_textBox) {
+        // Before the file is unmapped: the find bar stops its search here.
+        m_layout->removeWidget(m_textBox);
+        delete m_textBox;
+        m_textBox = nullptr;
         m_textViewer = nullptr;
+        m_findBar = nullptr;
     }
+    m_folding.reset();
+    m_highlighter.reset();
 
     if (m_codeView) {
         m_layout->removeWidget(m_codeView);
