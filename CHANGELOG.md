@@ -74,6 +74,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checks nothing (qcodeedit 1.45)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
+- The search bar of the editor and the viewer covers the top lines and moves
+  them down only when the result is among the first lines; selected text is
+  the query also while the bar is open; the placeholder is "Search"
+  (qceditor 1.17)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
