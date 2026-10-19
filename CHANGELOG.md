@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Review Spelling no longer blocks Gemini Commander: its window is not modal
   and only its tab is read-only (and not reloaded from disk) meanwhile; a
   second review of a long file is at once (qceditor 1.16, qcodeedit 1.38)
+- Review Spelling: the selected row stays in sight after sorting; it shows
+  the words with several suggestions ("Several", "Several, first close");
+  suggestions follow the word's capital and Shift held (also with AltGr) is
+  cheap, a capital after a small letter is not (qcodeedit 1.39)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
