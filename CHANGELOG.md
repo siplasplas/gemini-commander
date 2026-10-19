@@ -78,6 +78,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them down only when the result is among the first lines; selected text is
   the query also while the bar is open; the placeholder is "Search"
   (qceditor 1.17)
+- F3 and Shift+F3 with the search bar closed go to the next or previous
+  result without showing the bar; when nothing is found a tooltip says e.g.
+  `"abcd" not found` (qceditor 1.18)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
