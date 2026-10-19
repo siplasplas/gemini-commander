@@ -59,19 +59,19 @@ FetchContent_MakeAvailable(qt-extra)
 # encoding (qcodeedit-encoding, which needs cpg, fetched by qcodeedit when not
 # installed), spell checking (qcodeedit-spell, which needs hunspell,
 # libhunspell-dev) and reloads that are an undo step (qcodeedit-diff).
-# Installed qcodeedit packages 1.41.0 or later are used (spelling suggestions
+# Installed qcodeedit packages 1.42.0 or later are used (spelling suggestions
 # ranked by word frequency, whose lists qcodeedit-spelldata downloads);
 # otherwise the tag below
 # is fetched and built into gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
-set(GEMINI_QCODEEDIT_TAG v1.41.0)
+set(GEMINI_QCODEEDIT_TAG v1.42.0)
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
-    find_package(qcodeedit-katedata 1.41.0 QUIET)
-    find_package(qcodeedit-encoding 1.41.0 QUIET)
-    find_package(qcodeedit-spell 1.41.0 QUIET)
-    find_package(qcodeedit-spelldata 1.41.0 QUIET)
-    find_package(qcodeedit-diff 1.41.0 QUIET)
+    find_package(qcodeedit-katedata 1.42.0 QUIET)
+    find_package(qcodeedit-encoding 1.42.0 QUIET)
+    find_package(qcodeedit-spell 1.42.0 QUIET)
+    find_package(qcodeedit-spelldata 1.42.0 QUIET)
+    find_package(qcodeedit-diff 1.42.0 QUIET)
 endif()
 if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGET qcodeedit::spell
    OR NOT TARGET qcodeedit::spelldata OR NOT TARGET qcodeedit::diff)
