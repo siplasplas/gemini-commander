@@ -97,14 +97,14 @@ endif()
 # search bar over the top lines, F3 without it; Tools > Statistics); otherwise
 # the tag below is fetched, its editor library only.
 set(QCEDITOR_BUILD_APP OFF)
-set(GEMINI_QCEDITOR_TAG v1.19.0)
+set(GEMINI_QCEDITOR_TAG v1.19.1)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
         GIT_TAG ${GEMINI_QCEDITOR_TAG}
         GIT_SHALLOW TRUE
         ${fetch_exclude}
-        FIND_PACKAGE_ARGS 1.19.0
+        FIND_PACKAGE_ARGS 1.19.1
 )
 FetchContent_MakeAvailable(qceditor)
 
