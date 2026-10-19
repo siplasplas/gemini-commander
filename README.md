@@ -116,7 +116,7 @@ If a suitable version is already installed, it is used instead:
 |---------|----------|---------------------------|
 | [qt-extra](https://github.com/siplasplas/qt-extra) | `MruTabWidget`, `QxFileDialog` | `find_package(qt-extra 2.7)` |
 | [qceditor](https://github.com/siplasplas/qceditor) | the editor window and the viewer of small files (its editor library, the same as QCEditor's), encrypted `.een` files (with Botan) | `find_package(qceditor 1.16.0)` |
-| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)), reloads as an undo step | `find_package(qcodeedit-katedata 1.39.0)`, `qcodeedit-encoding`, `qcodeedit-spell` (needs libhunspell-dev), `qcodeedit-spelldata` and `qcodeedit-diff` |
+| [qcodeedit](https://github.com/siplasplas/qcodeedit) | editor widget, Kate syntax highlighting, syntax downloader, file encodings (with [cpg](https://github.com/siplasplas/cpg)), reloads as an undo step | `find_package(qcodeedit-katedata 1.40.0)`, `qcodeedit-encoding`, `qcodeedit-spell` (needs libhunspell-dev), `qcodeedit-spelldata` and `qcodeedit-diff` |
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
@@ -210,7 +210,8 @@ second review looks only for new words) with the misspelled words of the
 selection, or of the whole text, with a correction for each. Checked at first
 are the sure corrections (a single suggestion close to the word), the words
 with a single suggestion, or every word with its first correction
-(`editor.review_checked_at_first`: `sure`, `single`, `every`); **Show** lists
+(`editor.review_checked_at_first`: `sure`, `single`, `every`, or only the
+words with several suggestions, `several`, `severalFirstClose`); **Show** lists
 all words, only the checked ones (to look over what will change) or only the
 unchecked ones (left to decide); Ctrl+C copies the selected rows, separated by
 tabs; **Correct**
