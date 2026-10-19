@@ -81,6 +81,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - F3 and Shift+F3 with the search bar closed go to the next or previous
   result without showing the bar; when nothing is found a tooltip says e.g.
   `"abcd" not found` (qceditor 1.18)
+- **Tools > Statistics…** in the editor: bytes of the file in its encoding,
+  code points (not UTF-16 units) and lines, and the same for the selection
+  (qceditor 1.19)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches

@@ -92,19 +92,19 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGE
     )
     FetchContent_MakeAvailable(qcodeedit)
 endif()
-# An installed qceditor 1.18 or later is used (encrypted .een files, which
+# An installed qceditor 1.19 or later is used (encrypted .een files, which
 # need Botan; word frequencies for spelling, reviewing and correcting it; the
-# search bar over the top lines, F3 without it); otherwise the tag below is
-# fetched, its editor library only.
+# search bar over the top lines, F3 without it; Tools > Statistics); otherwise
+# the tag below is fetched, its editor library only.
 set(QCEDITOR_BUILD_APP OFF)
-set(GEMINI_QCEDITOR_TAG v1.18.0)
+set(GEMINI_QCEDITOR_TAG v1.19.0)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
         GIT_TAG ${GEMINI_QCEDITOR_TAG}
         GIT_SHALLOW TRUE
         ${fetch_exclude}
-        FIND_PACKAGE_ARGS 1.18.0
+        FIND_PACKAGE_ARGS 1.19.0
 )
 FetchContent_MakeAvailable(qceditor)
 
