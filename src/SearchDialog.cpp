@@ -528,7 +528,8 @@ void SearchDialog::createAdvancedTab()
 
     layout->addWidget(attributesGroup);
 
-    // Skipped entries: kept in the configuration, not reset by Clear
+    // Skipped entries: kept in the configuration; Clear turns off only the
+    // .gitignore checkbox
     auto* skipGroup = new QGroupBox(tr("Skip during search:"), m_advancedTab);
     auto* skipLayout = new QFormLayout(skipGroup);
     m_ignoreDirsEdit = new QLineEdit(skipGroup);
@@ -949,6 +950,10 @@ void SearchDialog::onResetOptions()
     m_modifiedToCheck->setChecked(false);
     m_fileContentFilterCombo->setCurrentIndex(0);  // Any
     m_executableBitsCombo->setCurrentIndex(0);     // Not specified
+    // Search everything again, also what .gitignore files ignore. The name
+    // patterns to skip stay, and so do the .gitignore options shared with
+    // Show > Custom and Copy.
+    m_useGitignoreCheck->setChecked(false);
 
     // Switch to Standard tab
     m_tabWidget->setCurrentWidget(m_standardTab);
