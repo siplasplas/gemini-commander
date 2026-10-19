@@ -126,11 +126,13 @@ target_include_directories(toml_headers INTERFACE
 # Viewer for large files (github.com/ideorg/textviewers). Its sources are
 # compiled into gemini-commander; its own CMakeLists.txt builds demo programs,
 # so SOURCE_SUBDIR points at a directory without one to only download it.
+# Its cpg submodule is not used by the compiled sources and is not fetched.
 FetchContent_Declare(
         textviewers
         GIT_REPOSITORY https://github.com/ideorg/textviewers.git
         GIT_TAG v1.2
         GIT_SHALLOW TRUE
+        GIT_SUBMODULES ""
         SOURCE_SUBDIR none
 )
 FetchContent_MakeAvailable(textviewers)
