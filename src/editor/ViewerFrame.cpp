@@ -62,6 +62,23 @@ void ViewerFrame::setupMenuBar()
     m_hexAction->setCheckable(true);
     m_hexAction->setShortcut(QKeySequence(Qt::Key_H));
     connect(m_hexAction, &QAction::triggered, this, &ViewerFrame::onHexModeTriggered);
+
+    // The keys belong to the view's find bar / search (shortcuts within the
+    // view); here they are only shown, as shortcuts on these actions too
+    // would be ambiguous and Qt would run neither.
+    QMenu* searchMenu = m_menuBar->addMenu(tr("&Search"));
+    const QList<QAction*> searchActions = {
+        searchMenu->addAction(tr("&Find...") + QStringLiteral("\tCtrl+F"),
+                              this, [this]() { m_viewerWidget->showSearch(); }),
+        searchMenu->addAction(tr("Find &Next") + QStringLiteral("\tF3"),
+                              this, [this]() { m_viewerWidget->findNext(); }),
+        searchMenu->addAction(tr("Find &Previous") + QStringLiteral("\tShift+F3"),
+                              this, [this]() { m_viewerWidget->findNext(true); }),
+    };
+    connect(searchMenu, &QMenu::aboutToShow, this, [this, searchActions]() {
+        for (QAction* action : searchActions)
+            action->setEnabled(m_viewerWidget->canSearch());
+    });
 }
 
 void ViewerFrame::onTextModeTriggered()

@@ -50,6 +50,12 @@ public:
 
     void setViewMode(ViewMode mode);
 
+    // Searching in the text view: the find bar of a large file or the search
+    // of the small-file code view. Not available in the hex view.
+    [[nodiscard]] bool canSearch() const;
+    void showSearch();
+    void findNext(bool backwards = false);
+
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 

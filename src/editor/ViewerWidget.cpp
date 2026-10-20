@@ -148,6 +148,27 @@ void ViewerWidget::setViewMode(ViewMode mode)
     }
 }
 
+bool ViewerWidget::canSearch() const
+{
+    return m_findBar || m_codeView;
+}
+
+void ViewerWidget::showSearch()
+{
+    if (m_findBar)
+        m_findBar->showSearch();
+    else if (m_codeView)
+        m_codeView->showSearch();
+}
+
+void ViewerWidget::findNext(bool backwards)
+{
+    if (m_findBar)
+        m_findBar->findNext(backwards);
+    else if (m_codeView)
+        m_codeView->findNext(backwards);
+}
+
 bool ViewerWidget::eventFilter(QObject* watched, QEvent* event)
 {
     Q_UNUSED(watched);
