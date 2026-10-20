@@ -77,6 +77,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   renaming (F6, multi-rename) and deleting (to the trash or permanently) a
   file or a whole directory carries them along, one database update per
   selected item
+- Spelling suggestions in the editor (qcodeedit 1.47–1.54): the user's own
+  words are suggested too; a much smaller forms cache (Polish 124 → 43 MB);
+  suggestions from the forms for French, German, Spanish, Czech, Portuguese
+  and more (accents typed or not, compound words from hunspell); typographic
+  apostrophes and hyphenated words; a key next to the meant one costs less;
+  frequency orders words spelled as close but does not hide them, so
+  "fiunding" is not corrected surely to "finding". The word frequency list
+  of every language with a dictionary installed is downloaded when missing
+  (qceditor 1.21)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - The search bar of the editor and the viewer covers the top lines and moves
