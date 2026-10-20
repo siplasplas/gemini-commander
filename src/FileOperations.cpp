@@ -13,6 +13,8 @@
 #include "SortedDirIterator.h"
 #include "quitls.h"
 
+#include <qce/spell/SpellChecker.h>
+
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
@@ -855,6 +857,19 @@ void removeExisting(const QString &path) {
         QFile::remove(path);
 }
 
+// The words ignored by the editor's spell check in the file, or in the files
+// under the directory, follow it to its copy or new place. An overwritten
+// file's own words are dropped first; a directory copied into an existing one
+// keeps the words of the files already there.
+static void carrySpellingData(const QString &srcPath, const QString &dstPath, bool move, bool isFile) {
+    if (isFile)
+        qce::spell::removeSpellingData(dstPath);
+    if (move)
+        qce::spell::moveSpellingData(srcPath, dstPath);
+    else
+        qce::spell::copySpellingData(srcPath, dstPath);
+}
+
 QString executeCopyOrMove(const QString &currentPath, const QStringList &names, const QString &destInput,
                             bool move, QWidget *parent, bool useGitignore,
                             std::optional<CopyTotals> totals) {
@@ -994,10 +1009,14 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                 if (reply == QMessageBox::YesToAll)
                     askPolice = QMessageBox::YesToAll;
                 removeExisting(dstFilePath);
+                qce::spell::removeSpellingData(dstFilePath);
             }
 
             QFile file(srcPath);
-            if (!file.rename(dstFilePath)) {
+            if (file.rename(dstFilePath)) {
+                // One update for a whole directory: the paths under it move too.
+                qce::spell::moveSpellingData(srcPath, dstFilePath);
+            } else {
                 QMessageBox::warning(parent, QObject::tr("Error"),
                     QObject::tr("Failed to move '%1'").arg(name));
             }
@@ -1010,6 +1029,8 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             askPolice = copyOrMoveFileAskOverwrite(srcPath, dstFilePath,
                               move, names.size()>1, askPolice, &progressDlg, &progressDlg, &destSync);
             progressDlg.endFile();
+            if (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll)
+                carrySpellingData(srcPath, dstFilePath, move, true);
         }
         else if (srcInfo.isDir()) {
             askPolice = copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
@@ -1021,6 +1042,9 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                 if (move && (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll))
                     QDir(srcPath).removeRecursively();
             }
+            // Files left behind (skipped or cancelled) keep their words, the
+            // copies get them too.
+            carrySpellingData(srcPath, dstFilePath, move && !QFileInfo::exists(srcPath), false);
         }
         if (progressDlg.wasCanceled())
             break;

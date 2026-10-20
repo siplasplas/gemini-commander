@@ -15,6 +15,8 @@
 
 #include "FileOperations.h"
 
+#include <qce/spell/SpellChecker.h>
+
 bool MainWindow::doNextTab(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
@@ -463,6 +465,7 @@ bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
             }
 
             if (ok) {
+                qce::spell::removeSpellingData(fullPath);
                 if (panel->branchMode)
                     panel->removeEntryByRelPath(relPath);
             } else {
@@ -512,6 +515,7 @@ bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
         QMessageBox::warning(window(), tr("Error"),
             tr("Could not delete '%1'").arg(name));
     } else {
+        qce::spell::removeSpellingData(fullPath);
         selectNameAfterDelete(panel, oppositeFilePanel(), fullPath);
     }
     return true;
@@ -562,6 +566,7 @@ bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
             }
 
             if (ok) {
+                qce::spell::removeSpellingData(fullPath);
                 if (panel->branchMode)
                     panel->removeEntryByRelPath(relPath);
             } else {
@@ -626,6 +631,7 @@ bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
         QMessageBox::warning(window(), tr("Error"),
             tr("Could not delete '%1'").arg(name));
     } else {
+        qce::spell::removeSpellingData(fullPath);
         selectNameAfterDelete(panel, oppositeFilePanel(), fullPath);
     }
     return true;
@@ -937,6 +943,7 @@ bool MainWindow::doMultiRename(QObject *obj, QKeyEvent *keyEvent) {
 
         QFile file(oldPath);
         if (file.rename(newPath)) {
+            qce::spell::moveSpellingData(oldPath, newPath);
             ++successCount;
         } else {
             ++failCount;

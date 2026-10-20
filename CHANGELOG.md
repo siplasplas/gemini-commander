@@ -72,6 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Review Spelling's list shows the words of the kind chosen in "Checked at
   first" (all, checked, unchecked) or every word, from the start; "None"
   checks nothing (qcodeedit 1.45)
+- Words ignored in the editor's spell check stay with their file, also after
+  closing it (qceditor 1.20, qcodeedit 1.46); copying (F5), moving or
+  renaming (F6, multi-rename) and deleting (to the trash or permanently) a
+  file or a whole directory carries them along, one database update per
+  selected item
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - The search bar of the editor and the viewer covers the top lines and moves

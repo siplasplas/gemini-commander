@@ -40,6 +40,8 @@
 #include "FileOperations.h"
 #include "GitignoreOptionsWidget.h"
 
+#include <qce/spell/SpellChecker.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -1461,6 +1463,8 @@ void FilePanel::renameOrMoveEntry(QWidget *dialogParent, const QString &defaultT
         QMessageBox::warning(parent, tr("Error"), tr("Failed to rename/move:\n%1\nto\n%2").arg(srcPath, dstPath));
         return;
     }
+    // The words the editor's spell check ignores in it go along.
+    qce::spell::moveSpellingData(srcPath, dstPath);
 
     // Odśwież panel
     loadDirectory();
