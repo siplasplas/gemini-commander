@@ -86,6 +86,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "fiunding" is not corrected surely to "finding". The word frequency list
   of every language with a dictionary installed is downloaded when missing
   (qceditor 1.21)
+- Spelling in the editor fitted to real typing mistakes (qcodeedit 1.55–1.63):
+  keyboard layouts (AltGr not let go: "któ©re", "zró”"), costs tuned on a
+  long hand-typed text, more sure corrections. Review Spelling shows one kind
+  of words at a time (sure corrections, a single suggestion not sure, ...),
+  checks them with actions (all, the rows selected with Shift), and Correct
+  leaves it open for the next kind; a double click shows the word in the
+  text. **Tools > Review Spelling of Lines** (Shift+F6) reviews a long text a
+  block of lines at a time, Up and Enter going on to the next (qceditor 1.22)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - The search bar of the editor and the viewer covers the top lines and moves
