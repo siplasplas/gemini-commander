@@ -59,19 +59,20 @@ FetchContent_MakeAvailable(qt-extra)
 # encoding (qcodeedit-encoding, which needs cpg, fetched by qcodeedit when not
 # installed), spell checking (qcodeedit-spell, which needs hunspell,
 # libhunspell-dev) and reloads that are an undo step (qcodeedit-diff).
-# Installed qcodeedit packages 1.63.0 or later are used (spelling suggestions
-# ranked by word frequency, whose lists qcodeedit-spelldata downloads);
+# Installed qcodeedit packages 1.65.0 or later are used (spelling suggestions
+# ranked by word frequency, whose lists qcodeedit-spelldata downloads; grammar
+# with its data files, through qcodeedit-spell);
 # otherwise the tag below
 # is fetched and built into gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
-set(GEMINI_QCODEEDIT_TAG v1.63.0)
+set(GEMINI_QCODEEDIT_TAG v1.65.0)
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
-    find_package(qcodeedit-katedata 1.63.0 QUIET)
-    find_package(qcodeedit-encoding 1.63.0 QUIET)
-    find_package(qcodeedit-spell 1.63.0 QUIET)
-    find_package(qcodeedit-spelldata 1.63.0 QUIET)
-    find_package(qcodeedit-diff 1.63.0 QUIET)
+    find_package(qcodeedit-katedata 1.65.0 QUIET)
+    find_package(qcodeedit-encoding 1.65.0 QUIET)
+    find_package(qcodeedit-spell 1.65.0 QUIET)
+    find_package(qcodeedit-spelldata 1.65.0 QUIET)
+    find_package(qcodeedit-diff 1.65.0 QUIET)
 endif()
 if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGET qcodeedit::spell
    OR NOT TARGET qcodeedit::spelldata OR NOT TARGET qcodeedit::diff)
@@ -80,6 +81,7 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGE
     set(QCE_BUILD_KATE ON)
     set(QCE_BUILD_KATE_DOWNLOADER ON)
     set(QCE_BUILD_ENCODING ON)
+    set(QCE_BUILD_GRAMMAR ON)
     set(QCE_BUILD_SPELL ON)
     set(QCE_BUILD_SPELL_DOWNLOADER ON)
     set(QCE_BUILD_DIFF ON)
@@ -92,19 +94,20 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGE
     )
     FetchContent_MakeAvailable(qcodeedit)
 endif()
-# An installed qceditor 1.19 or later is used (encrypted .een files, which
+# An installed qceditor 1.23 or later is used (encrypted .een files, which
 # need Botan; word frequencies for spelling, reviewing and correcting it; the
-# search bar over the top lines, F3 without it; Tools > Statistics); otherwise
+# search bar over the top lines, F3 without it; Tools > Statistics; grammar
+# menus and Review Grammar); otherwise
 # the tag below is fetched, its editor library only.
 set(QCEDITOR_BUILD_APP OFF)
-set(GEMINI_QCEDITOR_TAG v1.22.0)
+set(GEMINI_QCEDITOR_TAG v1.23.0)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
         GIT_TAG ${GEMINI_QCEDITOR_TAG}
         GIT_SHALLOW TRUE
         ${fetch_exclude}
-        FIND_PACKAGE_ARGS 1.22.0
+        FIND_PACKAGE_ARGS 1.23.0
 )
 FetchContent_MakeAvailable(qceditor)
 

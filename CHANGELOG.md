@@ -94,6 +94,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   leaves it open for the next kind; a double click shows the word in the
   text. **Tools > Review Spelling of Lines** (Shift+F6) reviews a long text a
   block of lines at a time, Up and Enter going on to the next (qceditor 1.22)
+- Grammar in the editor (qcodeedit 1.65, qceditor 1.23), with its data files
+  installed: words spelled right that do not fit together are underlined in
+  blue ("ze jest": że, "Mam dzwoniła": Mama); the context menu and Alt+Enter
+  show the problem and the corrections; **Tools > Review Grammar** (Ctrl+F6)
+  and **Review Grammar of Lines** (Ctrl+Shift+F6) list the mistakes to
+  correct; **Tools > Check Grammar** turns it off
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - The search bar of the editor and the viewer covers the top lines and moves
