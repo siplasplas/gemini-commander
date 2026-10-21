@@ -66,7 +66,7 @@ FetchContent_MakeAvailable(qt-extra)
 # is fetched and built into gemini-commander, without its demo and tests.
 # FETCHCONTENT_SOURCE_DIR_QCODEEDIT (a local qcodeedit checkout) skips the
 # installed packages: they would bring targets with the same names.
-set(GEMINI_QCODEEDIT_TAG v1.65.3)
+set(GEMINI_QCODEEDIT_TAG v1.65.4)
 if(NOT FETCHCONTENT_SOURCE_DIR_QCODEEDIT)
     find_package(qcodeedit-katedata 1.65.0 QUIET)
     find_package(qcodeedit-encoding 1.65.0 QUIET)
