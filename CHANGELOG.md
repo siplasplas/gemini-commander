@@ -104,6 +104,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   qceditor 1.24): a million matches in lines of tens of thousands of
   characters, e.g. `"` → `&quot;` in JSON lines, take a fraction of a second
   instead of minutes
+- The editor's search bar opened with several lines (or a long text)
+  selected searches and replaces in the selection by itself, shown shaded;
+  Alt+C and Alt+W toggle Match case and Whole words (qceditor 1.25)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - The search bar of the editor and the viewer covers the top lines and moves
