@@ -366,7 +366,9 @@ void ViewerWidget::createCodeView(const QString& filePath)
         child->installEventFilter(this);
     }
     m_layout->addWidget(m_codeView);
-    setFocusProxy(m_codeView);
+    // The text area itself (EditorTab has no focus proxy), so that the arrow
+    // keys scroll at once.
+    setFocusProxy(m_codeView->editor()->area());
 }
 
 void ViewerWidget::createHexViewer(uchar* data, qint64 size)

@@ -410,23 +410,18 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     // Always save config (at least sorting settings)
     cfg.save();
 
-    if (!Config::instance().confirmExit()) {
-        event->accept();
+    const bool exit = !Config::instance().confirmExit()
+        || QMessageBox::question(this, tr("Exit"), tr("Exit Gemini Commander?"),
+                                 QMessageBox::Yes | QMessageBox::Cancel,
+                                 QMessageBox::Yes) == QMessageBox::Yes;
+    if (!exit) {
+        event->ignore();
         return;
     }
-
-    QMessageBox::StandardButton reply = QMessageBox::question(
-                    this,
-                    tr("Exit"),
-                    tr("Exit Gemini Commander?"),
-                    QMessageBox::Yes|QMessageBox::Cancel,
-                    QMessageBox::Yes
-                );
-    if (reply == QMessageBox::Yes) {
-        event->accept();
-    } else {
-        event->ignore();
-    }
+    // The viewer is a window of its own: it would keep the application open.
+    if (viewerFrame && viewerFrame->isVisible())
+        viewerFrame->close();
+    event->accept();
 }
 
 void MainWindow::applyConfigGeometry(bool isStartup)

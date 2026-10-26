@@ -1,6 +1,7 @@
 #include "ViewerFrame.h"
 #include "ViewerWidget.h"
 
+#include <QApplication>
 #include <QVBoxLayout>
 #include <QShowEvent>
 #include <QCloseEvent>
@@ -11,8 +12,9 @@
 
 #include "../Config.h"
 
-ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
-    : QDialog(parent)
+ViewerFrame::ViewerFrame(const QString& filePath, QWidget *anchor)
+    : QDialog(nullptr, Qt::Window)  // no parent: not kept above the main window
+    , m_anchor(anchor)
 {
     // Don't use WA_DeleteOnClose - we want to keep the widget for mode persistence
     setWindowTitle(filePath);
@@ -30,6 +32,7 @@ ViewerFrame::ViewerFrame(const QString& filePath, QWidget *parent)
 
     if (!filePath.isEmpty()) {
         m_viewerWidget->openFile(filePath);
+        focusView();
     }
 
     connect(m_viewerWidget, &ViewerWidget::fileDeleted, this, [this]() {
@@ -43,6 +46,14 @@ void ViewerFrame::openFile(const QString& filePath)
 {
     setWindowTitle(filePath);
     m_viewerWidget->openFile(filePath);
+    focusView();
+}
+
+void ViewerFrame::focusView()
+{
+    // Through the focus proxies to the text, code or hex view. In a hidden or
+    // inactive window it takes effect when the window is activated.
+    m_viewerWidget->setFocus(Qt::OtherFocusReason);
 }
 
 void ViewerFrame::setupMenuBar()
@@ -85,12 +96,14 @@ void ViewerFrame::onTextModeTriggered()
 {
     m_viewerWidget->setViewMode(ViewerWidget::ViewMode::Text);
     updateMenuChecks();
+    focusView();
 }
 
 void ViewerFrame::onHexModeTriggered()
 {
     m_viewerWidget->setViewMode(ViewerWidget::ViewMode::Hex);
     updateMenuChecks();
+    focusView();
 }
 
 void ViewerFrame::updateMenuChecks()
@@ -103,8 +116,13 @@ void ViewerFrame::updateMenuChecks()
 void ViewerFrame::changeEvent(QEvent* event)
 {
     QDialog::changeEvent(event);
-    if (event->type() == QEvent::ActivationChange && isActiveWindow())
+    if (event->type() == QEvent::ActivationChange && isActiveWindow()) {
+        // A reload recreates the view; keep the focus in it.
+        const bool hadFocus = m_viewerWidget->isAncestorOf(QApplication::focusWidget());
         m_viewerWidget->refreshIfChanged();
+        if (hadFocus || !focusWidget())
+            focusView();
+    }
 }
 
 void ViewerFrame::closeEvent(QCloseEvent* event)
@@ -130,10 +148,10 @@ void ViewerFrame::showEvent(QShowEvent* event)
 
         resize(w, h);
 
-        // Position relative to parent window
-        if (parentWidget()) {
-            QPoint parentPos = parentWidget()->pos();
-            move(parentPos.x() + relX, parentPos.y() + relY);
+        // Position relative to the main window
+        if (m_anchor) {
+            QPoint anchorPos = m_anchor->pos();
+            move(anchorPos.x() + relX, anchorPos.y() + relY);
         }
     }
 }
@@ -145,11 +163,11 @@ void ViewerFrame::saveGeometryToConfig()
     int relX = 0;
     int relY = 0;
 
-    // Calculate position relative to parent window
-    if (parentWidget()) {
-        QPoint parentPos = parentWidget()->pos();
-        relX = x() - parentPos.x();
-        relY = y() - parentPos.y();
+    // Calculate position relative to the main window
+    if (m_anchor) {
+        QPoint anchorPos = m_anchor->pos();
+        relX = x() - anchorPos.x();
+        relY = y() - anchorPos.y();
     }
 
     cfg.setViewerGeometry(relX, relY, width(), height());
