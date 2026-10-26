@@ -100,6 +100,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   show the problem and the corrections; **Tools > Review Grammar** (Ctrl+F6)
   and **Review Grammar of Lines** (Ctrl+Shift+F6) list the mistakes to
   correct; **Tools > Check Grammar** turns it off
+- **Replace All** in the editor replaces all matches at once (qcodeedit 1.66,
+  qceditor 1.24): a million matches in lines of tens of thousands of
+  characters, e.g. `"` → `&quot;` in JSON lines, take a fraction of a second
+  instead of minutes
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - The search bar of the editor and the viewer covers the top lines and moves
