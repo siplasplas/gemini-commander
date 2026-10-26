@@ -243,6 +243,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local
 cmake --build build -j$(nproc)
 ```
 
+Without `-DCMAKE_BUILD_TYPE` the build type is Release.
+
 On Windows - default is ninja
 ```shell
 git clone https://github.com/siplasplas/gemini-commander

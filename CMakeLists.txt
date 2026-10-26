@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.24)
 
 project(gemini-commander VERSION 2.2.0 LANGUAGES CXX)
 
+# Without a build type the compiler gets no optimization (nor debug info):
+# a plain "cmake .." builds Release. An explicit -DCMAKE_BUILD_TYPE (and
+# multi-config generators) are left alone.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING
+        "Build type: Release, Debug, RelWithDebInfo or MinSizeRel" FORCE)
+    message(STATUS "No build type given, building Release")
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
 endif()
@@ -28,11 +37,15 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     set(fetch_exclude EXCLUDE_FROM_ALL)
 endif()
 
+# backward-cpp writes a stack trace to the crash log after a crash. Pinned to a
+# commit, not a tag: a shallow clone has only the newest commit of the
+# branch, and once master moves on the pinned one is not in it ("unable to
+# read tree"), so the (small) repository is cloned in full.
 FetchContent_Declare(
         backward
         GIT_REPOSITORY https://github.com/bombela/backward-cpp.git
         GIT_TAG 0bfd0a07a61551413ccd2ab9a9099af3bad40681
-        GIT_SHALLOW TRUE
+        GIT_SHALLOW FALSE
         ${fetch_exclude}
 )
 FetchContent_MakeAvailable(backward)
