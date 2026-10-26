@@ -16,6 +16,14 @@
 #include <set>
 #include <string>
 
+#ifdef _WIN32
+#include <io.h>
+#define dup2 _dup2
+#define fileno _fileno
+#else
+#include <unistd.h>
+#endif
+
 #include "MainWindow.h"
 #include "editor/EditorSettings.h"
 #include "git_version.h"
@@ -81,6 +89,34 @@ void migrateFiles(QApplication& app)
         std::fprintf(stderr, "Moving Kate data: %s\n", qPrintable(line));
 }
 
+// Points stderr at gemini-commander-crash.log: beside the executable, or in
+// ~/.local/share/siplasplas/gemini-commander when that directory is not
+// writable (e.g. /usr/local/bin). The file is opened first and only then put
+// on fd 2: freopen() closes stderr even when the file cannot be opened, and
+// the next descriptor opened takes number 2 - which every program started
+// from gemini then got as its stderr (a sqlitebrowser warning written into
+// its Wayland socket closed it at once).
+void redirectStderrToCrashLog()
+{
+    const QString name = QStringLiteral("gemini-commander-crash.log");
+    const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                            + QStringLiteral("/siplasplas/gemini-commander");
+    QDir().mkpath(dataDir);
+    for (const QString& dir : {QCoreApplication::applicationDirPath(), dataDir}) {
+        std::FILE* log = std::fopen(QDir(dir).filePath(name).toLocal8Bit().constData(), "a");
+        if (!log)
+            continue;
+        std::fflush(stderr);
+        const bool redirected = dup2(fileno(log), fileno(stderr)) >= 0;
+        std::fclose(log);
+        if (!redirected)
+            return;
+        std::setvbuf(stderr, nullptr, _IONBF, 0);
+        std::fprintf(stderr, "\n=== Gemini Commander %s (%s) ===\n", APP_VERSION, GIT_SHA);
+        return;
+    }
+}
+
 // Alt pressed and released alone puts the menu bar in keyboard mode, which
 // takes the focus from the panel. Off here; Alt+letter still opens a menu.
 class NoAltMenuNavigationStyle : public QProxyStyle {
@@ -100,12 +136,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QApplication::setStyle(new NoAltMenuNavigationStyle);
 
-    const QString crashLogPath = QDir(QCoreApplication::applicationDirPath())
-                                     .filePath(QStringLiteral("gemini-commander-crash.log"));
-    if (std::freopen(crashLogPath.toLocal8Bit().constData(), "a", stderr)) {
-        std::setvbuf(stderr, nullptr, _IONBF, 0);
-        std::fprintf(stderr, "\n=== Gemini Commander %s (%s) ===\n", APP_VERSION, GIT_SHA);
-    }
+    redirectStderrToCrashLog();
 
     // backward-cpp writes a stack trace to stderr after fatal signals and
     // unhandled C++ exceptions; stderr above points at the crash log.

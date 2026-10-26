@@ -153,7 +153,8 @@ there that Gemini Commander does not recognize are moved only when you agree.
 editor, is removed. Kate data from `~/.local/share/qcodeedit/kate-<version>/`
 (qcodeedit 1.12 and older) is moved to `~/.local/share/kate-data/<version>/`.
 What was moved is written to the program's log, `gemini-commander-crash.log`
-beside the executable.
+beside the executable, or in `~/.local/share/siplasplas/gemini-commander/`
+when that directory is not writable (e.g. an installation in `/usr/local/bin`).
 
 ### File encodings
 
