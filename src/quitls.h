@@ -10,11 +10,11 @@ class QWidget;
 
 // Shows a top-level window and brings it to the front, activating it only
 // when that is needed. On Wayland every activateWindow() asks the compositor
-// for an activation token (xdg_activation_v1); a token that is never used
-// (the window not mapped yet, already active, hidden in the meantime) keeps
-// GNOME's busy cursor for about 15 s. So: a window being shown is only
-// shown (the compositor focuses a new window itself), an active one is left
-// alone. GC_DEBUG_ACTIVATION=1 logs each call.
+// for an activation token (xdg_activation_v1), taken from the window that
+// has the focus; a token that is never used keeps GNOME's busy cursor for
+// about 15 s. So an active window is left alone, and a window being shown is
+// activated once it exists (GNOME does not focus a new window by itself).
+// GC_DEBUG_ACTIVATION=1 logs each call.
 void qBringToFront(QWidget* window);
 
 // Opens a local file with its default application. On Linux through

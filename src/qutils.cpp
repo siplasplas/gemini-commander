@@ -8,8 +8,10 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QPalette>
+#include <QPointer>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QUrl>
 #include <QWidget>
 
@@ -45,7 +47,18 @@ void qBringToFront(QWidget* window) {
                  << "visible" << window->isVisible() << "minimized" << window->isMinimized()
                  << "active" << window->isActiveWindow();
     if (!window->isVisible()) {
-        window->show();  // a newly shown window is focused by the compositor
+        window->show();
+        // GNOME does not focus a new window by itself (it only says it is
+        // ready): ask for activation once the window exists. QtWayland gets
+        // the token from the window that has the focus (ours, after the key
+        // press) and activates this one with it, so the token is used.
+        QPointer<QWidget> shown(window);
+        QTimer::singleShot(0, window, [shown]() {
+            if (shown && shown->isVisible() && !shown->isActiveWindow()) {
+                shown->raise();
+                shown->activateWindow();
+            }
+        });
         return;
     }
     if (window->isMinimized())
