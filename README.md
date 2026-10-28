@@ -259,6 +259,27 @@ ninja
 ```
 ./gemini_commander
 ``` 
+
+A directory (or a file, which is then selected in its directory) given on the
+command line opens in the left panel; a second one in the right panel.
+
+### Opening a directory from another program (D-Bus)
+
+A running Gemini Commander implements `org.freedesktop.Application` on the
+session bus, object `/io/github/siplasplas/GeminiCommander`. The name
+`io.github.siplasplas.GeminiCommander` belongs to the instance whose window
+was active last; each instance also owns
+`io.github.siplasplas.GeminiCommander.p<PID>`. `Open` takes the first
+`file://` URI or path to the current panel and activates the window, with
+`platform_data["activation-token"]` on Wayland; under a modal dialog or during
+an operation the panel changes once that is over:
+
+```sh
+gdbus call --session --dest io.github.siplasplas.GeminiCommander \
+    --object-path /io/github/siplasplas/GeminiCommander \
+    --method org.freedesktop.Application.Open "['file:///tmp/notes.txt']" "{}"
+```
+
 ## Installation
 ```shell
 sudo make install

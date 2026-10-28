@@ -37,6 +37,9 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     void applyStartupPaths(const QStringList& paths);
+    // From another program (D-Bus Open): the current panel goes to `path`, a
+    // directory, or the directory of a file with the file selected.
+    void openInCurrentPanel(const QString& path);
 #include "MainWindow_decl.inc"
 protected:
     void closeEvent(QCloseEvent *event) override;

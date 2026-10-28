@@ -216,6 +216,8 @@ target_link_libraries(stub_generator PRIVATE
 
 add_executable(${PROJECT_NAME}
         src/main.cpp
+        src/DBusService.cpp
+        src/DBusService.h
         src/MainWindow.cpp
         src/CopyDialog.cpp
         src/CopyDialog.h

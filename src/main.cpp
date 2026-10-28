@@ -24,6 +24,7 @@
 #include <unistd.h>
 #endif
 
+#include "DBusService.h"
 #include "MainWindow.h"
 #include "editor/EditorSettings.h"
 #include "git_version.h"
@@ -165,6 +166,8 @@ int main(int argc, char *argv[])
     MainWindow mainWindow;
     mainWindow.applyStartupPaths(startupPaths);
     mainWindow.show();
+    // Other programs (e.g. ducat) open directories here over D-Bus.
+    new DBusService(&mainWindow);
 
     return app.exec();
 }

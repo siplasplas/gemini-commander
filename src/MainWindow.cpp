@@ -2290,6 +2290,15 @@ void MainWindow::applyStartupPaths(const QStringList& paths)
     }
 }
 
+void MainWindow::openInCurrentPanel(const QString& path)
+{
+    FilePanel* panel = currentFilePanel();
+    if (!panel)
+        return;
+    panel->navigateToPath(path);
+    panel->setFocus();
+}
+
 void MainWindow::openEditorForFile(const QString& filePath) {
     QFileInfo info(filePath);
     if (!info.isFile())
