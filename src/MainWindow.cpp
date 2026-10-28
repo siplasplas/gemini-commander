@@ -2296,6 +2296,11 @@ void MainWindow::openInCurrentPanel(const QString& path)
     if (!panel)
         return;
     panel->navigateToPath(path);
+    // In an inactive window navigateToPath only remembers the entry to select
+    // (applied on focus). Set it in the view now: a reload of the directory
+    // meanwhile (it changes on disk, e.g. /tmp) keeps the view's current entry
+    // and would otherwise put the cursor back on [..].
+    panel->restoreSelectionFromMemory();
     panel->setFocus();
 }
 
