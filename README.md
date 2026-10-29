@@ -14,7 +14,7 @@ git clone https://github.com/siplasplas/gemini-commander
 ## Features
 
 - **Hidden file search** — Incremental search handles dot-prefixed files naturally (e.g., typing "git" finds ".gitignore")
-- **Built-in editor and viewer** — Opens instantly on top of the main window, even on Wayland where window stacking can be problematic. The editor window is [QCEditor](https://github.com/siplasplas/qceditor)'s editor library (the same editor, its settings kept in Gemini Commander's configuration), on the [qcodeedit](https://github.com/siplasplas/qcodeedit) widget with Kate syntax definitions, folding, a slightly darker background (lighter on dark themes) on the line with the caret, an inline find/replace bar (regular expressions, whole words, in selection), go to line:column (with this session's recent positions) and recent files. A file changed on disk is reloaded as one undo step (Ctrl+Z brings back the text before it); one with unsaved edits is left as it is, unless **Tools > Ask to Reload Modified Files** is on. Files named `*.een` are encrypted on disk: the editor asks for the password and reads the formats of the earlier editors EdiQ and Editas, saving in EdiQ's (see QCEditor's README); the viewer shows them as they are on disk. The viewer (F3) is an ordinary window, not kept above the main one, with the focus in the view at once; it searches with Ctrl+F, F3 and Shift+F3, also from its **Search** menu: large files through a find bar that marks the matches in view and searches the rest of the file in the background. The status bar shows line:column (in characters: an emoji is one column), the Unicode code point of the character after the caret (e.g. U+0105), the line breaks (Unix LF, Windows CRLF, Mac CR or Mixed), the encoding, the text's language (detected in the background, so opening is not slowed down) and the tab width. Files open in their own encoding (UTF-8/16/32 or a legacy code page such as cp1250, ISO 8859-2 or cp852, detected automatically) and are saved in it with their line breaks; characters the code page cannot store ask whether to write `?` or switch the file to UTF-8, and **Encoding** in the context menu reopens or saves the file in another encoding
+- **Built-in editor and viewer** — Opens instantly on top of the main window, even on Wayland where window stacking can be problematic. The editor window is [QCEditor](https://github.com/siplasplas/qceditor)'s editor library (the same editor, its settings kept in Gemini Commander's configuration), on the [qcodeedit](https://github.com/siplasplas/qcodeedit) widget with Kate syntax definitions, folding, a slightly darker background (lighter on dark themes) on the line with the caret, an inline find/replace bar (regular expressions, whole words, in selection), go to line:column (with this session's recent positions) and recent files. A file changed on disk is reloaded as one undo step (Ctrl+Z brings back the text before it); one with unsaved edits is left as it is, unless **Tools > Ask to Reload Modified Files** is on. Files named `*.een` are encrypted on disk: the editor asks for the password and reads the formats of the earlier editors EdiQ and Editas, saving in EdiQ's (see QCEditor's README); the viewer shows them as they are on disk. The viewer (F3) is an ordinary window, not kept above the main one, with the focus in the view at once; it searches with Ctrl+F, F3 and Shift+F3, also from its **Search** menu: large files through a find bar that marks the matches in view and searches the rest of the file in the background, also for regular expressions (`.*`, e.g. `(c|k)o(j|y)ones`). The status bar shows line:column (in characters: an emoji is one column), the Unicode code point of the character after the caret (e.g. U+0105), the line breaks (Unix LF, Windows CRLF, Mac CR or Mixed), the encoding, the text's language (detected in the background, so opening is not slowed down) and the tab width. Files open in their own encoding (UTF-8/16/32 or a legacy code page such as cp1250, ISO 8859-2 or cp852, detected automatically) and are saved in it with their line breaks; characters the code page cannot store ask whether to write `?` or switch the file to UTF-8, and **Encoding** in the context menu reopens or saves the file in another encoding
 - **Find Files (Alt+F7)** — Several name masks separated by `;` (e.g. `*.cpp;*.h`), text content, size and modification date range. **Skip during search** on the Advanced tab lists directory and file names to skip (with `*` and `?`, e.g. `.git;cmake-build*` and `*.o`; skipped directories are not entered) and can skip what `.gitignore` files ignore, read from the search directory down and, inside a git work tree, also from its top (deeper files add rules, `!` includes again); these settings are saved. **Clear** resets the search options, including skipping what `.gitignore` ignores (the name patterns to skip stay), and clears the results
 - **Copy without ignored files** — Copying a directory or several entries (F5, Shift+F5) can skip what `.gitignore` files ignore, read from the source directory down exactly as in Find Files; the checkbox is remembered. **Count** in the copy dialog shows the number and total size of the files to copy (in the background); the copy then uses that count instead of counting again, and OK pressed while counting starts the copy when the count is done
 - **Show filters** — In the Show menu, for the current panel: **All Files** (Ctrl+F10) shows everything again, **Programs** (Ctrl+F11) shows directories and executables (Linux: files executable by the user; Windows: `.exe`, `.com`, `.bat`, `.cmd`, `.ps1`), **Custom** (Ctrl+F12) shows the files matching masks such as `*.cpp;*.h` and/or hides what `.gitignore` files ignore, files and directories, as Find Files and Copy do. Two options, shown and saved once for the Custom filter, Copy and Find Files alike, set where `.gitignore` files start counting above the directory — the nearest directory with `.git` (the git repository), or the highest directory with a `.gitignore` below home (one `.gitignore` for a group of repositories, e.g. to copy them to a USB drive) — and whether `.git` directories are hidden as well. The branch view (Ctrl+B) and directory sizes (Space, Alt+Shift+Enter) follow the filter, so e.g. with `*.cpp;*.h` and `.gitignore` the sizes show which directories hold the most sources, without build directories. An active filter is shown after the path above the panel, e.g. `/home/user/project/[*.cpp;*.h;!gitignore]` or `[programs]` (`!gitignore`: without what `.gitignore` ignores); while the path is edited it is a plain path
@@ -64,27 +64,27 @@ On Ubuntu 24.04 LTS/25.10, Mint 22, Debian, Pop!_OS
 ```
 sudo apt update
 sudo apt install git cmake g++ pkg-config qt6-base-dev libbotan-2-dev \
-    libicu-dev nlohmann-json3-dev libarchive-dev libgtest-dev librsvg2-bin \
+    libicu-dev nlohmann-json3-dev libarchive-dev libpcre2-dev libgtest-dev librsvg2-bin \
     libhunspell-dev hunspell-en-us hunspell-pl
 ```
 
 On Fedora/RHEL-based systems:
 ```
 sudo dnf install git cmake gcc-c++ pkgconf-pkg-config qt6-qtbase-devel botan2-devel \
-    libicu-devel json-devel libarchive-devel gtest-devel librsvg2 librsvg2-tools \
+    libicu-devel json-devel libarchive-devel pcre2-devel gtest-devel librsvg2 librsvg2-tools \
     hunspell-devel hunspell-en-US hunspell-pl
 ```
 
 On Arch-based systems (e.g., Arch Linux, Manjaro):
 ```
 sudo pacman -Syu git cmake pkgconf qt6-base botan \
-    icu nlohmann-json libarchive gtest librsvg hunspell hunspell-en_us hunspell-pl
+    icu nlohmann-json libarchive pcre2 gtest librsvg hunspell hunspell-en_us hunspell-pl
 ```
 
 On openSUSE:
 ```
 sudo zypper install git cmake gcc-c++ pkgconf-pkg-config qt6-base-devel libbotan-devel \
-    libicu-devel nlohmann_json-devel libarchive-devel gtest rsvg-convert \
+    libicu-devel nlohmann_json-devel libarchive-devel pcre2-devel gtest rsvg-convert \
     hunspell-devel myspell-en_US myspell-pl_PL
 ```
 

@@ -146,7 +146,7 @@ target_include_directories(toml_headers INTERFACE
 FetchContent_Declare(
         textviewers
         GIT_REPOSITORY https://github.com/ideorg/textviewers.git
-        GIT_TAG v1.2
+        GIT_TAG v1.3
         GIT_SHALLOW TRUE
         GIT_SUBMODULES ""
         SOURCE_SUBDIR none
@@ -166,6 +166,8 @@ if(NOT BOTAN_FOUND)
     pkg_check_modules(BOTAN REQUIRED botan-3)
 endif()
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
+# Regular expression search in the viewer of large files (textviewers).
+pkg_check_modules(PCRE2 REQUIRED libpcre2-8)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
 add_library(core
@@ -274,6 +276,7 @@ add_executable(${PROJECT_NAME}
         ${TEXTVIEWERS_DIR}/logic/ChangeableDocument.cpp
         ${TEXTVIEWERS_DIR}/logic/LineIndexedDocument.cpp
         ${TEXTVIEWERS_DIR}/logic/Searcher.cpp
+        ${TEXTVIEWERS_DIR}/logic/RegexSearcher.cpp
         ${TEXTVIEWERS_DIR}/misc/selection.cpp
         src/Config.cpp
         src/Config.h
@@ -308,6 +311,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${TEXTVIEWERS_DIR}
         ${LIBARCHIVE_INCLUDE_DIRS}
+        ${PCRE2_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -326,6 +330,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         toml_headers
         ICU::uc ICU::i18n
         ${LIBARCHIVE_LIBRARIES}
+        ${PCRE2_LIBRARIES}
  )
 
 # Keep enough information in the executable for backward-cpp to resolve source

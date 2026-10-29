@@ -129,6 +129,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   results are marked in the visible part only, without a count; F3 and
   Shift+F3 search the whole file in the background with a progress dialog
   that can cancel it (textviewers 1.2)
+- The search bar of the viewer of large files searches regular expressions
+  (`.*`, PCRE2), e.g. `(c|k)o(j|y)ones` in a multi-gigabyte file; an invalid
+  pattern shows "Invalid pattern" (textviewers 1.3). Building needs PCRE2
+  (libpcre2-dev)
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
