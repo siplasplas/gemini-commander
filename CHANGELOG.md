@@ -109,6 +109,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Alt+C and Alt+W toggle Match case and Whole words (qceditor 1.25)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
+- Help > About shows the date of Gemini Commander's commit, and for the
+  libraries built from source (textviewers, qcodeedit or qceditor when not
+  installed) their commit, e.g. `v1.3`, with its date; the crash log header
+  has the date too
 - The search bar of the editor and the viewer covers the top lines and moves
   them down only when the result is among the first lines; selected text is
   the query also while the bar is open; the placeholder is "Search"

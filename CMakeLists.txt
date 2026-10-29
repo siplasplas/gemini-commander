@@ -339,12 +339,28 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer)
 endif()
 
+# The source directory of a library built in, for its commit in Help > About;
+# empty for an installed one (an old download may still be in _deps).
+function(gemini_built_in_dir out target dir)
+    get_target_property(imported ${target} IMPORTED)
+    if(imported)
+        set(${out} "" PARENT_SCOPE)
+    else()
+        set(${out} "${dir}" PARENT_SCOPE)
+    endif()
+endfunction()
+gemini_built_in_dir(GEMINI_QCODEEDIT_DIR qcodeedit::spell "${qcodeedit_SOURCE_DIR}")
+gemini_built_in_dir(GEMINI_QCEDITOR_DIR qceditor::editor "${qceditor_SOURCE_DIR}")
+
 # Generate git_version.h at build time (not configure time)
 set(GIT_VERSION_HEADER "${CMAKE_BINARY_DIR}/git_version.h")
 add_custom_target(git_version ALL
     COMMAND ${CMAKE_COMMAND}
         -DGIT_VERSION_HEADER=${GIT_VERSION_HEADER}
         -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+        -DTEXTVIEWERS_DIR=${TEXTVIEWERS_DIR}
+        -DQCODEEDIT_DIR=${GEMINI_QCODEEDIT_DIR}
+        -DQCEDITOR_DIR=${GEMINI_QCEDITOR_DIR}
         -P ${CMAKE_SOURCE_DIR}/cmake/GenerateGitVersion.cmake
     BYPRODUCTS ${GIT_VERSION_HEADER}
     COMMENT "Generating git version header"

@@ -677,15 +677,23 @@ void MainWindow::setupUi() {
     // Help menu
     QAction* aboutAction = new QAction(tr("About"), this);
     connect(aboutAction, &QAction::triggered, this, [this]() {
+        // A library built from source shows its commit and the commit's date;
+        // an installed one only its version.
+        const auto library = [this](const char* version, const char* describe, const char* date) {
+            if (!*date) return QString::fromUtf8(version);
+            return tr("%1 (built in, %2)").arg(QString::fromUtf8(describe), QString::fromUtf8(date));
+        };
         QString aboutText = tr(
             "<h3>Gemini Commander</h3>"
-            "<p>Version: %1 (%2)</p>"
-            "<p>Build type: %3</p>"
-            "<p>Qt Version: %4</p>"
-            "<p>qt-extra: %5<br>qcodeedit: %6<br>qceditor: %7</p>"
-        ).arg(APP_VERSION, GIT_SHA, APP_BUILD_TYPE, qVersion(),
-              QStringLiteral(GEMINI_QTEXTRA_VERSION), QStringLiteral(GEMINI_QCODEEDIT_VERSION),
-              QStringLiteral(GEMINI_QCEDITOR_VERSION));
+            "<p>Version: %1 (%2, %3)</p>"
+            "<p>Build type: %4</p>"
+            "<p>Qt Version: %5</p>"
+            "<p>qt-extra: %6<br>qcodeedit: %7<br>qceditor: %8<br>textviewers: %9</p>"
+        ).arg(APP_VERSION, GIT_SHA, GIT_DATE, APP_BUILD_TYPE, qVersion(),
+              QStringLiteral(GEMINI_QTEXTRA_VERSION),
+              library(GEMINI_QCODEEDIT_VERSION, QCODEEDIT_GIT_DESCRIBE, QCODEEDIT_GIT_DATE),
+              library(GEMINI_QCEDITOR_VERSION, QCEDITOR_GIT_DESCRIBE, QCEDITOR_GIT_DATE),
+              library("unknown", TEXTVIEWERS_GIT_DESCRIBE, TEXTVIEWERS_GIT_DATE));
         QMessageBox::about(this, tr("About Gemini Commander"), aboutText);
     });
     helpMenu->addAction(aboutAction);

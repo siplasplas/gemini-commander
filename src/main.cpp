@@ -113,7 +113,7 @@ void redirectStderrToCrashLog()
         if (!redirected)
             return;
         std::setvbuf(stderr, nullptr, _IONBF, 0);
-        std::fprintf(stderr, "\n=== Gemini Commander %s (%s) ===\n", APP_VERSION, GIT_SHA);
+        std::fprintf(stderr, "\n=== Gemini Commander %s (%s, %s) ===\n", APP_VERSION, GIT_SHA, GIT_DATE);
         return;
     }
 }
