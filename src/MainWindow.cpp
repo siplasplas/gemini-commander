@@ -209,11 +209,13 @@ MainWindow::MainWindow(QWidget *parent)
                 this, &MainWindow::onVisibleFilesChanged);
     }
 
-    // Update storage info toolbar and reload directory on tab changes
+    // Update storage info toolbar and, on tab changes, reload the directory
+    // when it was not loaded yet or changed on disk (not on every switch: a
+    // directory of 140,000 files takes a moment; also Ctrl+T's new tab)
     connect(m_leftTabs, &QTabWidget::currentChanged, this, [this](int index) {
         updateStorageInfoToolbar();
         if (auto* pane = qobject_cast<FilePaneWidget*>(m_leftTabs->widget(index))) {
-            pane->filePanel()->doRefresh(pane->filePanel(), nullptr);
+            pane->filePanel()->refreshIfStale();
             QTimer::singleShot(10, pane->filePanel(), [pane] {
                 pane->filePanel()->setFocus();
                 pane->pathEdit()->setSelection(0,0);
@@ -223,7 +225,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_rightTabs, &QTabWidget::currentChanged, this, [this](int index) {
         updateStorageInfoToolbar();
         if (auto* pane = qobject_cast<FilePaneWidget*>(m_rightTabs->widget(index))) {
-            pane->filePanel()->doRefresh(pane->filePanel(), nullptr);
+            pane->filePanel()->refreshIfStale();
             QTimer::singleShot(10, pane->filePanel(), [pane] {
                 pane->filePanel()->setFocus();
                 pane->pathEdit()->setSelection(0,0);

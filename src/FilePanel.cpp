@@ -36,6 +36,7 @@
 #include "SortedDirIterator.h"
 #include "keys/KeyRouter.h"
 #include <QDateTime>
+#include <QTimeZone>
 #include <QMimeDatabase>
 #include "FileOperations.h"
 #include "GitignoreOptionsWidget.h"
@@ -467,9 +468,24 @@ void FilePanel::sortEntries() {
     // --------------------------
     // Sorting (TC-like)
     // --------------------------
-    std::sort(entries.begin(), entries.end(), [this](const PanelEntry &c, const PanelEntry &d) {
-        auto a = c.info;
-        auto b = d.info;
+    // Settings and per-entry keys once, not per comparison: a directory of
+    // 140,000 files takes some 2.4 million comparisons.
+    const Qt::CaseSensitivity cs = Config::instance().sortCaseSensitive()
+        ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    const bool asc = (sortOrder == Qt::AscendingOrder);
+    const bool byName = sortColumn == "Name";
+    const bool byExt = sortColumn == "Ext";
+    const bool bySize = sortColumn == "Size";
+    const bool byDate = sortColumn == "Date";
+    if (byDate) {
+        for (PanelEntry& e : entries)
+            e.sortTimeMs = insideArchive ? e.archiveModTime.toMSecsSinceEpoch()
+                                         : e.info.lastModified(QTimeZone::UTC).toMSecsSinceEpoch();
+    }
+
+    std::sort(entries.begin(), entries.end(), [&](const PanelEntry &c, const PanelEntry &d) {
+        const QFileInfo& a = c.info;
+        const QFileInfo& b = d.info;
         // In archive mode, use contentState to determine if entry is a directory
         // (since QFileInfo points to fake paths that don't exist)
         const bool aDir = insideArchive
@@ -483,12 +499,8 @@ void FilePanel::sortEntries() {
         if (aDir != bDir)
             return aDir && !bDir;
 
-        const bool caseSensitive = Config::instance().sortCaseSensitive();
-        const Qt::CaseSensitivity cs = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
         auto lessCmp = [cs](const QString &x, const QString &y) { return x.compare(y, cs) < 0; };
         auto greaterCmp = [cs](const QString &x, const QString &y) { return x.compare(y, cs) > 0; };
-
-        const bool asc = (sortOrder == Qt::AscendingOrder);
 
         auto cmpNames = [&](bool ascLocal) {
             QString na = a.fileName();
@@ -500,11 +512,11 @@ void FilePanel::sortEntries() {
             return ascLocal ? lessCmp(na, nb) : greaterCmp(na, nb);
         };
 
-        if (sortColumn == "Name") {
+        if (byName) {
             return cmpNames(asc);
         }
 
-        if (sortColumn == "Ext") {
+        if (byExt) {
             if (aDir && bDir) {
                 return cmpNames(asc);
             } else if (!aDir && !bDir) {
@@ -520,7 +532,7 @@ void FilePanel::sortEntries() {
             }
         }
 
-        if (sortColumn == "Size") {
+        if (bySize) {
             if (aDir && bDir) {
                 const bool aHas = c.hasTotalSize == TotalSizeStatus::Has;
                 const bool bHas = d.hasTotalSize == TotalSizeStatus::Has;
@@ -552,12 +564,9 @@ void FilePanel::sortEntries() {
             return aDir; // dirs before files
         }
 
-        if (sortColumn == "Date") {
-            // In archive mode, use stored modification time
-            QDateTime da = insideArchive ? c.archiveModTime : a.lastModified();
-            QDateTime db = insideArchive ? d.archiveModTime : b.lastModified();
-            if (da != db)
-                return asc ? (da < db) : (da > db);
+        if (byDate) {
+            if (c.sortTimeMs != d.sortTimeMs)
+                return asc ? (c.sortTimeMs < d.sortTimeMs) : (c.sortTimeMs > d.sortTimeMs);
             return cmpNames(asc);
         }
 
@@ -589,6 +598,9 @@ void FilePanel::loadDirectory() {
         return;
     }
     entries.clear();
+    // Before listing: a change made while listing then counts as newer.
+    m_loadedPath = currentPath;
+    m_loadedDirTime = QFileInfo(currentPath).lastModified(QTimeZone::UTC);
     const auto keep = filterPredicate();
     QDirIterator it(currentPath, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden,
                     QDirIterator::NoIteratorFlags);
@@ -603,6 +615,14 @@ void FilePanel::loadDirectory() {
     sortEntriesApplyModel();
     emit directoryChanged(currentPath);
     emit selectionChanged();
+}
+
+void FilePanel::refreshIfStale() {
+    // The branch view and archives are not a plain listing: as before.
+    if (branchMode || insideArchive || m_loadedPath != currentPath
+        || QFileInfo(currentPath).lastModified(QTimeZone::UTC) != m_loadedDirTime) {
+        doRefresh(this, nullptr);
+    }
 }
 
 std::function<bool(const QFileInfo&)> FilePanel::filterPredicate() const {

@@ -50,6 +50,9 @@ struct PanelEntry {
     std::size_t totalSizeBytes = 0;
     TotalSizeStatus hasTotalSize = TotalSizeStatus::Unknown;
     QDateTime archiveModTime;  // Modification time for archive entries
+    // Set by FilePanel::sortEntries() for the Date column: the modification
+    // time once per entry, not a QDateTime (with time zone) per comparison.
+    qint64 sortTimeMs = 0;
     PanelEntry() = default;
     explicit PanelEntry(const QFileInfo& fi, const QString& branchPath = QString())
         : info(fi), branch(branchPath)
@@ -139,6 +142,10 @@ public:
     ~FilePanel() override;
 
     void loadDirectory();
+    // Reloads only when the directory was not loaded yet or changed on disk
+    // since (its modification time: entries added, removed or renamed), e.g.
+    // when its tab is shown again. A directory of 140,000 files takes ~0.3 s.
+    void refreshIfStale();
 
     QString getRowName(int row) const;
     QString currentRelPath() const;
@@ -207,6 +214,9 @@ private:
     void updateRowMarking(int row, bool marked);
     int m_lastSelectedRow = -1;
     bool m_cancelOperation = false;  // Flag for canceling long-running operations
+    // What loadDirectory() listed last, for refreshIfStale().
+    QString m_loadedPath;
+    QDateTime m_loadedDirTime;
     PanelFilter m_filter;
     void reloadKeepingCurrent();
 
