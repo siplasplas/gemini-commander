@@ -31,7 +31,8 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
     m_cancelOperation = false;
     KeyRouter::instance().setOperationInProgress(true);
 
-    entries.clear();
+    // The branch view is this panel's own listing, not the shared directory one.
+    QList<PanelEntry>& list = privateEntries();
     m_marked.clear();
     QString basePath = currentPath;
     if (!basePath.endsWith('/'))
@@ -56,7 +57,7 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
             branch = filePath.mid(basePath.length());
         }
 
-        entries.append(PanelEntry(info, branch));
+        list.append(PanelEntry(info, branch));
 
         // Process events periodically to allow ESC handling
         if (++count % 100 == 0) {
@@ -68,7 +69,7 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
 
     if (m_cancelOperation) {
         // Cancelled - revert to normal mode
-        entries.clear();
+        list.clear();
         loadDirectory();
         return true;
     }
@@ -89,7 +90,7 @@ bool FilePanel::doCancelOperation(QObject *obj, QKeyEvent *keyEvent) {
     // Only handle ESC if an operation is in progress
     // Check if any entry has InProgress status
     bool operationInProgress = false;
-    for (const auto& entry : entries) {
+    for (const auto& entry : entries()) {
         if (entry.hasTotalSize == TotalSizeStatus::InPogress) {
             operationInProgress = true;
             break;

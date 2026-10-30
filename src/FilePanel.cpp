@@ -267,7 +267,7 @@ int FilePanelModel::entryIndexToRow(int entryIndex) const {
 int FilePanelModel::rowCount(const QModelIndex &parent) const {
     if (parent.isValid())
         return 0;
-    int count = m_panel->entries.size();
+    int count = m_panel->entryCount();
     if (hasParentEntry())
         count += 1; // +1 for [..] row
     return count;
@@ -478,19 +478,20 @@ void FilePanel::sortEntries() {
     const bool byExt = sortColumn == "Ext";
     const bool bySize = sortColumn == "Size";
     const bool byDate = sortColumn == "Date";
+    QList<PanelEntry>& list = entries();
     if (byDate) {
-        for (PanelEntry& e : entries)
+        for (PanelEntry& e : list)
             e.sortTimeMs = insideArchive ? e.archiveModTime.toMSecsSinceEpoch()
                                          : e.info.lastModified(QTimeZone::UTC).toMSecsSinceEpoch();
     }
 
     // The entries stay in read order; only the index of the display order is
     // sorted.
-    m_order.resize(entries.size());
+    m_order.resize(list.size());
     std::iota(m_order.begin(), m_order.end(), 0);
     std::sort(m_order.begin(), m_order.end(), [&](int ci, int di) {
-        const PanelEntry& c = entries[ci];
-        const PanelEntry& d = entries[di];
+        const PanelEntry& c = list[ci];
+        const PanelEntry& d = list[di];
         const QFileInfo& a = c.info;
         const QFileInfo& b = d.info;
         // In archive mode, use contentState to determine if entry is a directory
@@ -600,31 +601,144 @@ void FilePanel::triggerCurrentEntry() {
 }
 
 void FilePanel::loadDirectory() {
+    delete dir;
     dir = new QDir(currentPath);
     if (!dir->exists()) {
         return;
     }
-    entries.clear();
     // Marks survive a reload of the same directory (Ctrl+R, a change on
     // disk), not a move to another one.
     if (currentPath != m_loadedPath)
         m_marked.clear();
-    // Before listing: a change made while listing then counts as newer.
-    m_loadedPath = currentPath;
-    m_loadedDirTime = QFileInfo(currentPath).lastModified(QTimeZone::UTC);
-    const auto keep = filterPredicate();
-    QDirIterator it(currentPath, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden,
-                    QDirIterator::NoIteratorFlags);
-    while (it.hasNext()) {
-        it.next();
-        QFileInfo info = it.fileInfo();
-        if (keep && !keep(info))
-            continue;
-        PanelEntry entry(info);
-        entries.append(entry);
+    // Taken before listing: a change made while listing then counts as newer.
+    const QDateTime dirTime = QFileInfo(currentPath).lastModified(QTimeZone::UTC);
+
+    std::shared_ptr<DirListing> shared = DirListing::find(listingKey());
+    if (shared && shared != m_listing && shared->dirTime == dirTime) {
+        // Another panel or tab shows this directory, unchanged on disk since
+        // it read it: use its listing, without reading the directory.
+        attachListing(std::move(shared));
+    } else {
+        // Read it: entering a directory nobody shows, or reloading the one
+        // shown (Ctrl+R, a change on disk, after a file operation). Other
+        // panels showing it follow (onListingReloaded).
+        if (!shared)
+            shared = DirListing::create(listingKey());
+        attachListing(shared);
+        QList<PanelEntry> read;
+        const auto keep = filterPredicate();
+        QDirIterator it(currentPath, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden,
+                        QDirIterator::NoIteratorFlags);
+        while (it.hasNext()) {
+            it.next();
+            QFileInfo info = it.fileInfo();
+            if (keep && !keep(info))
+                continue;
+            read.append(PanelEntry(info));
+        }
+        shared->entries = std::move(read);
+        shared->dirTime = dirTime;
+        m_readingListing = true;
+        emit shared->reloaded();
+        m_readingListing = false;
     }
+    m_loadedPath = currentPath;
+    m_loadedDirTime = m_listing->dirTime;
     pruneMarks();
     sortEntriesApplyModel();
+    emit directoryChanged(currentPath);
+    emit selectionChanged();
+}
+
+// --- Shared listings ---------------------------------------------------------
+
+namespace {
+// Listings held by panels, by key; a listing no panel holds is gone.
+QHash<QString, std::weak_ptr<DirListing>>& listingRegistry()
+{
+    static QHash<QString, std::weak_ptr<DirListing>> registry;
+    return registry;
+}
+} // namespace
+
+std::shared_ptr<DirListing> DirListing::find(const QString& key)
+{
+    auto& registry = listingRegistry();
+    const auto it = registry.find(key);
+    if (it == registry.end())
+        return nullptr;
+    if (auto listing = it->lock())
+        return listing;
+    registry.erase(it);
+    return nullptr;
+}
+
+std::shared_ptr<DirListing> DirListing::create(const QString& key)
+{
+    auto listing = std::make_shared<DirListing>();
+    listingRegistry().insert(key, listing);
+    return listing;
+}
+
+QString FilePanel::listingKey() const
+{
+    QString key = QDir::cleanPath(currentPath) + QLatin1Char('\n')
+                  + QString::number(int(m_filter.mode)) + QLatin1Char('\n') + m_filter.description();
+    if (m_filter.mode == PanelFilter::Mode::Custom && m_filter.useGitignore) {
+        // The .gitignore options change what is hidden too.
+        const GitignoreOptions options = Config::instance().gitignoreOptions();
+        key += QStringLiteral("\n%1%2").arg(int(options.top)).arg(options.skipGitDir);
+    }
+    return key;
+}
+
+void FilePanel::attachListing(std::shared_ptr<DirListing> listing)
+{
+    if (listing == m_listing)
+        return;
+    if (m_listing)
+        disconnect(m_listing.get(), nullptr, this, nullptr);
+    m_listing = std::move(listing);
+    m_order.clear();
+    connect(m_listing.get(), &DirListing::reloaded, this, &FilePanel::onListingReloaded);
+}
+
+QList<PanelEntry>& FilePanel::privateEntries()
+{
+    attachListing(std::make_shared<DirListing>());
+    return m_listing->entries;
+}
+
+void FilePanel::onListingReloaded()
+{
+    if (m_readingListing)
+        return;  // this panel reads it and goes on itself
+    const QString current = currentRelPath();
+    m_loadedDirTime = m_listing->dirTime;
+    pruneMarks();
+    sortEntriesApplyModel();
+    selectEntryByRelPath(current);
+    // This panel usually has no focus (another one reloaded): set the entry
+    // in the view now, not only when it gets the focus.
+    restoreSelectionFromMemory();
+    emit selectionChanged();
+}
+
+void FilePanel::forkFrom(const FilePanel& other)
+{
+    currentPath = other.currentPath;
+    sortColumn = other.sortColumn;
+    sortOrder = other.sortOrder;
+    m_filter = other.m_filter;
+    m_marked.clear();
+    delete dir;
+    dir = new QDir(currentPath);
+    attachListing(other.m_listing);
+    m_order = other.m_order;  // same listing, same sorting: same order
+    m_loadedPath = other.m_loadedPath;
+    m_loadedDirTime = other.m_loadedDirTime;
+    horizontalHeader()->setSortIndicator(columnIndex(sortColumn), sortOrder);
+    model->refresh();
     emit directoryChanged(currentPath);
     emit selectionChanged();
 }
@@ -649,7 +763,7 @@ void FilePanel::pruneMarks() {
     if (m_marked.isEmpty())
         return;
     QSet<QString> kept;
-    for (const PanelEntry& entry : entries) {
+    for (const PanelEntry& entry : entries()) {
         const QString key = markKey(entry);
         if (m_marked.contains(key))
             kept.insert(key);
@@ -732,7 +846,7 @@ void FilePanel::selectEntryByRelPath(const QString &relPath) {
             return;
         }
     }
-    size_t max_row = branchMode || currentRelPath()=="/" ? entries.size()-1 : entries.size();
+    size_t max_row = branchMode || currentRelPath()=="/" ? entryCount()-1 : entryCount();
     m_lastSelectedRow = std::min(m_lastSelectedRow, (int)max_row);
     if (hasFocus())
         restoreSelectionFromMemory();
@@ -1677,7 +1791,7 @@ void FilePanel::styleInactive() {
 }
 
 void FilePanel::feedSearchResults(const QVector<SearchResult> &results, const QString &searchPath) {
-    entries.clear();
+    QList<PanelEntry>& list = privateEntries();
     m_marked.clear();
     QString basePath = searchPath;
     if (!basePath.endsWith('/'))
@@ -1692,7 +1806,7 @@ void FilePanel::feedSearchResults(const QVector<SearchResult> &results, const QS
             branch = r.dir.mid(basePath.length());
         else
             branch = r.dir; // fallback to absolute if not under search path
-        entries.append(PanelEntry(info, branch));
+        list.append(PanelEntry(info, branch));
     }
 
     branchMode = true;
@@ -1714,8 +1828,8 @@ bool FilePanel::removeEntryByRelPath(const QString &relPath) {
             // later indices shift down by one
             const int index = orderIndex(pos);
             m_marked.remove(relPath);
-            entries.removeAt(index);
-            if (m_order.size() == entries.size() + 1) {
+            entries().removeAt(index);
+            if (m_order.size() == entries().size() + 1) {
                 m_order.removeAt(pos);
                 for (int& i : m_order)
                     if (i > index)
@@ -1796,10 +1910,10 @@ bool FilePanel::addEntryFromPath(const QString &fullPath, const QString &branch)
 
     // Create new entry and add to entries list, at the end of the display order
     PanelEntry entry(info, branch);
-    const bool ordered = m_order.size() == entries.size();
-    entries.append(entry);
+    const bool ordered = m_order.size() == entries().size();
+    entries().append(entry);
     if (ordered)
-        m_order.append(int(entries.size()) - 1);
+        m_order.append(int(entries().size()) - 1);
 
     // Refresh model to show the new entry
     model->refresh();
@@ -1964,7 +2078,7 @@ void FilePanel::exitArchive() {
 }
 
 void FilePanel::loadArchiveDirectory() {
-    entries.clear();
+    QList<PanelEntry>& list = privateEntries();  // not a shared directory listing
     m_marked.clear();
 
     // Get entries for current directory in archive
@@ -1994,7 +2108,7 @@ void FilePanel::loadArchiveDirectory() {
             entry.contentState = EntryContentState::NotDirectory;
         }
 
-        entries.append(entry);
+        list.append(entry);
     }
 
     sortEntries();

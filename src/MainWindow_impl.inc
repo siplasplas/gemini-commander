@@ -56,9 +56,15 @@ bool MainWindow::doAddTab(QObject *obj, QKeyEvent *keyEvent) {
     const QString path = pane->currentPath();
 
     auto* newPane = new FilePaneWidget(m_activeSide, tabs);
-    // duplicate the same folder - force load even if path matches default
-    newPane->filePanel()->currentPath.clear();
-    newPane->setCurrentPath(path);
+    FilePanel* source = pane->filePanel();
+    if (!source->branchMode && !source->insideArchive) {
+        // The same listing, sorting and filter: no reading, no sorting.
+        newPane->filePanel()->forkFrom(*source);
+    } else {
+        // duplicate the same folder - force load even if path matches default
+        newPane->filePanel()->currentPath.clear();
+        newPane->setCurrentPath(path);
+    }
     // Select first row
     newPane->filePanel()->selectRow(0);
 
@@ -337,7 +343,7 @@ bool MainWindow::doCompareByContents(QObject *obj, QKeyEvent *keyEvent) {
         } else if (N == 1) {
             neighborPath = neighborMarkedPaths[0];
         } else { // N == 0 — find same name in neighbor panel
-            for (const auto& entry : neighborPanel->entries) {
+            for (const auto& entry : neighborPanel->entries()) {
                 if (entry.info.fileName() == currentName) {
                     neighborPath = entry.info.absoluteFilePath();
                     break;
@@ -919,7 +925,7 @@ bool MainWindow::doMultiRename(QObject *obj, QKeyEvent *keyEvent) {
 
     // Get all files in directory for conflict detection
     QStringList existingNames;
-    for (const auto& entry : panel->entries) {
+    for (const auto& entry : panel->entries()) {
         existingNames << entry.info.fileName();
     }
 

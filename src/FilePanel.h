@@ -14,8 +14,11 @@
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QProgressDialog>
+#include <QDateTime>
 #include <QSet>
 #include <QVector>
+
+#include <memory>
 
 struct SearchResult;
 QT_BEGIN_NAMESPACE
@@ -65,13 +68,36 @@ struct PanelEntry {
     }
 };
 
+// The entries of one directory listing, in the order they were read,
+// shared by all panels and tabs showing the same directory with the same
+// Show filter: each panel keeps only its own display order and marks.
+// Reading the directory again (FilePanel::loadDirectory) updates it for all
+// of them (reloaded()). The branch view, archives and search results have
+// a private listing, not shared.
+class DirListing : public QObject
+{
+    Q_OBJECT
+public:
+    QList<PanelEntry> entries;
+    QDateTime dirTime;  // the directory's modification time when read
+
+    // The shared listing for `key` (path and filter) that a panel holds, or
+    // nullptr.
+    static std::shared_ptr<DirListing> find(const QString& key);
+    // A new listing, shared under `key`.
+    static std::shared_ptr<DirListing> create(const QString& key);
+
+signals:
+    void reloaded();
+};
+
 // Column names are now strings: "Name", "Ext", "Size", "Date", "Attr"
 // Each panel can have different columns in any order
 
 // Forward declaration
 class FilePanel;
 
-// Virtual model that reads directly from FilePanel::entries
+// Virtual model that reads directly from FilePanel::entries()
 // No data copying - only displays visible rows
 class FilePanelModel : public QAbstractTableModel
 {
@@ -121,15 +147,20 @@ public:
 #include "FilePanel_decl.inc"
     FilePanelModel* model = nullptr;
     QString currentPath;
-    // The entries in the order they were read; never sorted. The display
+    // The entries in the order they were read (the directory listing, shared
+    // with other panels showing the directory); never sorted. The display
     // order is m_order (indices into entries), which sortEntries() sorts.
     // Rows/positions go through entryAt(); a loop over all entries whose
-    // order does not matter (counts, sums) may use entries directly.
-    QList<PanelEntry> entries;
+    // order does not matter (counts, sums) may use entries() directly.
+    QList<PanelEntry>& entries() { return m_listing->entries; }
+    const QList<PanelEntry>& entries() const { return m_listing->entries; }
     // Entry at display position `pos` (0 = first entry, [..] not counted).
-    PanelEntry& entryAt(int pos) { return entries[orderIndex(pos)]; }
-    const PanelEntry& entryAt(int pos) const { return entries[orderIndex(pos)]; }
-    int entryCount() const { return int(entries.size()); }
+    PanelEntry& entryAt(int pos) { return entries()[orderIndex(pos)]; }
+    const PanelEntry& entryAt(int pos) const { return entries()[orderIndex(pos)]; }
+    int entryCount() const { return int(entries().size()); }
+    // Ctrl+T: the same directory, listing, sorting and Show filter as
+    // `other`, without reading the directory or sorting again.
+    void forkFrom(const FilePanel& other);
 
     // Marks are names (branch/name in the branch view), so a reload of the
     // same directory keeps them; another directory starts without marks.
@@ -234,13 +265,25 @@ private:
     PanelFilter m_filter;
     void reloadKeepingCurrent();
 
-    // Display order: indices into entries (4 bytes per entry), sorted by
+    // The listing shown (shared, see DirListing) and this panel's display
+    // order: indices into its entries (4 bytes per entry), sorted by
     // sortEntries() instead of the entries themselves.
+    std::shared_ptr<DirListing> m_listing = std::make_shared<DirListing>();
     QVector<int> m_order;
     int orderIndex(int pos) const {
         // Entries filled without sortEntries() yet: read order.
-        return m_order.size() == entries.size() ? m_order[pos] : pos;
+        return m_order.size() == entries().size() ? m_order[pos] : pos;
     }
+    // Key of the shared listing: path and Show filter (it changes the entries).
+    QString listingKey() const;
+    // Shows `listing`, following its reloads by other panels.
+    void attachListing(std::shared_ptr<DirListing> listing);
+    // A new listing of this panel only (branch view, archive, search results).
+    QList<PanelEntry>& privateEntries();
+    // Another panel read the shared directory again: sort, keep the marks of
+    // names still there and the current entry.
+    void onListingReloaded();
+    bool m_readingListing = false;  // this panel is the one reading it
     // Marked entries by name, see isMarked().
     QSet<QString> m_marked;
     static QString markKey(const PanelEntry& entry);

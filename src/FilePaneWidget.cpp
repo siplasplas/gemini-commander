@@ -219,7 +219,7 @@ void FilePaneWidget::updateStatusLabel()
     int totalFileCount = 0;
     int totalDirCount = 0;
 
-    for (const auto& entry : panel->entries) {
+    for (const auto& entry : panel->entries()) {
         bool isDir = entry.info.isDir();
 
         // Calculate size for this entry
