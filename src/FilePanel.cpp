@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <numeric>
 #include <unicode/translit.h>
 #include <unicode/unistr.h>
 #include <unicode/utypes.h>
@@ -328,10 +329,10 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
     }
 
     // Normal entry
-    if (entryIdx >= m_panel->entries.size())
+    if (entryIdx >= m_panel->entryCount())
         return {};
 
-    PanelEntry &entry = m_panel->entries[entryIdx];
+    PanelEntry &entry = m_panel->entryAt(entryIdx);
 
     if (role == Qt::DisplayRole) {
         auto [base, ext] = splitFileName(entry.info);
@@ -417,7 +418,7 @@ QVariant FilePanelModel::data(const QModelIndex &index, int role) const {
         return base + "." + ext;
     }
 
-    if (role == Qt::ForegroundRole && entry.isMarked) {
+    if (role == Qt::ForegroundRole && m_panel->isMarked(entry)) {
         return QBrush(Qt::red);
     }
 
@@ -483,7 +484,13 @@ void FilePanel::sortEntries() {
                                          : e.info.lastModified(QTimeZone::UTC).toMSecsSinceEpoch();
     }
 
-    std::sort(entries.begin(), entries.end(), [&](const PanelEntry &c, const PanelEntry &d) {
+    // The entries stay in read order; only the index of the display order is
+    // sorted.
+    m_order.resize(entries.size());
+    std::iota(m_order.begin(), m_order.end(), 0);
+    std::sort(m_order.begin(), m_order.end(), [&](int ci, int di) {
+        const PanelEntry& c = entries[ci];
+        const PanelEntry& d = entries[di];
         const QFileInfo& a = c.info;
         const QFileInfo& b = d.info;
         // In archive mode, use contentState to determine if entry is a directory
@@ -598,6 +605,10 @@ void FilePanel::loadDirectory() {
         return;
     }
     entries.clear();
+    // Marks survive a reload of the same directory (Ctrl+R, a change on
+    // disk), not a move to another one.
+    if (currentPath != m_loadedPath)
+        m_marked.clear();
     // Before listing: a change made while listing then counts as newer.
     m_loadedPath = currentPath;
     m_loadedDirTime = QFileInfo(currentPath).lastModified(QTimeZone::UTC);
@@ -612,9 +623,38 @@ void FilePanel::loadDirectory() {
         PanelEntry entry(info);
         entries.append(entry);
     }
+    pruneMarks();
     sortEntriesApplyModel();
     emit directoryChanged(currentPath);
     emit selectionChanged();
+}
+
+QString FilePanel::markKey(const PanelEntry& entry) {
+    return entry.branch.isEmpty() ? entry.info.fileName()
+                                  : entry.branch + QLatin1Char('/') + entry.info.fileName();
+}
+
+bool FilePanel::isMarked(const PanelEntry& entry) const {
+    return !m_marked.isEmpty() && m_marked.contains(markKey(entry));
+}
+
+void FilePanel::setMarked(const PanelEntry& entry, bool marked) {
+    if (marked)
+        m_marked.insert(markKey(entry));
+    else
+        m_marked.remove(markKey(entry));
+}
+
+void FilePanel::pruneMarks() {
+    if (m_marked.isEmpty())
+        return;
+    QSet<QString> kept;
+    for (const PanelEntry& entry : entries) {
+        const QString key = markKey(entry);
+        if (m_marked.contains(key))
+            kept.insert(key);
+    }
+    m_marked = std::move(kept);
 }
 
 void FilePanel::refreshIfStale() {
@@ -667,13 +707,10 @@ QString FilePanel::getRowRelPath(int row) const {
         return getRowName(row);
 
     // In branch mode, row maps directly to entry index
-    if (row < 0 || row >= entries.size())
+    if (row < 0 || row >= entryCount())
         return {};
 
-    const PanelEntry &entry = entries[row];
-    if (entry.branch.isEmpty())
-        return entry.info.fileName();
-    return entry.branch + "/" + entry.info.fileName();
+    return markKey(entryAt(row));
 }
 
 void FilePanel::selectEntryByRelPath(const QString &relPath) {
@@ -683,13 +720,8 @@ void FilePanel::selectEntryByRelPath(const QString &relPath) {
     }
 
     // Search entries for matching branch + filename
-    for (int i = 0; i < entries.size(); ++i) {
-        const PanelEntry &entry = entries[i];
-        QString entryRelPath;
-        if (entry.branch.isEmpty())
-            entryRelPath = entry.info.fileName();
-        else
-            entryRelPath = entry.branch + "/" + entry.info.fileName();
+    for (int i = 0; i < entryCount(); ++i) {
+        const QString entryRelPath = markKey(entryAt(i));
 
         if (entryRelPath == relPath || relPath.startsWith(entryRelPath+"/")) {
             // In branch mode, row == entry index; otherwise account for [..]
@@ -1345,8 +1377,8 @@ void FilePanel::jumpWithControl(int direction) {
         } else {
             // Fallback: check entry directly if Size column not present
             int entryIdx = model->rowToEntryIndex(r);
-            if (entryIdx >= 0 && entryIdx < entries.size()) {
-                isDir = entries[entryIdx].info.isDir();
+            if (entryIdx >= 0 && entryIdx < entryCount()) {
+                isDir = entryAt(entryIdx).info.isDir();
             }
         }
         if (isDir)
@@ -1499,7 +1531,7 @@ void FilePanel::updateRowMarking(int row, bool marked) {
     Q_UNUSED(marked);
     if (!model || row < 0 || row >= model->rowCount())
         return;
-    // Model returns ForegroundRole based on entry.isMarked
+    // Model returns ForegroundRole based on isMarked(entry)
     // Just signal that the row data changed
     model->refreshRow(row);
 }
@@ -1513,9 +1545,9 @@ std::pair<PanelEntry *, int> FilePanel::currentEntryRow() {
 
     // In branch mode there's no [..] entry
     if (branchMode) {
-        if (row < 0 || row >= entries.size())
+        if (row < 0 || row >= entryCount())
             return {nullptr, row};
-        return {&entries[row], row};
+        return {&entryAt(row), row};
     }
 
     if (!dir)
@@ -1525,10 +1557,10 @@ std::pair<PanelEntry *, int> FilePanel::currentEntryRow() {
     const int offset = isRoot ? 0 : 1; // 0: no [..], 1:first row is [..]
     const int entryIndex = row - offset;
 
-    if (entryIndex < 0 || entryIndex >= entries.size())
+    if (entryIndex < 0 || entryIndex >= entryCount())
         return {nullptr, row}; // np. [..]
 
-    return {&entries[entryIndex], row};
+    return {&entryAt(entryIndex), row};
 }
 
 void FilePanel::toggleMarkOnCurrent(bool advanceRow) {
@@ -1536,9 +1568,10 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow) {
     if (!p.first)
         return;
     auto entry = p.first;
-    entry->isMarked = !entry->isMarked;
+    const bool marked = !isMarked(*entry);
+    setMarked(*entry, marked);
 
-    updateRowMarking(p.second, entry->isMarked);
+    updateRowMarking(p.second, marked);
 
     if (advanceRow) {
         int nextRow = p.second + 1;
@@ -1552,12 +1585,15 @@ void FilePanel::toggleMarkOnCurrent(bool advanceRow) {
     emit selectionChanged();
 }
 
+// In display order, as the marked entries are seen.
 QStringList FilePanel::getMarkedNames() const {
     QStringList result;
-    for (const auto &entry: entries) {
-        if (entry.isMarked) {
+    if (m_marked.isEmpty())
+        return result;
+    for (int i = 0; i < entryCount(); ++i) {
+        const PanelEntry& entry = entryAt(i);
+        if (isMarked(entry))
             result << entry.info.fileName();
-        }
     }
     return result;
 }
@@ -1565,33 +1601,31 @@ QStringList FilePanel::getMarkedNames() const {
 QStringList FilePanel::getMarkedPaths() const {
     QDir dir(currentPath);
     QStringList result;
-    for (const auto &entry: entries) {
-        if (entry.isMarked) {
-            result << dir.absoluteFilePath(entry.info.fileName()) ;
-        }
+    if (m_marked.isEmpty())
+        return result;
+    for (int i = 0; i < entryCount(); ++i) {
+        const PanelEntry& entry = entryAt(i);
+        if (isMarked(entry))
+            result << dir.absoluteFilePath(entry.info.fileName());
     }
     return result;
 }
 
 QStringList FilePanel::getMarkedRelPaths() const {
     QStringList result;
-    for (const auto &entry: entries) {
-        if (entry.isMarked) {
-            if (entry.branch.isEmpty())
-                result << entry.info.fileName();
-            else
-                result << entry.branch + "/" + entry.info.fileName();
-        }
+    if (m_marked.isEmpty())
+        return result;
+    for (int i = 0; i < entryCount(); ++i) {
+        const PanelEntry& entry = entryAt(i);
+        if (isMarked(entry))
+            result << markKey(entry);
     }
     return result;
 }
 
 bool FilePanel::hasMarkedEntries() const {
-    for (const auto &entry: entries) {
-        if (entry.isMarked)
-            return true;
-    }
-    return false;
+    // Only names still listed are in the set (pruneMarks after each reload).
+    return !m_marked.isEmpty();
 }
 
 void FilePanel::rememberSelection() {
@@ -1644,6 +1678,7 @@ void FilePanel::styleInactive() {
 
 void FilePanel::feedSearchResults(const QVector<SearchResult> &results, const QString &searchPath) {
     entries.clear();
+    m_marked.clear();
     QString basePath = searchPath;
     if (!basePath.endsWith('/'))
         basePath += '/';
@@ -1673,17 +1708,19 @@ void FilePanel::feedSearchResults(const QVector<SearchResult> &results, const QS
 
 bool FilePanel::removeEntryByRelPath(const QString &relPath) {
     // Find entry by relative path
-    for (int i = 0; i < entries.size(); ++i) {
-        QString entryRelPath;
-        if (entries[i].branch.isEmpty()) {
-            entryRelPath = entries[i].info.fileName();
-        } else {
-            entryRelPath = entries[i].branch + "/" + entries[i].info.fileName();
-        }
-
-        if (entryRelPath == relPath) {
-            // Found - remove from entries
-            entries.removeAt(i);
+    for (int pos = 0; pos < entryCount(); ++pos) {
+        if (markKey(entryAt(pos)) == relPath) {
+            // Found - remove from entries and from the display order, whose
+            // later indices shift down by one
+            const int index = orderIndex(pos);
+            m_marked.remove(relPath);
+            entries.removeAt(index);
+            if (m_order.size() == entries.size() + 1) {
+                m_order.removeAt(pos);
+                for (int& i : m_order)
+                    if (i > index)
+                        --i;
+            }
             // Refresh model to reflect the change
             model->refresh();
             return true;
@@ -1694,30 +1731,27 @@ bool FilePanel::removeEntryByRelPath(const QString &relPath) {
 
 bool FilePanel::renameEntry(const QString &oldRelPath, const QString &newRelPath) {
     // Find entry by old relative path
-    for (int i = 0; i < entries.size(); ++i) {
-        QString entryRelPath;
-        if (entries[i].branch.isEmpty()) {
-            entryRelPath = entries[i].info.fileName();
-        } else {
-            entryRelPath = entries[i].branch + "/" + entries[i].info.fileName();
-        }
-
-        if (entryRelPath == oldRelPath) {
+    for (int i = 0; i < entryCount(); ++i) {
+        PanelEntry& entry = entryAt(i);
+        if (markKey(entry) == oldRelPath) {
             // Found - update entry
             QDir baseDir(currentPath);
             QString newFullPath = baseDir.absoluteFilePath(newRelPath);
             QFileInfo newInfo(newFullPath);
+            const bool marked = isMarked(entry);
+            setMarked(entry, false);
 
             // Update entry
-            entries[i].info = newInfo;
+            entry.info = newInfo;
 
             // Update branch if path changed
             int lastSlash = newRelPath.lastIndexOf('/');
             if (lastSlash >= 0) {
-                entries[i].branch = newRelPath.left(lastSlash);
+                entry.branch = newRelPath.left(lastSlash);
             } else {
-                entries[i].branch.clear();
+                entry.branch.clear();
             }
+            setMarked(entry, marked);  // the mark follows the new name
 
             // Refresh model row
             int modelRow = model->entryIndexToRow(i);
@@ -1730,23 +1764,20 @@ bool FilePanel::renameEntry(const QString &oldRelPath, const QString &newRelPath
 
 bool FilePanel::updateEntryBranch(const QString &relPath, const QString &newBranch) {
     // Find entry by relative path
-    for (int i = 0; i < entries.size(); ++i) {
-        QString entryRelPath;
-        if (entries[i].branch.isEmpty()) {
-            entryRelPath = entries[i].info.fileName();
-        } else {
-            entryRelPath = entries[i].branch + "/" + entries[i].info.fileName();
-        }
-
-        if (entryRelPath == relPath) {
+    for (int i = 0; i < entryCount(); ++i) {
+        PanelEntry& entry = entryAt(i);
+        if (markKey(entry) == relPath) {
+            const bool marked = isMarked(entry);
+            setMarked(entry, false);
             // Found - update branch
-            entries[i].branch = newBranch;
+            entry.branch = newBranch;
 
             // Update info to point to new location
             QDir baseDir(currentPath);
             QString newRelPathFull =
-                    newBranch.isEmpty() ? entries[i].info.fileName() : newBranch + "/" + entries[i].info.fileName();
-            entries[i].info = QFileInfo(baseDir.absoluteFilePath(newRelPathFull));
+                    newBranch.isEmpty() ? entry.info.fileName() : newBranch + "/" + entry.info.fileName();
+            entry.info = QFileInfo(baseDir.absoluteFilePath(newRelPathFull));
+            setMarked(entry, marked);  // the mark follows the new path
 
             // Refresh model row
             int modelRow = model->entryIndexToRow(i);
@@ -1763,9 +1794,12 @@ bool FilePanel::addEntryFromPath(const QString &fullPath, const QString &branch)
         return false;
     }
 
-    // Create new entry and add to entries list
+    // Create new entry and add to entries list, at the end of the display order
     PanelEntry entry(info, branch);
+    const bool ordered = m_order.size() == entries.size();
     entries.append(entry);
+    if (ordered)
+        m_order.append(int(entries.size()) - 1);
 
     // Refresh model to show the new entry
     model->refresh();
@@ -1862,10 +1896,10 @@ QStringList FilePanel::getVisibleFilePaths() const {
 
         // Get entry index from row
         int entryIdx = model->rowToEntryIndex(row);
-        if (entryIdx < 0 || entryIdx >= entries.size())
+        if (entryIdx < 0 || entryIdx >= entryCount())
             continue; // Skip [..] row
 
-        const PanelEntry &entry = entries[entryIdx];
+        const PanelEntry &entry = entryAt(entryIdx);
 
         // Only track files, not directories
         if (!entry.info.isDir()) {
@@ -1883,10 +1917,10 @@ void FilePanel::emitVisibleFiles() {
 
 bool FilePanel::refreshEntryByPath(const QString &filePath) {
     // Find entry by absolute path
-    for (int i = 0; i < entries.size(); ++i) {
-        if (entries[i].info.absoluteFilePath() == filePath) {
+    for (int i = 0; i < entryCount(); ++i) {
+        if (entryAt(i).info.absoluteFilePath() == filePath) {
             // Refresh file info
-            entries[i].info.refresh();
+            entryAt(i).info.refresh();
 
             // Refresh model row
             int modelRow = model->entryIndexToRow(i);
@@ -1931,6 +1965,7 @@ void FilePanel::exitArchive() {
 
 void FilePanel::loadArchiveDirectory() {
     entries.clear();
+    m_marked.clear();
 
     // Get entries for current directory in archive
     QList<ArchiveEntry> dirEntries = archiveContents.entriesAt(archiveCurrentDir);

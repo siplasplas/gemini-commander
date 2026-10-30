@@ -239,7 +239,7 @@ void FilePaneWidget::updateStatusLabel()
         totalBytes += entrySize;
 
         // Selected stats (only if marked)
-        if (entry.isMarked) {
+        if (panel->isMarked(entry)) {
             if (isDir) {
                 ++selectedDirCount;
             } else {

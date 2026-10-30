@@ -116,15 +116,15 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
     QMap<QString, int> leftFiles;  // name -> index in entries
     QMap<QString, int> rightFiles;
 
-    for (int i = 0; i < leftPanel->entries.size(); ++i) {
-        const auto& entry = leftPanel->entries[i];
+    for (int i = 0; i < leftPanel->entryCount(); ++i) {
+        const auto& entry = leftPanel->entryAt(i);
         if (!entry.info.isDir()) {
             leftFiles[entry.info.fileName()] = i;
         }
     }
 
-    for (int i = 0; i < rightPanel->entries.size(); ++i) {
-        const auto& entry = rightPanel->entries[i];
+    for (int i = 0; i < rightPanel->entryCount(); ++i) {
+        const auto& entry = rightPanel->entryAt(i);
         if (!entry.info.isDir()) {
             rightFiles[entry.info.fileName()] = i;
         }
@@ -140,18 +140,18 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
     for (auto it = leftFiles.constBegin(); it != leftFiles.constEnd(); ++it) {
         const QString& fileName = it.key();
         int leftIdx = it.value();
-        const auto& leftEntry = leftPanel->entries[leftIdx];
+        const auto& leftEntry = leftPanel->entryAt(leftIdx);
 
         auto rightIt = rightFiles.find(fileName);
         if (rightIt == rightFiles.end()) {
             // File only in left panel - mark it
-            leftPanel->entries[leftIdx].isMarked = true;
+            leftPanel->setMarked(leftEntry, true);
             leftPanel->updateRowMarking(leftIdx + offset, true);
             ++markedCount;
         } else {
             // File exists in both panels - compare
             int rightIdx = rightIt.value();
-            const auto& rightEntry = rightPanel->entries[rightIdx];
+            const auto& rightEntry = rightPanel->entryAt(rightIdx);
 
             bool different = false;
 
@@ -172,10 +172,10 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
 
             if (different) {
                 // Mark in both panels
-                leftPanel->entries[leftIdx].isMarked = true;
+                leftPanel->setMarked(leftEntry, true);
                 leftPanel->updateRowMarking(leftIdx + offset, true);
 
-                rightPanel->entries[rightIdx].isMarked = true;
+                rightPanel->setMarked(rightEntry, true);
                 rightPanel->updateRowMarking(rightIdx + offset, true);
                 ++markedCount;
             }
@@ -189,7 +189,7 @@ bool MainWindow::doCompareDirectories(QObject *obj, QKeyEvent *keyEvent) {
 
         if (!leftFiles.contains(fileName)) {
             // File only in right panel - mark it
-            rightPanel->entries[rightIdx].isMarked = true;
+            rightPanel->setMarked(rightPanel->entryAt(rightIdx), true);
             rightPanel->updateRowMarking(rightIdx + offset, true);
             ++markedCount;
         }

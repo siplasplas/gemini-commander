@@ -32,6 +32,7 @@ bool FilePanel::doBranchViewWithSubdirs(QObject *obj, QKeyEvent *keyEvent) {
     KeyRouter::instance().setOperationInProgress(true);
 
     entries.clear();
+    m_marked.clear();
     QString basePath = currentPath;
     if (!basePath.endsWith('/'))
         basePath += '/';
@@ -181,9 +182,11 @@ bool FilePanel::doInvertSelection(QObject *obj, QKeyEvent *keyEvent) {
     const bool isRoot = dir && dir->isRoot();
     const int offset = isRoot ? 0 : 1;
 
-    for (int i = 0; i < entries.size(); ++i) {
-        entries[i].isMarked = !entries[i].isMarked;
-        updateRowMarking(i + offset, entries[i].isMarked);
+    for (int i = 0; i < entryCount(); ++i) {
+        const PanelEntry& entry = entryAt(i);
+        const bool marked = !isMarked(entry);
+        setMarked(entry, marked);
+        updateRowMarking(i + offset, marked);
     }
     emit selectionChanged();
     return true;
@@ -239,8 +242,8 @@ bool FilePanel::doSelectAll(QObject *obj, QKeyEvent *keyEvent) {
     const bool isRoot = dir && dir->isRoot();
     const int offset = isRoot ? 0 : 1;
 
-    for (int i = 0; i < entries.size(); ++i) {
-        entries[i].isMarked = true;
+    for (int i = 0; i < entryCount(); ++i) {
+        setMarked(entryAt(i), true);
         updateRowMarking(i + offset, true);
     }
     emit selectionChanged();
@@ -267,9 +270,9 @@ bool FilePanel::doSelectGroup(QObject *obj, QKeyEvent *keyEvent) {
     const bool isRoot = dir && dir->isRoot();
     const int offset = isRoot ? 0 : 1;
 
-    for (int i = 0; i < entries.size(); ++i) {
-        if (regex.match(entries[i].info.fileName()).hasMatch()) {
-            entries[i].isMarked = true;
+    for (int i = 0; i < entryCount(); ++i) {
+        if (regex.match(entryAt(i).info.fileName()).hasMatch()) {
+            setMarked(entryAt(i), true);
             updateRowMarking(i + offset, true);
         }
     }
@@ -485,10 +488,10 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
         if (m_cancelOperation)
             break;
 
-        if (row >= entries.size())
+        if (row >= entryCount())
             break;
 
-        PanelEntry& entry = entries[row];
+        PanelEntry& entry = entryAt(row);
 
         // Skip non-directories
         if (!entry.info.isDir())
@@ -499,7 +502,7 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
             continue;
 
         // Skip already marked entries
-        if (entry.isMarked)
+        if (isMarked(entry))
             continue;
 
         // Skip if already has total size
@@ -531,7 +534,7 @@ bool FilePanel::doTotalSizes(QObject *obj, QKeyEvent *keyEvent) {
         model->refreshRow(row);
 
         // Mark the entry after calculating size
-        entry.isMarked = true;
+        setMarked(entry, true);
         updateRowMarking(row, true);
         model->refreshRow(row);
         viewport()->update();
@@ -556,10 +559,9 @@ bool FilePanel::doUnselectAll(QObject *obj, QKeyEvent *keyEvent) {
     const bool isRoot = dir && dir->isRoot();
     const int offset = isRoot ? 0 : 1;
 
-    for (int i = 0; i < entries.size(); ++i) {
-        entries[i].isMarked = false;
+    m_marked.clear();
+    for (int i = 0; i < entryCount(); ++i)
         updateRowMarking(i + offset, false);
-    }
     emit selectionChanged();
     return true;
 }
@@ -584,9 +586,9 @@ bool FilePanel::doUnselectGroup(QObject *obj, QKeyEvent *keyEvent) {
     const bool isRoot = dir && dir->isRoot();
     const int offset = isRoot ? 0 : 1;
 
-    for (int i = 0; i < entries.size(); ++i) {
-        if (regex.match(entries[i].info.fileName()).hasMatch()) {
-            entries[i].isMarked = false;
+    for (int i = 0; i < entryCount(); ++i) {
+        if (regex.match(entryAt(i).info.fileName()).hasMatch()) {
+            setMarked(entryAt(i), false);
             updateRowMarking(i + offset, false);
         }
     }

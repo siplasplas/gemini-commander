@@ -14,6 +14,7 @@
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QProgressDialog>
+#include <QSet>
 #include <QVector>
 
 struct SearchResult;
@@ -45,7 +46,7 @@ struct PanelEntry {
     QFileInfo info;
     QString branch;  // Relative path from base directory (used in Branch Mode)
                      // For archive mode: full path inside archive
-    bool isMarked = false;
+    // Marks are the panel's (FilePanel::isMarked), not the entry's.
     EntryContentState contentState = EntryContentState::NotDirectory;
     std::size_t totalSizeBytes = 0;
     TotalSizeStatus hasTotalSize = TotalSizeStatus::Unknown;
@@ -120,7 +121,20 @@ public:
 #include "FilePanel_decl.inc"
     FilePanelModel* model = nullptr;
     QString currentPath;
+    // The entries in the order they were read; never sorted. The display
+    // order is m_order (indices into entries), which sortEntries() sorts.
+    // Rows/positions go through entryAt(); a loop over all entries whose
+    // order does not matter (counts, sums) may use entries directly.
     QList<PanelEntry> entries;
+    // Entry at display position `pos` (0 = first entry, [..] not counted).
+    PanelEntry& entryAt(int pos) { return entries[orderIndex(pos)]; }
+    const PanelEntry& entryAt(int pos) const { return entries[orderIndex(pos)]; }
+    int entryCount() const { return int(entries.size()); }
+
+    // Marks are names (branch/name in the branch view), so a reload of the
+    // same directory keeps them; another directory starts without marks.
+    bool isMarked(const PanelEntry& entry) const;
+    void setMarked(const PanelEntry& entry, bool marked);
     bool branchMode = false;  // Branch View mode (flat list of files from subdirectories)
 
     // Archive browsing mode
@@ -219,6 +233,19 @@ private:
     QDateTime m_loadedDirTime;
     PanelFilter m_filter;
     void reloadKeepingCurrent();
+
+    // Display order: indices into entries (4 bytes per entry), sorted by
+    // sortEntries() instead of the entries themselves.
+    QVector<int> m_order;
+    int orderIndex(int pos) const {
+        // Entries filled without sortEntries() yet: read order.
+        return m_order.size() == entries.size() ? m_order[pos] : pos;
+    }
+    // Marked entries by name, see isMarked().
+    QSet<QString> m_marked;
+    static QString markKey(const PanelEntry& entry);
+    // Keeps only the marks of names still listed (after a reload).
+    void pruneMarks();
 
 signals:
     void selectionChanged();
