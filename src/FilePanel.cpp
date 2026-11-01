@@ -891,8 +891,9 @@ void FilePanel::navigateToPath(const QString& path)
         return;
 
     if (info.isDir()) {
-        // It's a directory - navigate to it
-        currentPath = info.absoluteFilePath();
+        // It's a directory - navigate to it. Without a trailing '/'
+        // (absoluteFilePath keeps it): the path above the panel, the tab.
+        currentPath = QDir::cleanPath(info.absoluteFilePath());
         loadDirectory();
         selectFirstEntry();
     } else if (info.isFile()) {
