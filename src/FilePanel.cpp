@@ -2073,10 +2073,13 @@ bool FilePanel::refreshEntryByPath(const QString &filePath) {
 // ============================================================================
 
 void FilePanel::enterArchive(const QString& archivePath) {
-    archiveContents = readArchive(archivePath);
-
-    if (archiveContents.allEntries.isEmpty()) {
-        // Archive is empty or couldn't be read
+    // With a progress dialog: listing tar.gz and the like decompresses it all.
+    QString error;
+    const auto result = ArchiveOperations::list(this, archivePath, archiveContents, error);
+    if (result == ArchiveOperations::Result::Failed)
+        QMessageBox::warning(this, tr("Open Archive"), error);
+    if (result != ArchiveOperations::Result::Done || archiveContents.allEntries.isEmpty()) {
+        archiveContents.clear();
         return;
     }
 

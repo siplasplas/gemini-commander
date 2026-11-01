@@ -86,7 +86,8 @@ qint64 sizeInBytes(const QString& size)
 // (7z with -bsp1) move the bar; without them the dialog shows that it works.
 // Cancelling kills the program.
 Result runWithProgress(QWidget* parent, const QString& title, const QString& program, const QStringList& args,
-                       const QString& workDir, QString& error, const QByteArray& input = {})
+                       const QString& workDir, QString& error, const QByteArray& input = {},
+                       QByteArray* output = nullptr)
 {
     if (QStandardPaths::findExecutable(program).isEmpty()) {
         error = QObject::tr("%1 not found.").arg(program);
@@ -111,7 +112,10 @@ Result runWithProgress(QWidget* parent, const QString& title, const QString& pro
     QByteArray errors;
     bool cancelled = false;
     while (!process.waitForFinished(50)) {
-        const QString out = QString::fromLocal8Bit(process.readAllStandardOutput());
+        const QByteArray bytes = process.readAllStandardOutput();
+        if (output)
+            output->append(bytes);
+        const QString out = QString::fromLocal8Bit(bytes);
         auto matches = percent.globalMatch(out);
         int last = -1;
         while (matches.hasNext())
@@ -131,6 +135,8 @@ Result runWithProgress(QWidget* parent, const QString& title, const QString& pro
     if (cancelled)
         return Result::Cancelled;
     progress.endFile();
+    if (output)
+        output->append(process.readAllStandardOutput());
     errors += process.readAllStandardError();
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
         error = QObject::tr("%1 failed with exit code %2:\n%3")
@@ -233,6 +239,59 @@ void removeSources(const QString& baseDir, const QStringList& files)
 }
 
 } // namespace
+
+Result list(QWidget* parent, const QString& archivePath, ArchiveContents& contents, QString& error)
+{
+    contents.clear();
+    contents.archivePath = archivePath;
+    if (spp::ArchivePlugin* plugin = Plugins::instance().archive()) {
+        FileOperationProgressDialog progress(QObject::tr("Open Archive"), parent);
+        bool started = false;
+        QList<spp::ArchiveItem> items;
+        KeyRouter::instance().setOperationInProgress(true);
+        const bool ok = plugin->list(
+            archivePath, items, error,
+            [&](qint64 done, qint64 total, const QString&) {
+                if (!started) {
+                    progress.setTotals(1, quint64(total));
+                    progress.beginFile(QFileInfo(archivePath).fileName(), total);
+                    started = true;
+                }
+                progress.addFileBytes(done);
+                return !progress.wasCanceled();
+            },
+            passwordAsker(&progress));
+        KeyRouter::instance().setOperationInProgress(false);
+        if (progress.wasCanceled())
+            return Result::Cancelled;
+        if (ok && !items.isEmpty()) {
+            appendArchiveItems(contents, items);
+            contents.readByPlugin = true;
+            return Result::Done;
+        }
+    }
+    // Without the module, or a format it cannot read: lsar.
+    const QString moduleError = error;
+    QByteArray json;
+    QString lsarError;
+    const Result result = runWithProgress(parent, QObject::tr("Open Archive"), QStringLiteral("lsar"),
+                                          {"-j", archivePath}, QFileInfo(archivePath).absolutePath(), lsarError,
+                                          {}, &json);
+    if (result == Result::Cancelled)
+        return result;
+    if (result == Result::Done)
+        contents = contentsFromLsar(archivePath, json);
+    if (contents.allEntries.isEmpty()) {
+        // The module's reason (e.g. "Unrecognized archive format") says more.
+        const QString reason = !moduleError.isEmpty() ? moduleError : lsarError;
+        error = QObject::tr("'%1' cannot be read as an archive.").arg(QFileInfo(archivePath).fileName());
+        if (!reason.isEmpty())
+            error += QLatin1Char('\n') + reason;
+        return Result::Failed;
+    }
+    error.clear();
+    return Result::Done;
+}
 
 Result extract(QWidget* parent, const ArchiveContents& contents, const QString& destDir, QString& error)
 {

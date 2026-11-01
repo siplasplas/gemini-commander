@@ -806,8 +806,17 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
 
     dest = QDir(dest).absolutePath();
 
-    // 5. Check archive structure and target directory
-    ArchiveContents contents = readArchive(filePath);
+    // 5. Check archive structure and target directory (listing it with a
+    // progress dialog that can cancel the command)
+    ArchiveContents contents;
+    {
+        QString error;
+        const auto listed = ArchiveOperations::list(this, filePath, contents, error);
+        if (listed == ArchiveOperations::Result::Failed)
+            QMessageBox::warning(this, tr("Extract Error"), error);
+        if (listed != ArchiveOperations::Result::Done)
+            return true;
+    }
     bool hasSingleRoot = archiveHasSingleRoot(contents);
     bool targetNotEmpty = !QDir(dest).isEmpty();
 

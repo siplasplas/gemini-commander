@@ -17,6 +17,11 @@ namespace ArchiveOperations {
 
 enum class Result { Done, Cancelled, Failed };
 
+// Lists the archive (Enter, Alt+F9) with a progress dialog that can cancel
+// it: listing tar.gz and the like decompresses all of it. Through the
+// module; by lsar without it or for what it cannot read.
+Result list(QWidget* parent, const QString& archivePath, ArchiveContents& contents, QString& error);
+
 // Extracts the archive listed in `contents` into `destDir`: through the
 // module when it listed it (ArchiveContents::readByPlugin), existing files
 // settled first with one question as copying does, passwords asked when

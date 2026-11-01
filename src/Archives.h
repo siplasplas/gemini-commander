@@ -9,6 +9,10 @@
 #include <QMimeType>
 #include <QPair>
 
+namespace spp {
+struct ArchiveItem;
+}
+
 enum class ArchiveType {
     Empty,              // Not an archive/compression
     Compressed,         // Compression only (gz, xz, bz2)
@@ -71,8 +75,15 @@ struct ArchiveContents {
     void clear();
 };
 
-// Read archive contents using libarchive, fallback to unar
+// Read archive contents using libarchive, fallback to unar. Without
+// progress: ArchiveOperations::list shows it and can be cancelled.
 ArchiveContents readArchive(const QString& archivePath);
+
+// The entries the archive module listed, added to `contents`.
+void appendArchiveItems(ArchiveContents& contents, const QList<spp::ArchiveItem>& items);
+
+// The entries of `lsar -j` output (JSON).
+ArchiveContents contentsFromLsar(const QString& archivePath, const QByteArray& output);
 
 // Check if archive has single root entry (file or directory)
 // Returns true if single root, false if multiple roots

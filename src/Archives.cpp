@@ -390,6 +390,27 @@ ArchiveContents readArchiveWithPlugin(const QString& archivePath)
     QList<spp::ArchiveItem> items;
     QString error;
     result.readByPlugin = plugin->list(archivePath, items, error) && !items.isEmpty();
+    appendArchiveItems(result, items);
+    return result;
+}
+
+ArchiveContents readArchiveWithUnar(const QString& archivePath)
+{
+    // Use lsar (list archive) with JSON output
+    QProcess proc;
+    proc.start("lsar", {"-j", archivePath});
+    if (!proc.waitForFinished(30000) || proc.exitCode() != 0) {
+        ArchiveContents result;
+        result.archivePath = archivePath;
+        return result;
+    }
+    return contentsFromLsar(archivePath, proc.readAllStandardOutput());
+}
+
+} // anonymous namespace
+
+void appendArchiveItems(ArchiveContents& contents, const QList<spp::ArchiveItem>& items)
+{
     for (const spp::ArchiveItem& item : items) {
         ArchiveEntry e;
         e.path = item.path;
@@ -398,26 +419,15 @@ ArchiveContents readArchiveWithPlugin(const QString& archivePath)
         e.size = item.size;
         e.modTime = item.modTime;
         if (!e.name.isEmpty())
-            result.allEntries.append(e);
+            contents.allEntries.append(e);
     }
-    return result;
 }
 
-ArchiveContents readArchiveWithUnar(const QString& archivePath)
+ArchiveContents contentsFromLsar(const QString& archivePath, const QByteArray& output)
 {
     ArchiveContents result;
     result.archivePath = archivePath;
 
-    // Use lsar (list archive) with JSON output
-    QProcess proc;
-    proc.start("lsar", {"-j", archivePath});
-    if (!proc.waitForFinished(30000))
-        return result;
-
-    if (proc.exitCode() != 0)
-        return result;
-
-    QByteArray output = proc.readAllStandardOutput();
     QJsonDocument doc = QJsonDocument::fromJson(output);
     if (!doc.isObject())
         return result;
@@ -452,8 +462,6 @@ ArchiveContents readArchiveWithUnar(const QString& archivePath)
 
     return result;
 }
-
-} // anonymous namespace
 
 ArchiveContents readArchive(const QString& archivePath)
 {
