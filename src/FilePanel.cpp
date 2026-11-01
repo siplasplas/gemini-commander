@@ -2085,7 +2085,7 @@ void FilePanel::enterArchive(const QString& archivePath) {
     // With a progress dialog: listing tar.gz and the like decompresses it all.
     QString error;
     const auto result = ArchiveOperations::list(this, archivePath, archiveContents, error);
-    if (result == ArchiveOperations::Result::Failed)
+    if (!error.isEmpty())  // failed, or only part of it read
         QMessageBox::warning(this, tr("Open Archive"), error);
     if (result != ArchiveOperations::Result::Done || archiveContents.allEntries.isEmpty()) {
         archiveContents.clear();

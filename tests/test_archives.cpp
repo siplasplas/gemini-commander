@@ -113,6 +113,7 @@ TEST(ArchivesTest, ReadsTheListingOfLsar)
         "lsarFormatName": "Zip",
         "lsarContents": [
             {"XADFileName": "dir/", "XADIsDirectory": true},
+            {"XADFileName": "Fen", "XADIsDirectory": 1, "XADFileSize": 0},
             {"XADFileName": "dir/a.txt", "XADFileSize": 11,
              "XADLastModificationDate": "2024-05-06T07:08:09Z"},
             {"XADFileName": "b.bin", "XADFileSize": 5000000000},
@@ -122,13 +123,17 @@ TEST(ArchivesTest, ReadsTheListingOfLsar)
     const ArchiveContents contents = contentsFromLsar("/x/a.zip", json);
     EXPECT_EQ(contents.archivePath, "/x/a.zip");
     EXPECT_FALSE(contents.readByPlugin);
-    ASSERT_EQ(contents.allEntries.size(), 3);
+    ASSERT_EQ(contents.allEntries.size(), 4);
     EXPECT_EQ(contents.allEntries[0].path, "dir");  // no trailing '/'
     EXPECT_TRUE(contents.allEntries[0].isDirectory);
-    EXPECT_EQ(contents.allEntries[1].name, "a.txt");
-    EXPECT_EQ(contents.allEntries[1].size, 11);
-    EXPECT_EQ(contents.allEntries[1].modTime.toUTC().toString(Qt::ISODate), "2024-05-06T07:08:09Z");
-    EXPECT_EQ(contents.allEntries[2].size, 5000000000LL);
+    // lsar writes 1 for a directory (RAR), not true.
+    EXPECT_EQ(contents.allEntries[1].path, "Fen");
+    EXPECT_TRUE(contents.allEntries[1].isDirectory);
+    EXPECT_EQ(contents.allEntries[2].name, "a.txt");
+    EXPECT_FALSE(contents.allEntries[2].isDirectory);
+    EXPECT_EQ(contents.allEntries[2].size, 11);
+    EXPECT_EQ(contents.allEntries[2].modTime.toUTC().toString(Qt::ISODate), "2024-05-06T07:08:09Z");
+    EXPECT_EQ(contents.allEntries[3].size, 5000000000LL);
 
     EXPECT_TRUE(contentsFromLsar("/x/a.zip", "not json").allEntries.isEmpty());
 }

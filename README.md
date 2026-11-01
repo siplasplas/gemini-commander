@@ -128,8 +128,9 @@ An archive in volumes opens from any of them (Enter, Alt+F9): `name.001`,
 `name.002`, ...; RAR's `name.part1.rar`, `name.part2.rar`, ...; the old
 `name.rar`, `name.r00`, `name.r01`, ...
 
-Archives the module cannot read — ARJ, ACE, encrypted RAR or 7z — are listed
-by `lsar` and extracted by `7z` or `unar`; a 7z archive with a solid block
+Archives the module cannot read — ARJ, ACE, encrypted RAR or 7z, solid RAR
+1.5 from DOS times (which it reads only in part) — are listed by `lsar` and
+extracted by `7z` or `unar`; F3 and F5 inside them go through `7z`. A 7z archive with a solid block
 size (Pack dialog; empty means one block for the whole archive) or a password
 is packed by `7z`, which then encrypts the file names too (the password goes
 to it on its standard input, not on the command line). Extracting and packing show the progress dialog of copying either way,

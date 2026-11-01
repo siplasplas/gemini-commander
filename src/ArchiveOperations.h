@@ -83,11 +83,15 @@ private:
     QString targetPath(const QString& entry, qint64 entrySize) const;
     // In a stream archive: where to stop reading for `entry` (see above).
     QString readUntil(const QString& entry) const;
+    // Listed by lsar (a format the module cannot read, e.g. solid RAR 1.5,
+    // or no module): the start of the file by the 7z program.
+    QString fileByProgram(QWidget* parent, const QString& entry, qint64 entrySize, QString& error);
 
     QString m_archivePath;
     QStringList m_order;               // files in the archive's order
     QList<qint64> m_ends;              // bytes decompressed up to the end of each
     bool m_stream;                     // decompressed as one stream: keep the files on the way
+    bool m_byModule;                   // listed by the module, which reads it then
     struct Dir;
     std::unique_ptr<Dir> m_dir;        // the temporary directory
     QHash<QString, QString> m_files;   // entry path -> preview file

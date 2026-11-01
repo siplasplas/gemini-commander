@@ -446,7 +446,8 @@ ArchiveContents contentsFromLsar(const QString& archivePath, const QByteArray& o
             e.path.chop(1);
 
         e.name = QFileInfo(e.path).fileName();
-        e.isDirectory = obj["XADIsDirectory"].toBool();
+        // A number (1) in lsar's output, not a JSON boolean.
+        e.isDirectory = obj["XADIsDirectory"].toVariant().toBool();
         e.size = obj["XADFileSize"].toVariant().toLongLong();
 
         // Parse date if available

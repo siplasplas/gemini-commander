@@ -426,7 +426,7 @@ set(SPP_PLUGIN_INSTALL_DIR "${GEMINI_PLUGIN_INSTALL_DIR}")
 FetchContent_Declare(
         siplasplas_plugins
         GIT_REPOSITORY https://github.com/siplasplas/siplasplas-plugins.git
-        GIT_TAG v0.3.1
+        GIT_TAG v0.3.2
         GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(siplasplas_plugins)

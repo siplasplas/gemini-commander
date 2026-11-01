@@ -217,6 +217,9 @@ Result list(QWidget* parent, const QString& archivePath, ArchiveContents& conten
 {
     contents.clear();
     contents.archivePath = archivePath;
+    // What the module read before it broke off (e.g. solid RAR 1.5), used
+    // only when lsar cannot read the archive either.
+    QList<spp::ArchiveItem> partial;
     if (spp::ArchivePlugin* plugin = Plugins::instance().archive()) {
         FileOperationProgressDialog progress(QObject::tr("Open Archive"), parent);
         bool started = false;
@@ -242,6 +245,7 @@ Result list(QWidget* parent, const QString& archivePath, ArchiveContents& conten
             contents.readByPlugin = true;
             return Result::Done;
         }
+        partial = items;
     }
     // Without the module, or a format it cannot read: lsar.
     const QString moduleError = error;
@@ -254,6 +258,13 @@ Result list(QWidget* parent, const QString& archivePath, ArchiveContents& conten
         return result;
     if (result == Result::Done)
         contents = contentsFromLsar(archivePath, json);
+    if (contents.allEntries.isEmpty() && !partial.isEmpty()) {
+        // Better part of it than nothing; Done with a warning in `error`.
+        appendArchiveItems(contents, partial);
+        error = QObject::tr("Only part of '%1' could be read:\n%2")
+                    .arg(QFileInfo(archivePath).fileName(), moduleError);
+        return Result::Done;
+    }
     if (contents.allEntries.isEmpty()) {
         // The module's reason (e.g. "Unrecognized archive format") says more.
         const QString reason = !moduleError.isEmpty() ? moduleError : lsarError;
@@ -303,8 +314,10 @@ Result copyOut(QWidget* parent, const ArchiveContents& contents, const QString& 
                const QStringList& entries, const QString& destDir, QString& error)
 {
     spp::ArchivePlugin* plugin = Plugins::instance().archive();
-    if (!plugin || !contents.readByPlugin) {
-        error = QObject::tr("Copying files out of this archive needs the archive module; "
+    // Listed by lsar (no module, or a format it cannot read): 7z extracts.
+    const bool by7z = !plugin || !contents.readByPlugin;
+    if (by7z && QStandardPaths::findExecutable(QStringLiteral("7z")).isEmpty()) {
+        error = QObject::tr("Copying files out of this archive needs the 7z program; "
                             "Alt+F9 extracts all of it.");
         return Result::Failed;
     }
@@ -337,7 +350,14 @@ Result copyOut(QWidget* parent, const ArchiveContents& contents, const QString& 
         error = QObject::tr("Cannot write to '%1': %2").arg(destDir, staging.errorString());
         return Result::Failed;
     }
-    const Result result = extractWithModule(parent, plugin, contents.archivePath, staging.path(), entries, {}, error);
+    // 7z takes the entries as names: a directory comes with its contents.
+    // "-p-": an encrypted archive fails instead of waiting for a password.
+    const Result result =
+        by7z ? runWithProgress(parent, QObject::tr("Extract"), QStringLiteral("7z"),
+                               QStringList{"x", "-y", "-bsp1", "-p-", QStringLiteral("-o%1").arg(staging.path()),
+                                           contents.archivePath, "--"} + entries,
+                               staging.path(), error)
+             : extractWithModule(parent, plugin, contents.archivePath, staging.path(), entries, {}, error);
     if (result != Result::Done)
         return result;
     QStringList names;
@@ -460,6 +480,7 @@ struct PreviewCache::Dir {
 PreviewCache::PreviewCache(const ArchiveContents& contents)
     : m_archivePath(contents.archivePath)
     , m_stream(ArchiveUtils::isStreamArchive(contents.archivePath))
+    , m_byModule(contents.readByPlugin)
     , m_dir(std::make_unique<Dir>())
 {
     qint64 end = 0;
@@ -470,6 +491,65 @@ PreviewCache::PreviewCache(const ArchiveContents& contents)
         m_order << entry.path;
         m_ends << end;
     }
+}
+
+QString PreviewCache::fileByProgram(QWidget* parent, const QString& entry, qint64 entrySize, QString& error)
+{
+    if (QStandardPaths::findExecutable(QStringLiteral("7z")).isEmpty()) {
+        error = QObject::tr("Viewing files inside this archive needs the 7z program.");
+        return {};
+    }
+    // The file to 7z's standard output, stopped after kBytes; "-p-": an
+    // encrypted archive fails instead of waiting for a password.
+    QProcess process;
+    process.start(QStringLiteral("7z"), {"e", "-so", "-p-", m_archivePath, "--", entry});
+    if (!process.waitForStarted()) {
+        error = QObject::tr("Cannot start 7z: %1").arg(process.errorString());
+        return {};
+    }
+    process.closeWriteChannel();
+    FileOperationProgressDialog progress(QObject::tr("View"), parent);
+    progress.setTotals(1, quint64(kBytes));
+    progress.beginFile(entry, kBytes);
+    KeyRouter::instance().setOperationInProgress(true);
+    QByteArray data;
+    bool cancelled = false;
+    while (data.size() < kBytes) {
+        if (!process.waitForReadyRead(50) && process.state() == QProcess::NotRunning)
+            break;
+        data += process.readAllStandardOutput();
+        progress.addFileBytes(qMin<qint64>(data.size(), kBytes));
+        progress.processEvents();
+        if (progress.wasCanceled()) {
+            cancelled = true;
+            break;
+        }
+    }
+    KeyRouter::instance().setOperationInProgress(false);
+    if (process.state() != QProcess::NotRunning) {
+        process.kill();  // the rest is not needed
+        process.waitForFinished();
+    } else {
+        data += process.readAllStandardOutput();
+        if (process.exitCode() != 0 && data.isEmpty()) {
+            error = QObject::tr("7z cannot read '%1':\n%2")
+                        .arg(entry, QString::fromLocal8Bit(process.readAllStandardError()).trimmed());
+            return {};
+        }
+    }
+    if (cancelled)
+        return {};
+    data.truncate(kBytes);
+    const QString path = targetPath(entry, entrySize);
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile out(path);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate) || out.write(data) != data.size()) {
+        error = QObject::tr("Cannot write '%1': %2").arg(path, out.errorString());
+        return {};
+    }
+    m_files.insert(entry, path);
+    m_bytes += data.size();
+    return path;
 }
 
 QString PreviewCache::readUntil(const QString& entry) const
@@ -488,11 +568,6 @@ QString PreviewCache::file(QWidget* parent, const QString& entry, qint64 entrySi
 {
     if (const auto kept = m_files.constFind(entry); kept != m_files.constEnd())
         return *kept;
-    spp::ArchivePlugin* plugin = Plugins::instance().archive();
-    if (!plugin) {
-        error = QObject::tr("Viewing files inside archives needs the archive module.");
-        return {};
-    }
     if (!m_dir->dir.isValid()) {
         error = m_dir->dir.errorString();
         return {};
@@ -501,6 +576,9 @@ QString PreviewCache::file(QWidget* parent, const QString& entry, qint64 entrySi
         error = QObject::tr("'%1' is not a file to view.").arg(entry);
         return {};
     }
+    spp::ArchivePlugin* plugin = Plugins::instance().archive();
+    if (!plugin || !m_byModule)
+        return fileByProgram(parent, entry, entrySize, error);
 
     // The file, and in a stream archive those on the way that fit.
     const auto wanted = [this, &entry](const spp::ArchiveItem& item) {
