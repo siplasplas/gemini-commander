@@ -1,5 +1,7 @@
 #include "PackDialog.h"
 
+#include "Plugins.h"
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -7,6 +9,38 @@
 #include <QLabel>
 #include <qxfiledialog.h>
 #include <QFileInfo>
+
+namespace {
+
+// Packers: the archive module writes them all; without it zip and 7z are
+// packed by the zip and 7z programs.
+struct Packer {
+    const char* id;
+    const char* extension;
+    int maxLevel;      // 0: no compression level (plain tar)
+    bool needsModule;
+};
+
+const Packer kPackers[] = {
+    {"zip", ".zip", 9, false},
+    {"7z", ".7z", 9, false},
+    {"tar.gz", ".tar.gz", 9, true},
+    {"tar.xz", ".tar.xz", 9, true},
+    {"tar.zst", ".tar.zst", 22, true},
+    {"tar.bz2", ".tar.bz2", 9, true},
+    {"tar", ".tar", 0, true},
+};
+
+const Packer& packerOf(const QString& id)
+{
+    for (const Packer& packer : kPackers) {
+        if (id == QLatin1String(packer.id))
+            return packer;
+    }
+    return kPackers[0];
+}
+
+} // namespace
 
 PackDialog::PackDialog(const QString& defaultName,
                        const QString& defaultDest,
@@ -30,7 +64,7 @@ PackDialog::PackDialog(const QString& defaultName,
 
     // Set default values
     m_destinationEdit->setText(defaultDest);
-    updateArchiveExtension();
+    onPackerChanged(0);
 }
 
 void PackDialog::setupUi()
@@ -54,22 +88,30 @@ void PackDialog::setupUi()
     formLayout->addRow(tr("Destination:"), destLayout);
 
     // Packer type combo
+    const bool module = Plugins::instance().archive() != nullptr;
     m_packerCombo = new QComboBox(this);
-    m_packerCombo->addItem("zip");
-    m_packerCombo->addItem("7z");
+    for (const Packer& packer : kPackers) {
+        if (module || !packer.needsModule)
+            m_packerCombo->addItem(QString::fromLatin1(packer.id));
+    }
     connect(m_packerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &PackDialog::onPackerChanged);
     formLayout->addRow(tr("Packer:"), m_packerCombo);
 
-    mainLayout->addLayout(formLayout);
+    // Compression level: -1 is the format's default
+    m_levelSpin = new QSpinBox(this);
+    m_levelSpin->setRange(-1, 9);
+    m_levelSpin->setValue(-1);
+    m_levelSpin->setSpecialValueText(tr("Default"));
+    m_levelSpin->setToolTip(tr("0: fastest, 9: smallest (Zstandard: up to 22)"));
+    formLayout->addRow(tr("Compression level:"), m_levelSpin);
 
-    // Move checkbox
-    m_moveCheck = new QCheckBox(tr("Move files (delete originals after packing)"), this);
-    mainLayout->addWidget(m_moveCheck);
-
-    // 7z options group
-    m_7zOptionsWidget = new QGroupBox(tr("7z Options"), this);
-    auto* optionsLayout = new QFormLayout(m_7zOptionsWidget);
+    // Password: zip through the archive module (AES-256), 7z by the 7z
+    // program (names encrypted too)
+    m_passwordEdit = new QLineEdit(this);
+    m_passwordEdit->setEchoMode(QLineEdit::Password);
+    m_passwordEdit->setPlaceholderText(tr("empty = none"));
+    formLayout->addRow(tr("Password:"), m_passwordEdit);
 
     // Volume size
     auto* volumeLayout = new QHBoxLayout();
@@ -85,7 +127,17 @@ void PackDialog::setupUi()
     volumeLayout->addWidget(m_volumeSizeEdit);
     volumeLayout->addWidget(m_volumeUnitCombo);
     volumeLayout->addStretch();
-    optionsLayout->addRow(tr("Volume size:"), volumeLayout);
+    formLayout->addRow(tr("Volume size:"), volumeLayout);
+
+    mainLayout->addLayout(formLayout);
+
+    // Move checkbox
+    m_moveCheck = new QCheckBox(tr("Move files (delete originals after packing)"), this);
+    mainLayout->addWidget(m_moveCheck);
+
+    // 7z options group
+    m_7zOptionsWidget = new QGroupBox(tr("7z Options"), this);
+    auto* optionsLayout = new QFormLayout(m_7zOptionsWidget);
 
     // Solid block
     auto* solidLayout = new QHBoxLayout();
@@ -131,7 +183,18 @@ void PackDialog::setupUi()
 void PackDialog::onPackerChanged(int index)
 {
     Q_UNUSED(index);
-    m_7zOptionsWidget->setVisible(packerType() == "7z");
+    const QString type = packerType();
+    const Packer& packer = packerOf(type);
+    m_7zOptionsWidget->setVisible(type == "7z");
+    m_levelSpin->setEnabled(packer.maxLevel > 0);
+    m_levelSpin->setMaximum(qMax(packer.maxLevel, 0));
+    // zip: AES-256 through the module (without it the zip program's weak
+    // encryption is not offered); 7z: the 7z program.
+    const bool encrypts = type == "7z" || (type == "zip" && Plugins::instance().archive());
+    m_passwordEdit->setEnabled(encrypts);
+    m_passwordEdit->setToolTip(type == "7z" ? tr("Packed by the 7z program; file names are encrypted too.")
+                               : encrypts   ? tr("AES-256 encryption.")
+                                            : tr("This format cannot be encrypted."));
     updateArchiveExtension();
 }
 
@@ -154,7 +217,7 @@ void PackDialog::updateArchiveExtension()
 
 QString PackDialog::currentExtension() const
 {
-    return (m_packerCombo->currentIndex() == 0) ? ".zip" : ".7z";
+    return QString::fromLatin1(packerOf(packerType()).extension);
 }
 
 QString PackDialog::archiveName() const
@@ -177,14 +240,23 @@ bool PackDialog::moveFiles() const
     return m_moveCheck->isChecked();
 }
 
-QString PackDialog::volumeSize() const
+int PackDialog::compressionLevel() const
 {
-    QString size = m_volumeSizeEdit->text().trimmed();
-    if (size.isEmpty()) {
-        return QString();
-    }
+    return m_levelSpin->isEnabled() ? m_levelSpin->value() : -1;
+}
 
-    QString unit = m_volumeUnitCombo->currentText().toLower();
+QString PackDialog::password() const
+{
+    return m_passwordEdit->isEnabled() ? m_passwordEdit->text() : QString();
+}
+
+QString PackDialog::sizeWithUnit(const QLineEdit* edit, const QComboBox* unitCombo)
+{
+    QString size = edit->text().trimmed();
+    if (size.isEmpty())
+        return {};
+
+    QString unit = unitCombo->currentText().toLower();
     if (unit == "b") {
         unit = "";
     } else if (unit == "kb") {
@@ -198,24 +270,12 @@ QString PackDialog::volumeSize() const
     return size + unit;
 }
 
+QString PackDialog::volumeSize() const
+{
+    return sizeWithUnit(m_volumeSizeEdit, m_volumeUnitCombo);
+}
+
 QString PackDialog::solidBlockSize() const
 {
-    QString size = m_solidBlockEdit->text().trimmed();
-    if (size.isEmpty()) {
-        // Solid mode enabled but no size specified - use default solid
-        return {};
-    }
-
-    QString unit = m_solidBlockUnitCombo->currentText().toLower();
-    if (unit == "b") {
-        unit = "";
-    } else if (unit == "kb") {
-        unit = "k";
-    } else if (unit == "mb") {
-        unit = "m";
-    } else if (unit == "gb") {
-        unit = "g";
-    }
-
-    return size + unit;
+    return sizeWithUnit(m_solidBlockEdit, m_solidBlockUnitCombo);
 }

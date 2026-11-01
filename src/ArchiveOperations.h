@@ -38,14 +38,17 @@ Result copyOut(QWidget* parent, const ArchiveContents& contents, const QString& 
                const QStringList& entries, const QString& destDir, QString& error);
 
 struct PackRequest {
-    QString format;          // "zip" or "7z"
+    QString format;          // "zip", "7z", "tar", "tar.gz", "tar.xz", "tar.zst", "tar.bz2"
     QString volumeSize;      // empty, or e.g. "100m" (k, m, g: KiB, MiB, GiB)
     QString solidBlockSize;  // 7z: empty, or e.g. "1g"; given, 7z packs (libarchive cannot)
+    int level = -1;          // compression level, -1 the format's default
+    QString password;        // zip (AES-256, the module) or 7z (the 7z program); empty: none
     bool moveFiles = false;  // remove the files once packed
 };
 
 // Packs `files` (relative to `baseDir`) into `archivePath`: through the
-// module, or by 7z for a solid block size and without the module (zip then).
+// module, or by 7z for a solid block size or a password (libarchive cannot)
+// and without the module (zip then).
 // An existing archive is replaced after asking.
 Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, const QString& archivePath,
             const PackRequest& request, QString& error);

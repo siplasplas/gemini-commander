@@ -395,12 +395,16 @@ Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, c
     }
 
     spp::ArchivePlugin* plugin = Plugins::instance().archive();
-    const bool by7z = request.format == QLatin1String("7z") && !request.solidBlockSize.isEmpty();
+    // libarchive writes neither 7z's solid block size nor an encrypted 7z.
+    const bool by7z = request.format == QLatin1String("7z")
+                      && (!request.solidBlockSize.isEmpty() || !request.password.isEmpty());
     Result result;
     if (plugin && !by7z) {
         spp::PackOptions options;
         options.format = request.format;
         options.volumeSize = volumeBytes;
+        options.level = request.level;
+        options.password = request.password;
         FileOperationProgressDialog progress(QObject::tr("Pack"), parent);
         bool started = false;
         qint64 reported = 0;
@@ -421,12 +425,22 @@ Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, c
         KeyRouter::instance().setOperationInProgress(false);
         result = ok ? Result::Done : progress.wasCanceled() ? Result::Cancelled : Result::Failed;
     } else if (request.format == QLatin1String("7z")) {
-        // A solid block size (or no module): 7z.
+        // A solid block size, a password (or no module): 7z.
         QStringList args = {"a", "-bsp1"};
         if (volumeBytes > 0)
             args << QStringLiteral("-v%1").arg(request.volumeSize);
         if (!request.solidBlockSize.isEmpty())
             args << QStringLiteral("-ms=%1").arg(request.solidBlockSize) << "-mqs=on";
+        if (request.level >= 0)
+            args << QStringLiteral("-mx=%1").arg(request.level);
+        // The password on 7z's standard input (asked twice), not on the
+        // command line, which other users can see; names encrypted too.
+        QByteArray input;
+        if (!request.password.isEmpty()) {
+            args << "-p" << "-mhe=on";
+            const QByteArray password = request.password.toUtf8() + '\n';
+            input = password + password;
+        }
         // The names in a list file: thousands of them do not fit the command line.
         QTemporaryDir listDir;
         QFile list(listDir.filePath(QStringLiteral("files.txt")));
@@ -438,14 +452,20 @@ Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, c
             list.write(file.toUtf8() + '\n');
         list.close();
         args << "-scsUTF-8" << archivePath << QStringLiteral("@%1").arg(list.fileName());
-        result = runWithProgress(parent, QObject::tr("Pack"), QStringLiteral("7z"), args, baseDir, error);
-    } else {
-        // No module: zip (no volumes), names from its standard input.
+        result = runWithProgress(parent, QObject::tr("Pack"), QStringLiteral("7z"), args, baseDir, error, input);
+    } else if (request.format == QLatin1String("zip")) {
+        // No module: zip (no volumes, no password), names from its standard input.
         QByteArray names;
         for (const QString& file : files)
             names += file.toUtf8() + '\n';
-        result = runWithProgress(parent, QObject::tr("Pack"), QStringLiteral("zip"),
-                                 {"-r", "-y", archivePath, "-@"}, baseDir, error, names);
+        QStringList args = {"-r", "-y"};
+        if (request.level >= 0)
+            args << QStringLiteral("-%1").arg(request.level);
+        args << archivePath << "-@";
+        result = runWithProgress(parent, QObject::tr("Pack"), QStringLiteral("zip"), args, baseDir, error, names);
+    } else {
+        error = QObject::tr("Packing %1 needs the archive module.").arg(request.format);
+        return Result::Failed;
     }
 
     if (result != Result::Done) {

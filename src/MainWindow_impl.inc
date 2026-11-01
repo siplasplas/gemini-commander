@@ -1067,10 +1067,13 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     request.format = dlg.packerType();
     request.volumeSize = dlg.volumeSize();
     request.solidBlockSize = dlg.solidBlockSize();
+    request.level = dlg.compressionLevel();
+    request.password = dlg.password();
     request.moveFiles = dlg.moveFiles();
     const bool needsProgram = !Plugins::instance().archive()
-                              || (request.format == "7z" && !request.solidBlockSize.isEmpty());
-    const QString executable = request.format;  // "7z" or "zip"
+                              || (request.format == "7z"
+                                  && (!request.solidBlockSize.isEmpty() || !request.password.isEmpty()));
+    const QString executable = request.format;  // "7z" or "zip" (the tar formats need the module)
     if (needsProgram && QStandardPaths::findExecutable(executable).isEmpty()) {
         // Show install instructions
         QString installCmd = DistroInfo::installCommand(
