@@ -1722,11 +1722,12 @@ FileOperations::Params MainWindow::askForFileOperation(FilePanel* srcPanel, bool
     FilePanel* dstPanel = filePanelForSide(dstSide);
     // The opposite panel inside an archive: its currentPath is the archive's
     // directory, so the files would land next to the archive, not in it.
+    // Archives are not changed once made (by design: they stay as packed).
     if (!inPlace && dstPanel && dstPanel->insideArchive) {
         QMessageBox::information(this, isMove ? tr("Move") : tr("Copy"),
-            tr("The other panel is inside an archive: adding files to an archive "
-               "is not supported yet. Leave the archive there, or use Shift+F5 or "
-               "Shift+F6 and type the destination."));
+            tr("The other panel is inside an archive: files are not added to "
+               "archives. Leave the archive there, or use Shift+F5 or Shift+F6 "
+               "and type the destination."));
         return {};
     }
     QString targetDir = dstPanel ? dstPanel->currentPath : srcPanel->currentPath;

@@ -255,6 +255,8 @@ add_executable(${PROJECT_NAME}
         src/Plugins.h
         src/ArchiveOperations.cpp
         src/ArchiveOperations.h
+        src/ArchiveUtils.cpp
+        src/ArchiveUtils.h
         src/SearchWorker.h
         src/editor/EditorFrame.cpp
         src/editor/EditorFrame.h

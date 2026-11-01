@@ -1,5 +1,6 @@
 #include "ArchiveOperations.h"
 
+#include "ArchiveUtils.h"
 #include "Archives.h"
 #include "CopyConflicts.h"
 #include "FileOperationProgressDialog.h"
@@ -48,24 +49,6 @@ QStringList volumeFiles(const QString& path)
             return result;
         result << volume;
     }
-}
-
-// "100m" -> bytes (k, m, g: KiB, MiB, GiB, as 7z reads them); 0 when empty.
-qint64 sizeInBytes(const QString& size)
-{
-    QString number = size.trimmed().toLower();
-    if (number.isEmpty())
-        return 0;
-    qint64 unit = 1;
-    if (number.endsWith(QLatin1Char('k')))
-        unit = 1024;
-    else if (number.endsWith(QLatin1Char('m')))
-        unit = 1024 * 1024;
-    else if (number.endsWith(QLatin1Char('g')))
-        unit = 1024LL * 1024 * 1024;
-    if (unit > 1)
-        number.chop(1);
-    return qint64(number.toDouble() * double(unit));
 }
 
 // Runs an external program with the progress dialog: percentages it prints
@@ -368,7 +351,7 @@ Result copyOut(QWidget* parent, const ArchiveContents& contents, const QString& 
 Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, const QString& archivePath,
             const PackRequest& request, QString& error)
 {
-    const qint64 volumeBytes = sizeInBytes(request.volumeSize);
+    const qint64 volumeBytes = ArchiveUtils::sizeInBytes(request.volumeSize);
     // An existing archive (or its volumes) is replaced, not added to.
     QStringList existing = volumeBytes > 0 ? volumeFiles(archivePath) : QStringList();
     if (QFileInfo::exists(archivePath))
@@ -474,26 +457,9 @@ struct PreviewCache::Dir {
     QTemporaryDir dir{QDir::tempPath() + QStringLiteral("/gemini-commander-preview-XXXXXX")};
 };
 
-namespace {
-
-// Compressed as one stream (or solid): reaching a file decompresses
-// everything before it. Zip, RAR, ISO and the like are read file by file.
-bool isStreamArchive(const QString& archivePath)
-{
-    const QString name = QFileInfo(archivePath).fileName().toLower();
-    static const QStringList suffixes = {".7z", ".7z.001", ".tgz", ".tbz", ".tbz2", ".txz", ".tzst", ".taz", ".tlz"};
-    for (const QString& suffix : suffixes) {
-        if (name.endsWith(suffix))
-            return true;
-    }
-    return name.contains(QLatin1String(".tar."));
-}
-
-} // namespace
-
 PreviewCache::PreviewCache(const ArchiveContents& contents)
     : m_archivePath(contents.archivePath)
-    , m_stream(isStreamArchive(contents.archivePath))
+    , m_stream(ArchiveUtils::isStreamArchive(contents.archivePath))
     , m_dir(std::make_unique<Dir>())
 {
     qint64 end = 0;
@@ -508,34 +474,14 @@ PreviewCache::PreviewCache(const ArchiveContents& contents)
 
 QString PreviewCache::readUntil(const QString& entry) const
 {
-    const int index = m_order.indexOf(entry);
-    if (!m_stream || index < 0)
-        return entry;
-    // As far again as reaching the file took, at least kReadAhead more.
-    const qint64 reached = m_ends[index];
-    const qint64 limit = qMax(2 * reached, reached + kReadAhead);
-    int last = index;
-    while (last + 1 < m_ends.size() && m_ends[last + 1] <= limit)
-        ++last;
-    return m_order[last];
+    return ArchiveUtils::readUntil(m_order, m_ends, entry, m_stream, kReadAhead);
 }
 
 PreviewCache::~PreviewCache() = default;
 
 QString PreviewCache::targetPath(const QString& entry, qint64 entrySize) const
 {
-    const QString dir = m_dir->dir.path();
-    // Below the directory only, whatever the entry's path says ("..").
-    QString path = QDir::cleanPath(QDir(dir).absoluteFilePath(entry));
-    if (!path.startsWith(dir + QLatin1Char('/')))
-        return {};
-    if (entrySize > kBytes) {
-        const QString tag = QObject::tr(" (first %1)").arg(QLocale().formattedDataSize(kBytes));
-        const int slash = path.lastIndexOf(QLatin1Char('/'));
-        const int dot = path.lastIndexOf(QLatin1Char('.'));
-        path.insert(dot > slash + 1 ? dot : path.size(), tag);
-    }
-    return path;
+    return ArchiveUtils::previewPath(m_dir->dir.path(), entry, entrySize, kBytes);
 }
 
 QString PreviewCache::file(QWidget* parent, const QString& entry, qint64 entrySize, QString& error)
