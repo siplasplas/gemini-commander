@@ -137,10 +137,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`.*`, PCRE2), e.g. `(c|k)o(j|y)ones` in a multi-gigabyte file; an invalid
   pattern shows "Invalid pattern" (textviewers 1.3). Building needs PCRE2
   (libpcre2-dev)
+- Other programs (e.g. ducat) open a path in Gemini Commander over D-Bus
+  (`org.freedesktop.Application.Open`): one path goes to the current panel,
+  two to the left and right panels. A directory ending in `/` is entered;
+  without it (also on the command line) its parent directory opens with the
+  cursor on it, as for a file
+
+### Changed
+- Panels and tabs showing the same directory share one listing: Ctrl+T in a
+  directory of 140,000 files takes milliseconds instead of a fraction of a
+  second, and each panel keeps its own sorting and marks; a reload in one
+  shows in the others. Marks survive a reload of the directory
+- Space on a directory counts its size each time it is marked, to see how it
+  grew; unmarking keeps the size shown
+- A build without a build type is Release without debug information (the
+  executable about 8 MB instead of 57 MB); RelWithDebInfo keeps it
 
 ### Fixed
 - Tab in the editor inserts a tab (qcodeedit 1.19.2); Ctrl+Tab still switches
   tabs
+- F3 in the viewer of large files no longer leaves GNOME's busy cursor on
+  Wayland when the result is found soon: the progress of a long search is
+  shown in the find bar, stopped by Escape, instead of in a dialog window
+  closed before its activation token was used (textviewers 1.4)
 
 ## [2.2.0] - 2026-10-18
 
