@@ -250,6 +250,8 @@ add_executable(${PROJECT_NAME}
         src/FileOperationProgressDialog.h
         src/FileOperations.cpp
         src/FileOperations.h
+        src/CopyConflicts.cpp
+        src/CopyConflicts.h
         src/SearchWorker.h
         src/editor/EditorFrame.cpp
         src/editor/EditorFrame.h

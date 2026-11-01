@@ -372,96 +372,6 @@ void countCopyWork(const QString& basePath, const QStringList& names,
     keepGoing(outFiles, outBytes);
 }
 
-// A path taken at the destination, also by a broken symbolic link.
-static bool targetExists(const QFileInfo &info) {
-    return info.exists() || info.isSymLink();
-}
-
-// A real directory, not a symbolic link to one.
-static bool isRealDir(const QFileInfo &info) {
-    return info.isDir() && !info.isSymLink();
-}
-
-// Modification times closer than this count as the same: FAT keeps them to
-// 2 seconds, so a file copied there and back is not "newer".
-constexpr qint64 kSameTimeMs = 2000;
-
-// 1 when the source is newer than the target, -1 when older, 0 the same.
-static int compareTimes(const QFileInfo &src, const QFileInfo &dst) {
-    const qint64 diff = src.lastModified().toMSecsSinceEpoch() - dst.lastModified().toMSecsSinceEpoch();
-    if (diff >= kSameTimeMs)
-        return 1;
-    if (diff <= -kSameTimeMs)
-        return -1;
-    return 0;
-}
-
-static bool overwriteAllowed(ConflictPolicy policy, const QFileInfo &src, const QFileInfo &dst) {
-    switch (policy) {
-        case ConflictPolicy::Overwrite:
-            return true;
-        case ConflictPolicy::Skip:
-            return false;
-        case ConflictPolicy::OverwriteOlder:
-            return compareTimes(src, dst) > 0;
-    }
-    return false;
-}
-
-// The entries a copy or move goes through in a directory (as
-// copyOrMoveDirectoryRecursive does).
-static QFileInfoList dirEntries(const QString &path) {
-    return QDir(path).entryInfoList(
-        QDir::Files | QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot | QDir::System, QDir::Name);
-}
-
-namespace {
-
-// Files (and symbolic links) whose target exists already, found before
-// copying or moving.
-struct ConflictScan {
-    quint64 entries = 0;    // checked, for the progress
-    quint64 conflicts = 0;
-    quint64 newer = 0;      // of them, the source newer than the target
-    QStringList examples;   // the first few target paths
-};
-
-} // namespace
-
-// Goes through `src` against its target `dst`; only directories that exist
-// at the destination are entered, the rest cannot conflict. Mismatches (a
-// file over a directory, a directory over a file) are reported when copying
-// and are not conflicts. False when keepGoing() stops it.
-static bool scanConflicts(const QFileInfo &src, const QString &dst, bool sameFs, SearchIgnore *ignore,
-                          ConflictScan &scan, const std::function<bool(const ConflictScan&)> &keepGoing) {
-    if (ignore && ignore->isIgnored(src))
-        return true;
-    if (++scan.entries % 200 == 0 && !keepGoing(scan))
-        return false;
-    const QFileInfo dstInfo(dst);
-    if (!targetExists(dstInfo))
-        return true;
-    if (src.isSymLink() && !sameFs)
-        return true;  // not copied across filesystems
-    if (isRealDir(src)) {
-        if (!isRealDir(dstInfo))
-            return true;
-        for (const QFileInfo &child : dirEntries(src.absoluteFilePath())) {
-            if (!scanConflicts(child, QDir(dst).filePath(child.fileName()), sameFs, ignore, scan, keepGoing))
-                return false;
-        }
-        return true;
-    }
-    if (isRealDir(dstInfo))
-        return true;
-    scan.conflicts++;
-    if (compareTimes(src, dstInfo) > 0)
-        scan.newer++;
-    if (scan.examples.size() < 5)
-        scan.examples << dst;
-    return true;
-}
-
 static QString describeFile(const QFileInfo &info) {
     return QObject::tr("%1, %2")
         .arg(QLocale().formattedDataSize(info.size()),
@@ -1056,12 +966,15 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             progressDlg.updateScanning(s.entries, s.conflicts);
             return !progressDlg.wasCanceled();
         };
+        std::function<bool(const QFileInfo&)> skip;
+        if (ignore)
+            skip = [ignore](const QFileInfo& fi) { return ignore->isIgnored(fi); };
         for (const QString &name : names) {
             const QString srcPath = srcDir.absoluteFilePath(name);
             const QString dstFilePath = destIsDir ? QDir(dstPath).filePath(name) : dstPath;
             if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
                 continue;
-            if (!scanConflicts(QFileInfo(srcPath), dstFilePath, sameFs, ignore, scan, keepGoing))
+            if (!scanConflicts(QFileInfo(srcPath), dstFilePath, sameFs, skip, scan, keepGoing))
                 return {};
         }
         if (scan.conflicts > 0) {

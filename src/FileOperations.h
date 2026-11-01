@@ -1,6 +1,8 @@
 #ifndef FILEOPERATIONS_H
 #define FILEOPERATIONS_H
 
+#include "CopyConflicts.h"
+
 #include <QMessageBox>
 #include <QString>
 #include <QStringList>
@@ -42,14 +44,6 @@ struct CopyStats {
 };
 
 enum class EnsureDirResult { Created, Exists, Cancelled, NotADir };
-
-/// What happens to a file whose target exists already; chosen once, before
-/// copying or moving (see executeCopyOrMove).
-enum class ConflictPolicy {
-    Overwrite,       ///< always
-    Skip,            ///< never; a moved file stays in the source
-    OverwriteOlder,  ///< only when the source is newer than the target
-};
 
 // Get filesystem cluster size for a path
 quint64 getClusterSize(const QString& path);

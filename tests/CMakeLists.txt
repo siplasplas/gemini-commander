@@ -15,6 +15,23 @@ target_link_libraries(sizeformat_tests
 
 gtest_discover_tests(sizeformat_tests)
 
+# Conflicts of Copy and Move: the quick scan before copying, overwrite policies.
+add_executable(copy_conflicts_tests
+        test_copy_conflicts.cpp
+        ${CMAKE_SOURCE_DIR}/src/CopyConflicts.cpp
+)
+
+target_include_directories(copy_conflicts_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+target_link_libraries(copy_conflicts_tests
+        PRIVATE
+        Qt6::Core
+        GTest::gtest
+        GTest::gtest_main
+)
+
+gtest_discover_tests(copy_conflicts_tests)
+
 # The editor (qceditor's library) as gemini-commander uses it: loading,
 # saving and modification state.
 add_executable(editor_tests test_editor.cpp)
