@@ -1,4 +1,6 @@
 #include "Archives.h"
+#include "Plugins.h"
+#include "plugin/ArchivePlugin.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QFile>
@@ -9,9 +11,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-
-#include <archive.h>
-#include <archive_entry.h>
 
 namespace {
 
@@ -469,41 +468,28 @@ bool ArchiveContents::isDirectory(const QString& path) const
 
 namespace {
 
-ArchiveContents readArchiveWithLibarchive(const QString& archivePath)
+// Through the archive module (libarchive), when it is loaded.
+ArchiveContents readArchiveWithPlugin(const QString& archivePath)
 {
     ArchiveContents result;
     result.archivePath = archivePath;
 
-    struct archive* a = archive_read_new();
-    archive_read_support_filter_all(a);
-    archive_read_support_format_all(a);
-
-    QByteArray pathBytes = archivePath.toUtf8();
-    if (archive_read_open_filename(a, pathBytes.constData(), 10240) == ARCHIVE_OK) {
-        struct archive_entry* entry;
-        while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-            ArchiveEntry e;
-            e.path = QString::fromUtf8(archive_entry_pathname(entry));
-
-            // Remove trailing slash from directories
-            while (e.path.endsWith('/'))
-                e.path.chop(1);
-
-            e.name = QFileInfo(e.path).fileName();
-            e.isDirectory = (archive_entry_filetype(entry) == AE_IFDIR);
-            e.size = archive_entry_size(entry);
-            e.modTime = QDateTime::fromSecsSinceEpoch(archive_entry_mtime(entry));
-
-            // Skip empty paths
-            if (!e.path.isEmpty() && !e.name.isEmpty()) {
-                result.allEntries.append(e);
-            }
-
-            archive_read_data_skip(a);
-        }
+    gemini::ArchivePlugin* plugin = Plugins::instance().archive();
+    if (!plugin)
+        return result;
+    QList<gemini::ArchiveItem> items;
+    QString error;
+    plugin->list(archivePath, items, error);
+    for (const gemini::ArchiveItem& item : items) {
+        ArchiveEntry e;
+        e.path = item.path;
+        e.name = QFileInfo(e.path).fileName();
+        e.isDirectory = item.isDirectory;
+        e.size = item.size;
+        e.modTime = item.modTime;
+        if (!e.name.isEmpty())
+            result.allEntries.append(e);
     }
-
-    archive_read_free(a);
     return result;
 }
 
@@ -561,10 +547,10 @@ ArchiveContents readArchiveWithUnar(const QString& archivePath)
 
 ArchiveContents readArchive(const QString& archivePath)
 {
-    // Try libarchive first
-    ArchiveContents result = readArchiveWithLibarchive(archivePath);
+    // The archive module (libarchive) first
+    ArchiveContents result = readArchiveWithPlugin(archivePath);
 
-    // If libarchive failed or returned empty, try unar
+    // Without the module, or a format it cannot read: lsar (unar)
     if (result.allEntries.isEmpty()) {
         result = readArchiveWithUnar(archivePath);
     }

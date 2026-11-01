@@ -165,7 +165,8 @@ pkg_check_modules(BOTAN botan-2)
 if(NOT BOTAN_FOUND)
     pkg_check_modules(BOTAN REQUIRED botan-3)
 endif()
-pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
+# The archive module (plugins/archive); without it archives are listed by lsar.
+pkg_check_modules(LIBARCHIVE libarchive)
 # Regular expression search in the viewer of large files (textviewers).
 pkg_check_modules(PCRE2 REQUIRED libpcre2-8)
 find_package(nlohmann_json 3.2.0 REQUIRED)
@@ -252,6 +253,9 @@ add_executable(${PROJECT_NAME}
         src/FileOperations.h
         src/CopyConflicts.cpp
         src/CopyConflicts.h
+        src/Plugins.cpp
+        src/Plugins.h
+        src/plugin/ArchivePlugin.h
         src/SearchWorker.h
         src/editor/EditorFrame.cpp
         src/editor/EditorFrame.h
@@ -312,7 +316,6 @@ add_executable(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${TEXTVIEWERS_DIR}
-        ${LIBARCHIVE_INCLUDE_DIRS}
         ${PCRE2_INCLUDE_DIRS}
 )
 
@@ -331,7 +334,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         qcodeedit::spell
         toml_headers
         ICU::uc ICU::i18n
-        ${LIBARCHIVE_LIBRARIES}
         ${PCRE2_LIBRARIES}
  )
 
@@ -406,6 +408,17 @@ target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
 
 # Installation
 include(GNUInstallDirs)
+
+# Modules (Qt plugins, plugins/): loaded from lib/gemini-commander/plugins
+# next to bin when installed, from <build>/plugins in the build tree.
+set(GEMINI_PLUGIN_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/gemini-commander/plugins")
+set(GEMINI_PLUGIN_BUILD_DIR "${CMAKE_BINARY_DIR}/plugins")
+file(RELATIVE_PATH GEMINI_PLUGIN_DIR_FROM_BIN
+     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
+     "${CMAKE_INSTALL_PREFIX}/${GEMINI_PLUGIN_INSTALL_DIR}")
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        GEMINI_PLUGIN_DIR_FROM_BIN="${GEMINI_PLUGIN_DIR_FROM_BIN}")
+add_subdirectory(plugins)
 
 # Install executable
 install(TARGETS ${PROJECT_NAME}

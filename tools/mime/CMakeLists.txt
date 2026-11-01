@@ -22,9 +22,13 @@ add_executable(MimeExplorer
     ${MAIN_SRC_DIR}/SortedDirIterator.cpp
     ${MAIN_SRC_DIR}/Archives.h
     ${MAIN_SRC_DIR}/Archives.cpp
+    ${MAIN_SRC_DIR}/Plugins.h
+    ${MAIN_SRC_DIR}/Plugins.cpp
     ${MAIN_SRC_DIR}/FileIconResolver.h
     ${MAIN_SRC_DIR}/FileIconResolver.cpp
 )
 
-target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR} ${LIBARCHIVE_INCLUDE_DIRS})
-target_link_libraries(MimeExplorer PRIVATE Qt6::Core Qt6::Widgets ${LIBARCHIVE_LIBRARIES})
+target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR})
+# Archives are classified only, not read: no plugin directory of its own.
+target_compile_definitions(MimeExplorer PRIVATE GEMINI_PLUGIN_DIR_FROM_BIN="plugins")
+target_link_libraries(MimeExplorer PRIVATE Qt6::Core Qt6::Widgets)

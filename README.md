@@ -108,6 +108,17 @@ pacman -S mingw-w64-ucrt-x86_64-gtest
 pacman -S mingw-w64-ucrt-x86_64-hunspell
 ```
 
+### Modules
+
+Parts with their own dependencies are Qt plugins in `plugins/`, built into
+`<build>/plugins` and installed to `lib/gemini-commander/plugins`; more
+directories can be given in `GEMINI_PLUGIN_PATH` (separated by `:`). The
+program works without them:
+
+| Module | Used for | Needs | Without it |
+|--------|----------|-------|------------|
+| archive (`gemini-archive-plugin`) | listing archives (Enter on an archive) | libarchive (libarchive-dev) | archives are listed by `lsar` (unar) |
+
 ### Libraries fetched by CMake
 
 These libraries do not have to be installed; CMake's FetchContent downloads
