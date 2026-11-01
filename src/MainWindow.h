@@ -40,6 +40,9 @@ public:
     // From another program (D-Bus Open): the current panel goes to `path`, a
     // directory, or the directory of a file with the file selected.
     void openInCurrentPanel(const QString& path);
+    // Two paths (D-Bus Open): the left panel goes to the first, the right one
+    // to the second; the current panel keeps the focus.
+    void openInBothPanels(const QString& leftPath, const QString& rightPath);
 #include "MainWindow_decl.inc"
 protected:
     void closeEvent(QCloseEvent *event) override;

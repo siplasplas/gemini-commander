@@ -74,13 +74,16 @@ bool DBusService::eventFilter(QObject* watched, QEvent* event)
 
 void DBusService::open(const QStringList& uris, const QVariantMap& platformData)
 {
+    QStringList paths;
     for (const QString& uri : uris) {
         const QString path = localPath(uri);
-        if (!path.isEmpty()) {
-            m_pendingPath = path;  // one panel, one path; a later call wins
+        if (!path.isEmpty())
+            paths << path;
+        if (paths.size() == 2)
             break;
-        }
     }
+    if (!paths.isEmpty())
+        m_pendingPaths = paths;  // a later call wins
     // At once, so that a token is used and an open dialog is seen.
     activate(platformData);
     openPendingWhenIdle();
@@ -88,7 +91,7 @@ void DBusService::open(const QStringList& uris, const QVariantMap& platformData)
 
 void DBusService::openPendingWhenIdle()
 {
-    if (m_pendingPath.isEmpty())
+    if (m_pendingPaths.isEmpty())
         return;
     // Not under a modal dialog (Copy, Overwrite?, ...) nor during an operation
     // (copying, directory sizes): it works on the panel's entries, which
@@ -99,9 +102,12 @@ void DBusService::openPendingWhenIdle()
         return;
     }
     m_retryTimer.stop();
-    const QString path = m_pendingPath;
-    m_pendingPath.clear();
-    m_window->openInCurrentPanel(path);
+    const QStringList paths = m_pendingPaths;
+    m_pendingPaths.clear();
+    if (paths.size() == 2)
+        m_window->openInBothPanels(paths[0], paths[1]);
+    else
+        m_window->openInCurrentPanel(paths[0]);
 }
 
 void DBusService::activate(const QVariantMap& platformData)

@@ -2314,6 +2314,21 @@ void MainWindow::openInCurrentPanel(const QString& path)
     panel->setFocus();
 }
 
+void MainWindow::openInBothPanels(const QString& leftPath, const QString& rightPath)
+{
+    const std::pair<Side, QString> targets[] = {{Side::Left, leftPath}, {Side::Right, rightPath}};
+    for (const auto& [side, path] : targets) {
+        FilePanel* panel = filePanelForSide(side);
+        if (!panel)
+            continue;
+        panel->navigateToPath(path);
+        // As in openInCurrentPanel: the entry in the view, not only remembered.
+        panel->restoreSelectionFromMemory();
+    }
+    if (FilePanel* panel = currentFilePanel())
+        panel->setFocus();
+}
+
 void MainWindow::openEditorForFile(const QString& filePath) {
     QFileInfo info(filePath);
     if (!info.isFile())

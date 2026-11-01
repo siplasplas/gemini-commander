@@ -272,13 +272,18 @@ session bus, object `/io/github/siplasplas/GeminiCommander`. The name
 was active last; each instance also owns
 `io.github.siplasplas.GeminiCommander.p<PID>`. `Open` takes the first
 `file://` URI or path to the current panel and activates the window, with
-`platform_data["activation-token"]` on Wayland; under a modal dialog or during
-an operation the panel changes once that is over:
+`platform_data["activation-token"]` on Wayland; given two, the first goes to
+the left panel and the second to the right one, and the current panel keeps
+the focus. Under a modal dialog or during an operation the panels change once
+that is over:
 
 ```sh
 gdbus call --session --dest io.github.siplasplas.GeminiCommander \
     --object-path /io/github/siplasplas/GeminiCommander \
     --method org.freedesktop.Application.Open "['file:///tmp/notes.txt']" "{}"
+gdbus call --session --dest io.github.siplasplas.GeminiCommander \
+    --object-path /io/github/siplasplas/GeminiCommander \
+    --method org.freedesktop.Application.Open "['/tmp', 'file:///etc/hosts']" "{}"
 ```
 
 ## Installation

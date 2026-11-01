@@ -20,8 +20,9 @@ class MainWindow;
  *
  *   Open(as uris, a{sv} platform_data): the window is activated and the first
  *       file:// URI or path goes to the current panel (a directory is
- *       entered; for a file its directory is, with the file selected) - once
- *       no modal dialog is open and no operation runs.
+ *       entered; for a file its directory is, with the file selected); with
+ *       two, the first goes to the left panel and the second to the right
+ *       one - once no modal dialog is open and no operation runs.
  *   Activate(a{sv} platform_data): activates the window.
  *
  * platform_data["activation-token"] (xdg-activation, Wayland) lets the window
@@ -43,13 +44,13 @@ protected:
 
 private:
     void claimSharedName();
-    // Opens m_pendingPath unless a modal dialog is open or an operation runs;
+    // Opens m_pendingPaths unless a modal dialog is open or an operation runs;
     // then it tries again later.
     void openPendingWhenIdle();
 
     MainWindow* m_window;
     bool m_registered = false;
-    QString m_pendingPath;
+    QStringList m_pendingPaths;  // one (current panel) or two (left, right)
     QTimer m_retryTimer;
 };
 
