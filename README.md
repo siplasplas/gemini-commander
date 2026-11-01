@@ -245,7 +245,9 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local
 cmake --build build -j$(nproc)
 ```
 
-Without `-DCMAKE_BUILD_TYPE` the build type is Release.
+Without `-DCMAKE_BUILD_TYPE` the build type is Release, without debug
+information (crash reports then show function names without source lines);
+`-DCMAKE_BUILD_TYPE=RelWithDebInfo` keeps it.
 
 On Windows - default is ninja
 ```shell

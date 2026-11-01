@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.24)
 project(gemini-commander VERSION 2.2.0 LANGUAGES CXX)
 
 # Without a build type the compiler gets no optimization (nor debug info):
-# a plain "cmake .." builds Release. An explicit -DCMAKE_BUILD_TYPE (and
+# a plain "cmake .." builds Release, without debug info. An explicit -DCMAKE_BUILD_TYPE (and
 # multi-config generators) are left alone.
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -146,7 +146,7 @@ target_include_directories(toml_headers INTERFACE
 FetchContent_Declare(
         textviewers
         GIT_REPOSITORY https://github.com/ideorg/textviewers.git
-        GIT_TAG v1.3
+        GIT_TAG v1.4
         GIT_SHALLOW TRUE
         GIT_SUBMODULES ""
         SOURCE_SUBDIR none
@@ -333,10 +333,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ${PCRE2_LIBRARIES}
  )
 
-# Keep enough information in the executable for backward-cpp to resolve source
-# files and line numbers in crash reports, including optimized builds.
+# Frame pointers keep backward-cpp's crash stack traces reliable in optimized
+# builds; without debug information they show function names only. Release
+# has no debug information; Debug and RelWithDebInfo add it (source files and
+# line numbers in crash reports).
+# Libraries may still bring theirs (backward-cpp always compiles with -g; an
+# installed qceditor may be a Debug build), so Release and MinSizeRel drop it
+# when linking; function names stay.
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fno-omit-frame-pointer)
+    target_link_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Release,MinSizeRel>:LINKER:--strip-debug>)
 endif()
 
 # The source directory of a library built in, for its commit in Help > About;
