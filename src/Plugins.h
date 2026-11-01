@@ -3,20 +3,20 @@
 
 #include <QStringList>
 
-namespace gemini {
+namespace spp {
 class ArchivePlugin;
 }
 
-// The modules of Gemini Commander (Qt plugins), loaded once from the plugin
-// directories: $GEMINI_PLUGIN_PATH (directories separated by ':'), the
-// installed lib/gemini-commander/plugins next to bin, and plugins/ in the
-// build tree. The program works without any of them.
+// The modules of Gemini Commander (Qt plugins from siplasplas-plugins),
+// loaded once from the plugin directories: $GEMINI_PLUGIN_PATH (directories
+// separated by ':'), the installed lib/gemini-commander/plugins next to bin,
+// and plugins/ in the build tree. The program works without any of them.
 class Plugins {
 public:
     static Plugins& instance();
 
     // The archive module, or null when none was loaded.
-    gemini::ArchivePlugin* archive() const { return m_archive; }
+    spp::ArchivePlugin* archive() const { return m_archive; }
 
     // What was found: one line per plugin file or problem.
     const QStringList& report() const { return m_report; }
@@ -27,7 +27,7 @@ public:
 private:
     Plugins();
 
-    gemini::ArchivePlugin* m_archive = nullptr;
+    spp::ArchivePlugin* m_archive = nullptr;
     QStringList m_report;
 };
 

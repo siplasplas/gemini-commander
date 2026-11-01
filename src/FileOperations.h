@@ -104,6 +104,11 @@ EnsureDirResult ensureDestDirExists(const QString& dstPath, QWidget* parent);
 // Check if destination input indicates a directory
 bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 
+// Several conflicts (targets that exist): one choice for all of them —
+// Skip, Overwrite All, Overwrite with Newer; nullopt cancels the command.
+// `move` adds that files not overwritten stay in the source.
+std::optional<ConflictPolicy> askConflictPolicy(QWidget* parent, const ConflictScan& scan, bool move);
+
 // Existing targets are settled first: for a single file Overwrite/Cancel
 // (saying whether it is overwritten with a newer, older or same-time file);
 // otherwise a quick scan (entering only the directories that exist at the

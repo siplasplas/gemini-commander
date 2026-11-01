@@ -397,8 +397,7 @@ static bool askOverwriteOneFile(QWidget *parent, const QFileInfo &src, const QFi
     return box.clickedButton() == overwrite;
 }
 
-// Several conflicts: one choice for all of them; nullopt cancels the command.
-static std::optional<ConflictPolicy> askConflictPolicy(QWidget *parent, const ConflictScan &scan, bool move) {
+std::optional<ConflictPolicy> askConflictPolicy(QWidget *parent, const ConflictScan &scan, bool move) {
     QString text = QObject::tr("%n conflict(s): already at the destination", nullptr, int(scan.conflicts));
     text += QLatin1Char('\n');
     for (const QString &path : scan.examples)

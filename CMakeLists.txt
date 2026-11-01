@@ -165,8 +165,6 @@ pkg_check_modules(BOTAN botan-2)
 if(NOT BOTAN_FOUND)
     pkg_check_modules(BOTAN REQUIRED botan-3)
 endif()
-# The archive module (plugins/archive); without it archives are listed by lsar.
-pkg_check_modules(LIBARCHIVE libarchive)
 # Regular expression search in the viewer of large files (textviewers).
 pkg_check_modules(PCRE2 REQUIRED libpcre2-8)
 find_package(nlohmann_json 3.2.0 REQUIRED)
@@ -255,7 +253,8 @@ add_executable(${PROJECT_NAME}
         src/CopyConflicts.h
         src/Plugins.cpp
         src/Plugins.h
-        src/plugin/ArchivePlugin.h
+        src/ArchiveOperations.cpp
+        src/ArchiveOperations.h
         src/SearchWorker.h
         src/editor/EditorFrame.cpp
         src/editor/EditorFrame.h
@@ -409,8 +408,10 @@ target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
 # Installation
 include(GNUInstallDirs)
 
-# Modules (Qt plugins, plugins/): loaded from lib/gemini-commander/plugins
-# next to bin when installed, from <build>/plugins in the build tree.
+# Modules (Qt plugins) from siplasplas-plugins, shared with ducat: loaded
+# from lib/gemini-commander/plugins next to bin when installed, from
+# <build>/plugins in the build tree. The archive plugin needs libarchive
+# (without it archives are listed by lsar and handled by 7z/unar).
 set(GEMINI_PLUGIN_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/gemini-commander/plugins")
 set(GEMINI_PLUGIN_BUILD_DIR "${CMAKE_BINARY_DIR}/plugins")
 file(RELATIVE_PATH GEMINI_PLUGIN_DIR_FROM_BIN
@@ -418,7 +419,16 @@ file(RELATIVE_PATH GEMINI_PLUGIN_DIR_FROM_BIN
      "${CMAKE_INSTALL_PREFIX}/${GEMINI_PLUGIN_INSTALL_DIR}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         GEMINI_PLUGIN_DIR_FROM_BIN="${GEMINI_PLUGIN_DIR_FROM_BIN}")
-add_subdirectory(plugins)
+set(SPP_PLUGIN_BUILD_DIR "${GEMINI_PLUGIN_BUILD_DIR}")
+set(SPP_PLUGIN_INSTALL_DIR "${GEMINI_PLUGIN_INSTALL_DIR}")
+FetchContent_Declare(
+        siplasplas_plugins
+        GIT_REPOSITORY https://github.com/siplasplas/siplasplas-plugins.git
+        GIT_TAG v0.1.0
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(siplasplas_plugins)
+target_link_libraries(${PROJECT_NAME} PRIVATE siplasplas::plugin-api)
 
 # Install executable
 install(TARGETS ${PROJECT_NAME}

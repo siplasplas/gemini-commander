@@ -31,4 +31,4 @@ add_executable(MimeExplorer
 target_include_directories(MimeExplorer PRIVATE ${MAIN_SRC_DIR})
 # Archives are classified only, not read: no plugin directory of its own.
 target_compile_definitions(MimeExplorer PRIVATE GEMINI_PLUGIN_DIR_FROM_BIN="plugins")
-target_link_libraries(MimeExplorer PRIVATE Qt6::Core Qt6::Widgets)
+target_link_libraries(MimeExplorer PRIVATE Qt6::Core Qt6::Widgets siplasplas::plugin-api)

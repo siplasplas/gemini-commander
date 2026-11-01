@@ -1,6 +1,7 @@
 #include "quitls.h"
 #include "utils.h"
 #include "Archives.h"
+#include "ArchiveOperations.h"
 #include "PackDialog.h"
 #include "MultiRenameDialog.h"
 #include "DistroInfo.h"
@@ -794,7 +795,17 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
         }
     }
 
-    // 6. Extract
+    // 6. Extract: through the archive module with progress, or by 7z/unar
+    // for what it cannot read (ARJ, ACE, encrypted RAR or 7z)
+    if (contents.readByPlugin) {
+        QString error;
+        const auto result = ArchiveOperations::extract(this, contents, finalDest, error);
+        if (result == ArchiveOperations::Result::Failed)
+            QMessageBox::warning(this, tr("Extract Error"), error);
+        reloadAllPanels();
+        panel->selectEntryByName(fileName);
+        return true;
+    }
     QProgressDialog progress(tr("Extracting files..."), QString(), 0, 0, this);
     progress.setWindowTitle(tr("Extract"));
     progress.setWindowModality(Qt::WindowModal);

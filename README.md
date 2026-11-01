@@ -110,14 +110,18 @@ pacman -S mingw-w64-ucrt-x86_64-hunspell
 
 ### Modules
 
-Parts with their own dependencies are Qt plugins in `plugins/`, built into
-`<build>/plugins` and installed to `lib/gemini-commander/plugins`; more
-directories can be given in `GEMINI_PLUGIN_PATH` (separated by `:`). The
-program works without them:
+Parts with their own dependencies are Qt plugins from
+[siplasplas-plugins](https://github.com/siplasplas/siplasplas-plugins) (shared
+with ducat), fetched by CMake, built into `<build>/plugins` and installed to
+`lib/gemini-commander/plugins`; more directories can be given in
+`GEMINI_PLUGIN_PATH` (separated by `:`). The program works without them:
 
 | Module | Used for | Needs | Without it |
 |--------|----------|-------|------------|
-| archive (`gemini-archive-plugin`) | listing archives (Enter on an archive) | libarchive (libarchive-dev) | archives are listed by `lsar` (unar) |
+| archive (`spp-archive`) | listing archives (Enter on an archive) and extracting them (Alt+F9) with a progress bar, passwords and one question about existing files, as copying asks | libarchive (libarchive-dev) | archives are listed by `lsar` and extracted by `7z` or `unar` |
+
+Archives the module cannot read — ARJ, ACE, encrypted RAR or 7z — are listed
+by `lsar` and extracted by `7z` or `unar`, without a progress bar.
 
 ### Libraries fetched by CMake
 
@@ -133,6 +137,7 @@ If a suitable version is already installed, it is used instead:
 | [toml++](https://github.com/marzer/tomlplusplus) | configuration files | `find_package(tomlplusplus 3)` |
 | [textviewers](https://github.com/ideorg/textviewers) | viewer for large files | always fetched |
 | [backward-cpp](https://github.com/bombela/backward-cpp) | crash stack traces | always fetched |
+| [siplasplas-plugins](https://github.com/siplasplas/siplasplas-plugins) | modules (see above): their interfaces, and the plugins built into `<build>/plugins` | always fetched |
 
 For libraries installed outside the default search paths, pass
 `-DCMAKE_PREFIX_PATH=/path/to/prefix`. To always use the fetched versions,

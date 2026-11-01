@@ -1,6 +1,6 @@
 #include "Archives.h"
 #include "Plugins.h"
-#include "plugin/ArchivePlugin.h"
+#include "siplasplas/plugin/ArchivePlugin.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QFile>
@@ -396,6 +396,7 @@ void ArchiveContents::clear()
 {
     archivePath.clear();
     allEntries.clear();
+    readByPlugin = false;
 }
 
 QList<ArchiveEntry> ArchiveContents::entriesAt(const QString& dirPath) const
@@ -474,13 +475,13 @@ ArchiveContents readArchiveWithPlugin(const QString& archivePath)
     ArchiveContents result;
     result.archivePath = archivePath;
 
-    gemini::ArchivePlugin* plugin = Plugins::instance().archive();
+    spp::ArchivePlugin* plugin = Plugins::instance().archive();
     if (!plugin)
         return result;
-    QList<gemini::ArchiveItem> items;
+    QList<spp::ArchiveItem> items;
     QString error;
-    plugin->list(archivePath, items, error);
-    for (const gemini::ArchiveItem& item : items) {
+    result.readByPlugin = plugin->list(archivePath, items, error) && !items.isEmpty();
+    for (const spp::ArchiveItem& item : items) {
         ArchiveEntry e;
         e.path = item.path;
         e.name = QFileInfo(e.path).fileName();

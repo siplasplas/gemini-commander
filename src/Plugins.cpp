@@ -1,6 +1,6 @@
 #include "Plugins.h"
 
-#include "plugin/ArchivePlugin.h"
+#include "siplasplas/plugin/ArchivePlugin.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -44,7 +44,7 @@ Plugins::Plugins()
                 continue;
             }
             // The first plugin of each kind is used.
-            if (auto* archive = qobject_cast<gemini::ArchivePlugin*>(plugin)) {
+            if (auto* archive = qobject_cast<spp::ArchivePlugin*>(plugin)) {
                 if (m_archive) {
                     m_report << QStringLiteral("%1: archives %2, not used: one is loaded")
                                     .arg(file, archive->name());

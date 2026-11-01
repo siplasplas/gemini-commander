@@ -58,6 +58,7 @@ struct ArchiveEntry {
 struct ArchiveContents {
     QString archivePath;                    // Path to archive file
     QList<ArchiveEntry> allEntries;         // Flat list of all entries
+    bool readByPlugin = false;              // listed by the archive module, which then extracts it
 
     // Get entries for a specific directory path inside archive
     // Returns only direct children (not recursive)
