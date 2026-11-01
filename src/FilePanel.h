@@ -16,6 +16,7 @@
 #include <QProgressDialog>
 #include <QDateTime>
 #include <QSet>
+#include <QTemporaryDir>
 #include <QVector>
 
 #include <memory>
@@ -241,6 +242,11 @@ public:
     void enterArchive(const QString& archivePath);
     void exitArchive();
     void loadArchiveDirectory();
+    // F3 on a file inside the archive: the start of it (at most
+    // kArchivePreviewBytes) in a temporary file, removed when leaving the
+    // archive. Empty with `error` set when it failed.
+    static constexpr qint64 kArchivePreviewBytes = 1024 * 1024;
+    QString archivePreviewFile(const PanelEntry& entry, QString& error);
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
@@ -293,6 +299,8 @@ private:
     static QString markKey(const PanelEntry& entry);
     // Keeps only the marks of names still listed (after a reload).
     void pruneMarks();
+    // The previews of files inside the archive (archivePreviewFile).
+    std::unique_ptr<QTemporaryDir> m_archivePreviewDir;
 
 signals:
     void selectionChanged();

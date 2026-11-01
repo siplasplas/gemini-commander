@@ -1265,6 +1265,22 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
 
+    // Inside an archive: the start of the file, extracted to a temporary file
+    FilePanel* panel = currentFilePanel();
+    if (panel && panel->insideArchive) {
+        const PanelEntry* entry = panel->currentEntryRow().first;
+        if (!entry || entry->contentState != EntryContentState::NotDirectory)
+            return true;
+        QString error;
+        const QString preview = panel->archivePreviewFile(*entry, error);
+        if (preview.isEmpty()) {
+            QMessageBox::warning(this, tr("View"), error);
+            return true;
+        }
+        openViewerForFile(preview);
+        return true;
+    }
+
     auto fullPath = currentPanelPath();
     QFileInfo info(fullPath);
     if (!info.isFile()) {

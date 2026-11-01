@@ -29,6 +29,7 @@
 #include <QDebug>
 
 #include "FilePanel.h"
+#include "ArchiveOperations.h"
 #include "FileIconResolver.h"
 #include "Config.h"
 #include "quitls.h"
@@ -2082,7 +2083,23 @@ void FilePanel::enterArchive(const QString& archivePath) {
     insideArchive = true;
     archiveFilePath = archivePath;
     archiveCurrentDir.clear();
+    m_archivePreviewDir.reset();
     loadArchiveDirectory();
+}
+
+QString FilePanel::archivePreviewFile(const PanelEntry& entry, QString& error)
+{
+    if (!m_archivePreviewDir) {
+        m_archivePreviewDir = std::make_unique<QTemporaryDir>(
+            QDir::tempPath() + QStringLiteral("/gemini-commander-preview-XXXXXX"));
+        if (!m_archivePreviewDir->isValid()) {
+            error = m_archivePreviewDir->errorString();
+            m_archivePreviewDir.reset();
+            return {};
+        }
+    }
+    return ArchiveOperations::previewEntry(this, archiveFilePath, entry.branch, qint64(entry.totalSizeBytes),
+                                           m_archivePreviewDir->path(), kArchivePreviewBytes, error);
 }
 
 void FilePanel::exitArchive() {
@@ -2093,6 +2110,7 @@ void FilePanel::exitArchive() {
     archiveFilePath.clear();
     archiveCurrentDir.clear();
     archiveContents.clear();
+    m_archivePreviewDir.reset();  // the previews (F3) go with it
 
     // Reload normal directory and select the archive file
     loadDirectory();

@@ -33,6 +33,15 @@ struct PackRequest {
 Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, const QString& archivePath,
             const PackRequest& request, QString& error);
 
+// For a preview (F3): the first `maxBytes` of the file `entry` of the
+// archive, written below `dir` with the entry's path. Only that much is
+// decompressed, also of a huge entry. When `entrySize` is larger, the name
+// says so before its extension (kept for syntax colouring), e.g.
+// "app (first 1 MiB).log". Returns the file's path; empty with `error` set
+// when it failed.
+QString previewEntry(QWidget* parent, const QString& archivePath, const QString& entry, qint64 entrySize,
+                     const QString& dir, qint64 maxBytes, QString& error);
+
 } // namespace ArchiveOperations
 
 #endif // ARCHIVEOPERATIONS_H

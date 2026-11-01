@@ -8,10 +8,12 @@
 #include "keys/KeyRouter.h"
 #include "siplasplas/plugin/ArchivePlugin.h"
 
+#include <QApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QLocale>
 #include <QMessageBox>
 #include <QProcess>
 #include <QRegularExpression>
@@ -329,6 +331,43 @@ Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, c
     if (request.moveFiles)
         removeSources(baseDir, files);
     return Result::Done;
+}
+
+QString previewEntry(QWidget* parent, const QString& archivePath, const QString& entry, qint64 entrySize,
+                     const QString& dir, qint64 maxBytes, QString& error)
+{
+    spp::ArchivePlugin* plugin = Plugins::instance().archive();
+    if (!plugin) {
+        error = QObject::tr("Viewing files inside archives needs the archive module.");
+        return {};
+    }
+    // Below `dir` only, whatever the entry's path says ("..").
+    QString path = QDir::cleanPath(QDir(dir).absoluteFilePath(entry));
+    if (maxBytes >= 0 && entrySize > maxBytes) {
+        const QString tag = QObject::tr(" (first %1)").arg(QLocale().formattedDataSize(maxBytes));
+        const int slash = path.lastIndexOf(QLatin1Char('/'));
+        const int dot = path.lastIndexOf(QLatin1Char('.'));
+        path.insert(dot > slash + 1 ? dot : path.size(), tag);
+    }
+    if (!path.startsWith(QDir(dir).absolutePath() + QLatin1Char('/'))) {
+        error = QObject::tr("'%1' is not a file to view.").arg(entry);
+        return {};
+    }
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        error = QObject::tr("Cannot write '%1': %2").arg(path, file.errorString());
+        return {};
+    }
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    const qint64 written = plugin->readEntry(archivePath, entry, &file, maxBytes, error, passwordAsker(parent));
+    QApplication::restoreOverrideCursor();
+    file.close();
+    if (written < 0) {
+        QFile::remove(path);
+        return {};
+    }
+    return path;
 }
 
 } // namespace ArchiveOperations

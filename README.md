@@ -118,7 +118,7 @@ with ducat), fetched by CMake, built into `<build>/plugins` and installed to
 
 | Module | Used for | Needs | Without it |
 |--------|----------|-------|------------|
-| archive (`spp-archive`) | listing archives (Enter on an archive), extracting them (Alt+F9) with passwords and one question about existing files, as copying asks, and packing (Alt+F5) zip or 7z, also in volumes | libarchive (libarchive-dev) | archives are listed by `lsar`, extracted by `7z` or `unar`, packed by `zip` or `7z` |
+| archive (`spp-archive`) | listing archives (Enter on an archive), viewing a file inside one (F3; only its first 1 MiB is extracted to a temporary file, removed when leaving the archive, so a huge entry opens at once — the title then says e.g. `app (first 1.00 MiB).log`), extracting them (Alt+F9) with passwords and one question about existing files, as copying asks, and packing (Alt+F5) zip or 7z, also in volumes | libarchive (libarchive-dev) | archives are listed by `lsar`, extracted by `7z` or `unar`, packed by `zip` or `7z` |
 
 Archives the module cannot read — ARJ, ACE, encrypted RAR or 7z — are listed
 by `lsar` and extracted by `7z` or `unar`; a 7z archive with a solid block
