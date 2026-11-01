@@ -40,6 +40,7 @@
 #include <QDateTime>
 #include <QTimeZone>
 #include <QMimeDatabase>
+#include <QRegularExpression>
 #include "FileOperations.h"
 #include "GitignoreOptionsWidget.h"
 
@@ -1000,7 +1001,15 @@ void FilePanel::trigger(const QString &name) {
             QMimeType mt = mimeDb.mimeTypeForFile(fullPath);
             auto [components, archiveType] = classifyArchive(mt, fullPath);
 
-            if (archiveType == DetailedArchiveType::Compressed ||
+            // A later volume of an old-style RAR archive (name.r00, name.r01,
+            // ...): the module opens it from name.rar.
+            static const QRegularExpression rarVolume(QStringLiteral("\\.[rR]\\d\\d$"));
+            const bool rarPart = rarVolume.match(name).hasMatch()
+                                 && (QFileInfo::exists(fullPath.chopped(4) + ".rar")
+                                     || QFileInfo::exists(fullPath.chopped(4) + ".RAR"));
+
+            if (rarPart ||
+                archiveType == DetailedArchiveType::Compressed ||
                 archiveType == DetailedArchiveType::Archive ||
                 archiveType == DetailedArchiveType::CompressedArchive ||
                 archiveType == DetailedArchiveType::ArchiveOther) {

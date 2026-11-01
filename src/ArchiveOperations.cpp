@@ -37,20 +37,6 @@ spp::ArchivePassword passwordAsker(QWidget* parent)
     };
 }
 
-// The size of the archive's files (volumes .001, .002, ... together).
-qint64 archiveBytes(const QString& archivePath)
-{
-    if (!archivePath.endsWith(QLatin1String(".001")))
-        return QFileInfo(archivePath).size();
-    const QString base = archivePath.chopped(4);
-    qint64 size = 0;
-    for (int i = 1;; ++i) {
-        const QFileInfo volume(QStringLiteral("%1.%2").arg(base).arg(i, 3, 10, QLatin1Char('0')));
-        if (!volume.exists())
-            return size;
-        size += volume.size();
-    }
-}
 
 // The volume files name.001, name.002, ... that exist.
 QStringList volumeFiles(const QString& path)
@@ -204,14 +190,18 @@ Result extractWithModule(QWidget* parent, spp::ArchivePlugin* plugin, const QStr
                          const spp::ExtractConflictHandler& conflict, QString& error)
 {
     FileOperationProgressDialog progress(QObject::tr("Extract"), parent);
-    const qint64 total = archiveBytes(archivePath);
-    progress.setTotals(1, quint64(total));
-    progress.beginFile(QFileInfo(archivePath).fileName(), total);
     KeyRouter::instance().setOperationInProgress(true);
+    bool started = false;
     qint64 reported = 0;
     const bool ok = plugin->extract(
         archivePath, destDir, entries, error,
-        [&progress, &reported](qint64 done, qint64, const QString&) {
+        [&](qint64 done, qint64 total, const QString&) {
+            // The total from the module: all volumes of the archive.
+            if (!started) {
+                progress.setTotals(1, quint64(total));
+                progress.beginFile(QFileInfo(archivePath).fileName(), total);
+                started = true;
+            }
             progress.addTransferred(done - reported);  // for the speed
             reported = done;
             progress.addFileBytes(done);
