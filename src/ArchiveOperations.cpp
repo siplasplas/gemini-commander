@@ -162,6 +162,63 @@ Result extractWithProcess(QWidget* parent, const QString& archivePath, const QSt
     return Result::Failed;
 }
 
+// The files of the archive whose targets (`targetOf`; empty: not copied)
+// exist: one question for all, as copying asks. Overwrite when there are
+// none; nullopt when cancelled.
+std::optional<FileOperations::ConflictPolicy> settleConflicts(
+    QWidget* parent, const ArchiveContents& contents, const std::function<QString(const ArchiveEntry&)>& targetOf)
+{
+    using namespace FileOperations;
+    ConflictScan scan;
+    for (const ArchiveEntry& entry : contents.allEntries) {
+        if (entry.isDirectory)
+            continue;
+        const QString target = targetOf(entry);
+        if (target.isEmpty())
+            continue;
+        const QFileInfo targetInfo(target);
+        if (!targetExists(targetInfo) || isRealDir(targetInfo))
+            continue;
+        ++scan.conflicts;
+        if (entry.modTime.isValid()
+            && entry.modTime.toMSecsSinceEpoch() - targetInfo.lastModified().toMSecsSinceEpoch() >= kSameTimeMs)
+            ++scan.newer;
+        if (scan.examples.size() < 5)
+            scan.examples << target;
+    }
+    if (scan.conflicts == 0)
+        return ConflictPolicy::Overwrite;
+    return askConflictPolicy(parent, scan, false);
+}
+
+// Extracts `entries` (all when empty) through the module, with the progress
+// dialog (bytes of the archive read) and passwords.
+Result extractWithModule(QWidget* parent, spp::ArchivePlugin* plugin, const QString& archivePath,
+                         const QString& destDir, const QStringList& entries,
+                         const spp::ExtractConflictHandler& conflict, QString& error)
+{
+    FileOperationProgressDialog progress(QObject::tr("Extract"), parent);
+    const qint64 total = archiveBytes(archivePath);
+    progress.setTotals(1, quint64(total));
+    progress.beginFile(QFileInfo(archivePath).fileName(), total);
+    KeyRouter::instance().setOperationInProgress(true);
+    qint64 reported = 0;
+    const bool ok = plugin->extract(
+        archivePath, destDir, entries, error,
+        [&progress, &reported](qint64 done, qint64, const QString&) {
+            progress.addTransferred(done - reported);  // for the speed
+            reported = done;
+            progress.addFileBytes(done);
+            return !progress.wasCanceled();
+        },
+        passwordAsker(&progress), conflict);
+    KeyRouter::instance().setOperationInProgress(false);
+    progress.endFile();
+    if (ok)
+        return Result::Done;
+    return progress.wasCanceled() ? Result::Cancelled : Result::Failed;
+}
+
 // Removes the packed files (Pack with "move"); a link, not what it points to.
 void removeSources(const QString& baseDir, const QStringList& files)
 {
@@ -185,28 +242,12 @@ Result extract(QWidget* parent, const ArchiveContents& contents, const QString& 
 
     // Existing files, settled before extracting (as copying does).
     using namespace FileOperations;
-    ConflictScan scan;
-    for (const ArchiveEntry& entry : contents.allEntries) {
-        if (entry.isDirectory)
-            continue;
-        const QString target = QDir(destDir).filePath(entry.path);
-        const QFileInfo targetInfo(target);
-        if (!targetExists(targetInfo) || isRealDir(targetInfo))
-            continue;
-        ++scan.conflicts;
-        if (entry.modTime.isValid()
-            && entry.modTime.toMSecsSinceEpoch() - targetInfo.lastModified().toMSecsSinceEpoch() >= kSameTimeMs)
-            ++scan.newer;
-        if (scan.examples.size() < 5)
-            scan.examples << target;
-    }
-    ConflictPolicy policy = ConflictPolicy::Overwrite;
-    if (scan.conflicts > 0) {
-        const auto chosen = askConflictPolicy(parent, scan, false);
-        if (!chosen)
-            return Result::Cancelled;
-        policy = *chosen;
-    }
+    const auto settled = settleConflicts(parent, contents, [&destDir](const ArchiveEntry& entry) {
+        return QDir(destDir).filePath(entry.path);
+    });
+    if (!settled)
+        return Result::Cancelled;
+    const ConflictPolicy policy = *settled;
     const spp::ExtractConflictHandler conflict = [policy](const spp::ArchiveItem& item, const QString& target) {
         const QFileInfo targetInfo(target);
         switch (policy) {
@@ -223,29 +264,56 @@ Result extract(QWidget* parent, const ArchiveContents& contents, const QString& 
         }
         return spp::ExtractConflict::Skip;
     };
+    return extractWithModule(parent, plugin, contents.archivePath, destDir, {}, conflict, error);
+}
 
-    // Progress by the bytes of the archive read.
-    const QString archivePath = contents.archivePath;
-    FileOperationProgressDialog progress(QObject::tr("Extract"), parent);
-    const qint64 total = archiveBytes(archivePath);
-    progress.setTotals(1, quint64(total));
-    progress.beginFile(QFileInfo(archivePath).fileName(), total);
-    KeyRouter::instance().setOperationInProgress(true);
-    qint64 reported = 0;
-    const bool ok = plugin->extract(
-        archivePath, destDir, {}, error,
-        [&progress, &reported](qint64 done, qint64, const QString&) {
-            progress.addTransferred(done - reported);  // for the speed
-            reported = done;
-            progress.addFileBytes(done);
-            return !progress.wasCanceled();
-        },
-        passwordAsker(&progress), conflict);
-    KeyRouter::instance().setOperationInProgress(false);
-    progress.endFile();
-    if (ok)
+Result copyOut(QWidget* parent, const ArchiveContents& contents, const QString& archiveDir,
+               const QStringList& entries, const QString& destDir, QString& error)
+{
+    spp::ArchivePlugin* plugin = Plugins::instance().archive();
+    if (!plugin || !contents.readByPlugin) {
+        error = QObject::tr("Copying files out of this archive needs the archive module; "
+                            "Alt+F9 extracts all of it.");
+        return Result::Failed;
+    }
+    if (entries.isEmpty())
         return Result::Done;
-    return progress.wasCanceled() ? Result::Cancelled : Result::Failed;
+    using namespace FileOperations;
+    const EnsureDirResult dest = ensureDestDirExists(destDir, parent);
+    if (dest != EnsureDirResult::Exists && dest != EnsureDirResult::Created)
+        return Result::Cancelled;
+
+    // Paths below the archive's directory shown in the panel.
+    const QString prefix = archiveDir.isEmpty() ? QString() : archiveDir + QLatin1Char('/');
+    const auto selected = [&entries](const QString& path) {
+        for (const QString& entry : entries) {
+            if (path == entry || path.startsWith(entry + QLatin1Char('/')))
+                return true;
+        }
+        return false;
+    };
+    const auto settled = settleConflicts(parent, contents, [&](const ArchiveEntry& entry) {
+        return selected(entry.path) ? QDir(destDir).filePath(entry.path.mid(prefix.size())) : QString();
+    });
+    if (!settled)
+        return Result::Cancelled;
+
+    // Extracted next to the target, then moved in by renaming (the same
+    // filesystem), the conflicts as settled above.
+    QTemporaryDir staging(QDir(destDir).filePath(QStringLiteral(".gemini-extract-XXXXXX")));
+    if (!staging.isValid()) {
+        error = QObject::tr("Cannot write to '%1': %2").arg(destDir, staging.errorString());
+        return Result::Failed;
+    }
+    const Result result = extractWithModule(parent, plugin, contents.archivePath, staging.path(), entries, {}, error);
+    if (result != Result::Done)
+        return result;
+    QStringList names;
+    for (const QString& entry : entries)
+        names << entry.mid(prefix.size());
+    executeCopyOrMove(QDir(staging.path()).filePath(archiveDir), names, destDir + QLatin1Char('/'), true, parent,
+                      false, std::nullopt, *settled);
+    return Result::Done;
 }
 
 Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, const QString& archivePath,

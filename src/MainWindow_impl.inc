@@ -378,10 +378,52 @@ bool MainWindow::doCompareByContents(QObject *obj, QKeyEvent *keyEvent) {
     return true;
 }
 
+bool MainWindow::refuseInsideArchive(FilePanel* panel) {
+    if (!panel || !panel->insideArchive)
+        return false;
+    QMessageBox::information(this, tr("Archive"),
+        tr("Inside an archive only viewing (F3) and copying out (F5) work."));
+    return true;
+}
+
+void MainWindow::copyOutOfArchive(FilePanel* panel) {
+    QStringList entries;
+    for (int i = 0; i < panel->entryCount(); ++i) {
+        const PanelEntry& entry = panel->entryAt(i);
+        if (panel->isMarked(entry))
+            entries << entry.branch;  // the path inside the archive
+    }
+    if (entries.isEmpty()) {
+        const PanelEntry* current = panel->currentEntryRow().first;
+        if (!current)
+            return;  // [..]
+        entries << current->branch;
+    }
+    FilePanel* opposite = oppositeFilePanel();
+    QString dest = (opposite && !opposite->insideArchive) ? opposite->currentPath : QDir::homePath();
+    bool ok = false;
+    dest = QInputDialog::getText(this, tr("Copy"),
+        entries.size() == 1 ? tr("Copy '%1' to:").arg(QFileInfo(entries.first()).fileName())
+                            : tr("Copy %1 entries to:").arg(entries.size()),
+        QLineEdit::Normal, dest, &ok);
+    if (!ok || dest.isEmpty())
+        return;
+    QString error;
+    if (ArchiveOperations::copyOut(this, panel->archiveContents, panel->archiveCurrentDir, entries,
+                                   QDir(dest).absolutePath(), error) == ArchiveOperations::Result::Failed)
+        QMessageBox::warning(this, tr("Copy"), error);
+    if (opposite && !opposite->insideArchive)
+        opposite->loadDirectory();
+}
+
 bool MainWindow::doCopy(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
+    if (panel && panel->insideArchive) {
+        copyOutOfArchive(panel);
+        return true;
+    }
     if (panel) {
         auto params = askForFileOperation(panel, false, false);  // inPlace=false, isMove=false
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this, params.useGitignore, params.totals);
@@ -397,6 +439,8 @@ bool MainWindow::doCopyInPlace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
     if (panel) {
         auto params = askForFileOperation(panel, true, false);  // inPlace=true, isMove=false
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, false, this, params.useGitignore, params.totals);
@@ -435,6 +479,8 @@ bool MainWindow::doDeletePermanently(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
 
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
 
     QDir dir(panel->currentPath);
 
@@ -534,6 +580,8 @@ bool MainWindow::doDeleteToTrash(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
 
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
 
     QDir dir(panel->currentPath);
 
@@ -662,6 +710,8 @@ bool MainWindow::doDirHotlistConfig(QObject *obj, QKeyEvent *keyEvent) {
 bool MainWindow::doEdit(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
+    if (refuseInsideArchive(currentFilePanel()))
+        return true;
     auto fullPath = currentPanelPath();
     QFileInfo info(fullPath);
     if (!info.isFile()) {
@@ -712,6 +762,8 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
 
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
     if (!panel) return true;
 
     // 1. Get current file
@@ -862,6 +914,8 @@ bool MainWindow::doMove(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
     if (panel) {
         auto params = askForFileOperation(panel, false, true);  // inPlace=false, isMove=true
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this, false, params.totals);
@@ -877,6 +931,8 @@ bool MainWindow::doMoveInPlace(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(obj);
     Q_UNUSED(keyEvent);
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
     if (panel) {
         auto params = askForFileOperation(panel, true, true);  // inPlace=true, isMove=true
         auto selected_path = FileOperations::executeCopyOrMove(params.srcPath, params.names, params.destPath, true, this, false, params.totals);
@@ -965,6 +1021,8 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     Q_UNUSED(keyEvent);
 
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
     if (!panel) return true;
 
     // 1. Determine files to pack
@@ -1338,6 +1396,8 @@ bool MainWindow::doToggleMarkDown(QObject *obj, QKeyEvent *keyEvent) {
 
 bool MainWindow::doMakeDirectory(QObject *obj, QKeyEvent *keyEvent) {
     FilePanel* panel = currentFilePanel();
+    if (refuseInsideArchive(panel))
+        return true;
     if (panel)
         createNewDirectory(panel);
     return true;

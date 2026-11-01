@@ -114,6 +114,7 @@ std::optional<ConflictPolicy> askConflictPolicy(QWidget* parent, const ConflictS
 // otherwise a quick scan (entering only the directories that exist at the
 // destination) counts the conflicts and one choice covers all of them:
 // Cancel, Skip, Overwrite All, Overwrite with Newer. No conflicts, no question.
+// presetPolicy: settled by the caller already; nothing is asked.
 // useGitignore (copy only): skip what .gitignore files ignore, read from
 // currentPath down, exactly as Find Files does (SearchIgnore).
 // totals: the work counted beforehand (with the same useGitignore), so it is
@@ -123,7 +124,8 @@ std::optional<ConflictPolicy> askConflictPolicy(QWidget* parent, const ConflictS
 QString executeCopyOrMove(const QString& currentPath, const QStringList& names,
                     const QString& destInput, bool move,
                     QWidget* parent, bool useGitignore = false,
-                    std::optional<CopyTotals> totals = std::nullopt);
+                    std::optional<CopyTotals> totals = std::nullopt,
+                    std::optional<ConflictPolicy> presetPolicy = std::nullopt);
 
 } // namespace FileOperations
 

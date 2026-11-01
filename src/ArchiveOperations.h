@@ -23,6 +23,15 @@ enum class Result { Done, Cancelled, Failed };
 // needed; else by 7z or unar. `error` is set when it failed.
 Result extract(QWidget* parent, const ArchiveContents& contents, const QString& destDir, QString& error);
 
+// F5 inside an archive: copies `entries` (paths inside the archive, below
+// its directory `archiveDir`, "" for the top) out into `destDir`, with their
+// paths relative to `archiveDir`, as copying does: existing files are
+// settled first with one question (from the listing, before extracting).
+// The entries are extracted with a progress dialog into a hidden temporary
+// directory inside `destDir` (the same filesystem) and moved from there.
+Result copyOut(QWidget* parent, const ArchiveContents& contents, const QString& archiveDir,
+               const QStringList& entries, const QString& destDir, QString& error);
+
 struct PackRequest {
     QString format;          // "zip" or "7z"
     QString volumeSize;      // empty, or e.g. "100m" (k, m, g: KiB, MiB, GiB)

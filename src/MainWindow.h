@@ -51,6 +51,12 @@ protected:
     void changeEvent(QEvent *event) override;
 private:
     bool m_geometryDirty = false;  // True if user resized window interactively
+    // A command that does not work inside an archive (only F3, F5 and going
+    // in and out do): says so and returns true when `panel` is inside one.
+    bool refuseInsideArchive(FilePanel* panel);
+    // F5 inside an archive: copies the marked entries (or the current one)
+    // out to the opposite panel's directory.
+    void copyOutOfArchive(FilePanel* panel);
     void setupUi();
     static Side opposite(Side side);
     bool eventFilter(QObject *obj, QEvent *event) override;

@@ -910,7 +910,7 @@ static void carrySpellingData(const QString &srcPath, const QString &dstPath, bo
 
 QString executeCopyOrMove(const QString &currentPath, const QStringList &names, const QString &destInput,
                             bool move, QWidget *parent, bool useGitignore,
-                            std::optional<CopyTotals> totals) {
+                            std::optional<CopyTotals> totals, std::optional<ConflictPolicy> presetPolicy) {
     if (names.isEmpty())
         return {};
 
@@ -949,9 +949,11 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     // Existing targets are settled before anything is copied, with one
     // question: for a single file whether to overwrite it, otherwise one
     // choice for all conflicts found by a quick scan.
-    ConflictPolicy policy = ConflictPolicy::Overwrite;
+    ConflictPolicy policy = presetPolicy.value_or(ConflictPolicy::Overwrite);
     const QFileInfo firstInfo(srcDir.absoluteFilePath(names.first()));
-    if (names.size() == 1 && !isRealDir(firstInfo)) {
+    if (presetPolicy) {
+        // Settled by the caller.
+    } else if (names.size() == 1 && !isRealDir(firstInfo)) {
         const QString dstFilePath = destIsDir ? QDir(dstPath).filePath(names.first()) : dstPath;
         const QFileInfo dstInfo(dstFilePath);
         if (targetExists(dstInfo) && !isRealDir(dstInfo)
