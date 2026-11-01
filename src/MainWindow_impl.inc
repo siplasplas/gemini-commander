@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "Archives.h"
 #include "ArchiveOperations.h"
+#include "Plugins.h"
 #include "PackDialog.h"
 #include "MultiRenameDialog.h"
 #include "DistroInfo.h"
@@ -795,32 +796,11 @@ bool MainWindow::doExtractFiles(QObject *obj, QKeyEvent *keyEvent) {
         }
     }
 
-    // 6. Extract: through the archive module with progress, or by 7z/unar
-    // for what it cannot read (ARJ, ACE, encrypted RAR or 7z)
-    if (contents.readByPlugin) {
-        QString error;
-        const auto result = ArchiveOperations::extract(this, contents, finalDest, error);
-        if (result == ArchiveOperations::Result::Failed)
-            QMessageBox::warning(this, tr("Extract Error"), error);
-        reloadAllPanels();
-        panel->selectEntryByName(fileName);
-        return true;
-    }
-    QProgressDialog progress(tr("Extracting files..."), QString(), 0, 0, this);
-    progress.setWindowTitle(tr("Extract"));
-    progress.setWindowModality(Qt::WindowModal);
-    progress.setMinimumDuration(0);
-    progress.setValue(0);
-    progress.show();
-    QApplication::processEvents();
-
-    QString error = extractArchive(filePath, finalDest);
-
-    progress.close();
-
-    if (!error.isEmpty()) {
+    // 6. Extract: through the archive module, or by 7z/unar for what it
+    // cannot read (ARJ, ACE, encrypted RAR or 7z); with a progress dialog
+    QString error;
+    if (ArchiveOperations::extract(this, contents, finalDest, error) == ArchiveOperations::Result::Failed)
         QMessageBox::warning(this, tr("Extract Error"), error);
-    }
 
     // Refresh panels and restore selection on archive
     reloadAllPanels();
@@ -1014,15 +994,20 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     if (dlg.exec() != QDialog::Accepted)
         return true;
 
-    // 4. Check executable
-    QString packer = dlg.packerType();
-    QString executable = (packer == "7z") ? "7z" : "zip";
-    QString execPath = QStandardPaths::findExecutable(executable);
-
-    if (execPath.isEmpty()) {
+    // 4. The archive module packs, except 7z with a solid block size (and
+    // everything without the module): then a program is needed
+    ArchiveOperations::PackRequest request;
+    request.format = dlg.packerType();
+    request.volumeSize = dlg.volumeSize();
+    request.solidBlockSize = dlg.solidBlockSize();
+    request.moveFiles = dlg.moveFiles();
+    const bool needsProgram = !Plugins::instance().archive()
+                              || (request.format == "7z" && !request.solidBlockSize.isEmpty());
+    const QString executable = request.format;  // "7z" or "zip"
+    if (needsProgram && QStandardPaths::findExecutable(executable).isEmpty()) {
         // Show install instructions
         QString installCmd = DistroInfo::installCommand(
-            (packer == "7z") ? "p7zip-full" : "zip");
+            (executable == "7z") ? "p7zip-full" : "zip");
         QMessageBox::warning(this, tr("Packer Not Found"),
             tr("%1 not found.\n\nInstall with:\n%2")
                 .arg(executable, installCmd));
@@ -1043,8 +1028,7 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
 
     // Check if destination is inside source or source is inside destination
     for (const QString& fileRelPath : filesToPack) {
-        QFileInfo fi(fileRelPath);
-        QString filePath = fi.absoluteFilePath();
+        QString filePath = QDir(srcDir).absoluteFilePath(fileRelPath);
 
         // Check if archive destination is inside any source directory
         if (destDir.startsWith(filePath + "/") || destDir == filePath) {
@@ -1059,28 +1043,10 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     QString archivePath = QDir(dlg.destination())
         .absoluteFilePath(dlg.archiveName());
 
-    // Show progress dialog
-    QProgressDialog progress(tr("Packing files..."), QString(), 0, 0, this);
-    progress.setWindowTitle(tr("Pack"));
-    progress.setWindowModality(Qt::WindowModal);
-    progress.setMinimumDuration(0);
-    progress.setValue(0);
-    progress.show();
-    QApplication::processEvents();
-
     QString error;
-    if (packer == "7z") {
-        error = pack7z(archivePath, filesToPack, dlg.moveFiles(),
-                       dlg.volumeSize(), dlg.solidBlockSize());
-    } else {
-        error = packZip(archivePath, filesToPack, dlg.moveFiles());
-    }
-
-    progress.close();
-
-    if (!error.isEmpty()) {
+    if (ArchiveOperations::pack(this, panel->currentPath, filesToPack, archivePath, request, error)
+        == ArchiveOperations::Result::Failed)
         QMessageBox::warning(this, tr("Pack Error"), error);
-    }
 
     // Refresh panels to show new archive
     reloadAllPanels();

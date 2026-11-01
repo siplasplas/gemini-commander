@@ -74,23 +74,10 @@ struct ArchiveContents {
 // Read archive contents using libarchive, fallback to unar
 ArchiveContents readArchive(const QString& archivePath);
 
-// Pack files into 7z archive
-// Returns empty string on success, error message on failure
-QString pack7z(const QString& archivePath, const QStringList& files,
-               bool moveFiles, const QString& volumeSize,
-               const QString& solidBlockSize);
-
-// Pack files into zip archive
-// Returns empty string on success, error message on failure
-QString packZip(const QString& archivePath, const QStringList& files,
-                bool moveFiles);
-
 // Check if archive has single root entry (file or directory)
 // Returns true if single root, false if multiple roots
 bool archiveHasSingleRoot(const ArchiveContents& contents);
 
-// Extract archive to destination directory
-// Returns empty string on success, error message on failure
-QString extractArchive(const QString& archivePath, const QString& destDir);
+// Extracting and packing: ArchiveOperations.
 
 #endif // ARCHIVES_H

@@ -12,6 +12,11 @@
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QProcess>
+#include <QRegularExpression>
+#include <QStandardPaths>
+#include <QTemporaryDir>
 
 namespace ArchiveOperations {
 
@@ -45,15 +50,136 @@ qint64 archiveBytes(const QString& archivePath)
     }
 }
 
+// The volume files name.001, name.002, ... that exist.
+QStringList volumeFiles(const QString& path)
+{
+    QStringList result;
+    for (int i = 1;; ++i) {
+        const QString volume = QStringLiteral("%1.%2").arg(path).arg(i, 3, 10, QLatin1Char('0'));
+        if (!QFileInfo::exists(volume))
+            return result;
+        result << volume;
+    }
+}
+
+// "100m" -> bytes (k, m, g: KiB, MiB, GiB, as 7z reads them); 0 when empty.
+qint64 sizeInBytes(const QString& size)
+{
+    QString number = size.trimmed().toLower();
+    if (number.isEmpty())
+        return 0;
+    qint64 unit = 1;
+    if (number.endsWith(QLatin1Char('k')))
+        unit = 1024;
+    else if (number.endsWith(QLatin1Char('m')))
+        unit = 1024 * 1024;
+    else if (number.endsWith(QLatin1Char('g')))
+        unit = 1024LL * 1024 * 1024;
+    if (unit > 1)
+        number.chop(1);
+    return qint64(number.toDouble() * double(unit));
+}
+
+// Runs an external program with the progress dialog: percentages it prints
+// (7z with -bsp1) move the bar; without them the dialog shows that it works.
+// Cancelling kills the program.
+Result runWithProgress(QWidget* parent, const QString& title, const QString& program, const QStringList& args,
+                       const QString& workDir, QString& error, const QByteArray& input = {})
+{
+    if (QStandardPaths::findExecutable(program).isEmpty()) {
+        error = QObject::tr("%1 not found.").arg(program);
+        return Result::Failed;
+    }
+    QProcess process;
+    process.setWorkingDirectory(workDir);
+    process.start(program, args);
+    if (!process.waitForStarted()) {
+        error = QObject::tr("Cannot start %1: %2").arg(program, process.errorString());
+        return Result::Failed;
+    }
+    if (!input.isEmpty())
+        process.write(input);
+    process.closeWriteChannel();
+
+    FileOperationProgressDialog progress(title, parent);
+    progress.setTotals(1, 100);
+    progress.beginFile(program, 100);
+    KeyRouter::instance().setOperationInProgress(true);
+    static const QRegularExpression percent(QStringLiteral("(\\d{1,3})%"));
+    QByteArray errors;
+    bool cancelled = false;
+    while (!process.waitForFinished(50)) {
+        const QString out = QString::fromLocal8Bit(process.readAllStandardOutput());
+        auto matches = percent.globalMatch(out);
+        int last = -1;
+        while (matches.hasNext())
+            last = matches.next().captured(1).toInt();
+        if (last >= 0)
+            progress.addFileBytes(last);
+        errors += process.readAllStandardError();
+        progress.processEvents();
+        if (progress.wasCanceled()) {
+            process.kill();
+            process.waitForFinished();
+            cancelled = true;
+            break;
+        }
+    }
+    KeyRouter::instance().setOperationInProgress(false);
+    if (cancelled)
+        return Result::Cancelled;
+    progress.endFile();
+    errors += process.readAllStandardError();
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        error = QObject::tr("%1 failed with exit code %2:\n%3")
+                    .arg(program).arg(process.exitCode()).arg(QString::fromLocal8Bit(errors).trimmed());
+        return Result::Failed;
+    }
+    return Result::Done;
+}
+
+// Without the module, or a format it cannot read: 7z, else unar.
+Result extractWithProcess(QWidget* parent, const QString& archivePath, const QString& destDir, QString& error)
+{
+    QDir().mkpath(destDir);
+    if (!QStandardPaths::findExecutable(QStringLiteral("7z")).isEmpty()) {
+        const Result result = runWithProgress(
+            parent, QObject::tr("Extract"), QStringLiteral("7z"),
+            {"x", "-y", "-bsp1", QStringLiteral("-o%1").arg(destDir), archivePath}, destDir, error);
+        if (result != Result::Failed)
+            return result;
+        // 7z cannot read it: unar may.
+    }
+    if (!QStandardPaths::findExecutable(QStringLiteral("unar")).isEmpty()) {
+        error.clear();
+        return runWithProgress(parent, QObject::tr("Extract"), QStringLiteral("unar"),
+                               {"-f", "-o", destDir, archivePath}, destDir, error);
+    }
+    if (error.isEmpty())
+        error = QObject::tr("No extraction tool found. Install 7z or unar.");
+    return Result::Failed;
+}
+
+// Removes the packed files (Pack with "move"); a link, not what it points to.
+void removeSources(const QString& baseDir, const QStringList& files)
+{
+    for (const QString& file : files) {
+        const QString path = QDir(baseDir).absoluteFilePath(file);
+        const QFileInfo info(path);
+        if (info.isDir() && !info.isSymLink())
+            QDir(path).removeRecursively();
+        else
+            QFile::remove(path);
+    }
+}
+
 } // namespace
 
 Result extract(QWidget* parent, const ArchiveContents& contents, const QString& destDir, QString& error)
 {
     spp::ArchivePlugin* plugin = Plugins::instance().archive();
-    if (!plugin) {
-        error = QObject::tr("The archive module is not loaded.");
-        return Result::Failed;
-    }
+    if (!plugin || !contents.readByPlugin)
+        return extractWithProcess(parent, contents.archivePath, destDir, error);
 
     // Existing files, settled before extracting (as copying does).
     using namespace FileOperations;
@@ -118,6 +244,91 @@ Result extract(QWidget* parent, const ArchiveContents& contents, const QString& 
     if (ok)
         return Result::Done;
     return progress.wasCanceled() ? Result::Cancelled : Result::Failed;
+}
+
+Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, const QString& archivePath,
+            const PackRequest& request, QString& error)
+{
+    const qint64 volumeBytes = sizeInBytes(request.volumeSize);
+    // An existing archive (or its volumes) is replaced, not added to.
+    QStringList existing = volumeBytes > 0 ? volumeFiles(archivePath) : QStringList();
+    if (QFileInfo::exists(archivePath))
+        existing.prepend(archivePath);
+    if (!existing.isEmpty()) {
+        const auto reply = QMessageBox::question(
+            parent, QObject::tr("Pack"),
+            QObject::tr("'%1' already exists.\nReplace it?").arg(existing.first()),
+            QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (reply != QMessageBox::Yes)
+            return Result::Cancelled;
+        for (const QString& file : existing)
+            QFile::remove(file);
+    }
+
+    spp::ArchivePlugin* plugin = Plugins::instance().archive();
+    const bool by7z = request.format == QLatin1String("7z") && !request.solidBlockSize.isEmpty();
+    Result result;
+    if (plugin && !by7z) {
+        spp::PackOptions options;
+        options.format = request.format;
+        options.volumeSize = volumeBytes;
+        FileOperationProgressDialog progress(QObject::tr("Pack"), parent);
+        bool started = false;
+        qint64 reported = 0;
+        KeyRouter::instance().setOperationInProgress(true);
+        const bool ok = plugin->pack(
+            archivePath, baseDir, files, options, error,
+            [&](qint64 done, qint64 total, const QString&) {
+                if (!started) {
+                    progress.setTotals(1, quint64(total));
+                    progress.beginFile(QFileInfo(archivePath).fileName(), total);
+                    started = true;
+                }
+                progress.addTransferred(done - reported);  // for the speed
+                reported = done;
+                progress.addFileBytes(done);
+                return !progress.wasCanceled();
+            });
+        KeyRouter::instance().setOperationInProgress(false);
+        result = ok ? Result::Done : progress.wasCanceled() ? Result::Cancelled : Result::Failed;
+    } else if (request.format == QLatin1String("7z")) {
+        // A solid block size (or no module): 7z.
+        QStringList args = {"a", "-bsp1"};
+        if (volumeBytes > 0)
+            args << QStringLiteral("-v%1").arg(request.volumeSize);
+        if (!request.solidBlockSize.isEmpty())
+            args << QStringLiteral("-ms=%1").arg(request.solidBlockSize) << "-mqs=on";
+        // The names in a list file: thousands of them do not fit the command line.
+        QTemporaryDir listDir;
+        QFile list(listDir.filePath(QStringLiteral("files.txt")));
+        if (!listDir.isValid() || !list.open(QIODevice::WriteOnly)) {
+            error = QObject::tr("Failed to create temporary file list.");
+            return Result::Failed;
+        }
+        for (const QString& file : files)
+            list.write(file.toUtf8() + '\n');
+        list.close();
+        args << "-scsUTF-8" << archivePath << QStringLiteral("@%1").arg(list.fileName());
+        result = runWithProgress(parent, QObject::tr("Pack"), QStringLiteral("7z"), args, baseDir, error);
+    } else {
+        // No module: zip (no volumes), names from its standard input.
+        QByteArray names;
+        for (const QString& file : files)
+            names += file.toUtf8() + '\n';
+        result = runWithProgress(parent, QObject::tr("Pack"), QStringLiteral("zip"),
+                                 {"-r", "-y", archivePath, "-@"}, baseDir, error, names);
+    }
+
+    if (result != Result::Done) {
+        // A process stopped halfway leaves its output; the module does not.
+        QFile::remove(archivePath);
+        for (const QString& volume : volumeFiles(archivePath))
+            QFile::remove(volume);
+        return result;
+    }
+    if (request.moveFiles)
+        removeSources(baseDir, files);
+    return Result::Done;
 }
 
 } // namespace ArchiveOperations

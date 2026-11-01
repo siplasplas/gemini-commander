@@ -90,8 +90,10 @@ void PackDialog::setupUi()
     // Solid block
     auto* solidLayout = new QHBoxLayout();
     m_solidBlockEdit = new QLineEdit(this);
-    m_solidBlockEdit->setPlaceholderText(tr("empty = no solid"));
-    m_solidBlockEdit->setText("1");
+    // Empty: the archive module packs, as one solid block; a size needs 7z.
+    m_solidBlockEdit->setPlaceholderText(tr("empty = one block"));
+    m_solidBlockEdit->setToolTip(tr("Empty: one solid block for the whole archive.\n"
+                                    "A size (e.g. 1 GB) packs with the 7z program."));
     m_solidBlockEdit->setFixedWidth(100);
     m_solidBlockUnitCombo = new QComboBox(this);
     m_solidBlockUnitCombo->addItem("B");
