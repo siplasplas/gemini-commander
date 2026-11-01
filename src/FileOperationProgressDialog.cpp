@@ -169,6 +169,16 @@ void FileOperationProgressDialog::updateCounting(quint64 files, quint64 bytes)
     refreshBars(true);
 }
 
+void FileOperationProgressDialog::updateScanning(quint64 entries, quint64 conflicts)
+{
+    if (m_canceled)
+        return;
+    m_fileLabel->setText(tr("Checking the destination... %1 entries, %2 conflicts")
+                             .arg(entries)
+                             .arg(conflicts));
+    refreshBars(true);
+}
+
 void FileOperationProgressDialog::setTotals(quint64 totalFiles, quint64 totalBytes)
 {
     m_totalFiles = totalFiles;

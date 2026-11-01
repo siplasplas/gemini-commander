@@ -17,12 +17,15 @@
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
+#include <QDateTime>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
+#include <QLocale>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QPushButton>
 
 #ifdef _WIN32
 #include <io.h>
@@ -369,19 +372,148 @@ void countCopyWork(const QString& basePath, const QStringList& names,
     keepGoing(outFiles, outBytes);
 }
 
-QMessageBox::StandardButton askOverwriteMulti(QWidget *parent, const QString &name) {
-    auto reply = QMessageBox::question(
-            parent, QObject::tr("Overwrite"), QObject::tr("'%1' already exists.\nOverwrite?").arg(name),
-            QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::No | QMessageBox::NoToAll | QMessageBox::Abort,
-            QMessageBox::Yes);
-    return reply;
+// A path taken at the destination, also by a broken symbolic link.
+static bool targetExists(const QFileInfo &info) {
+    return info.exists() || info.isSymLink();
 }
 
-QMessageBox::StandardButton askOverwriteSingle(QWidget *parent, const QString &name) {
-    auto reply = QMessageBox::question(parent, QObject::tr("Overwrite"),
-                                       QObject::tr("'%1' already exists.\nOverwrite?").arg(name),
-                                       QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-    return reply;
+// A real directory, not a symbolic link to one.
+static bool isRealDir(const QFileInfo &info) {
+    return info.isDir() && !info.isSymLink();
+}
+
+// Modification times closer than this count as the same: FAT keeps them to
+// 2 seconds, so a file copied there and back is not "newer".
+constexpr qint64 kSameTimeMs = 2000;
+
+// 1 when the source is newer than the target, -1 when older, 0 the same.
+static int compareTimes(const QFileInfo &src, const QFileInfo &dst) {
+    const qint64 diff = src.lastModified().toMSecsSinceEpoch() - dst.lastModified().toMSecsSinceEpoch();
+    if (diff >= kSameTimeMs)
+        return 1;
+    if (diff <= -kSameTimeMs)
+        return -1;
+    return 0;
+}
+
+static bool overwriteAllowed(ConflictPolicy policy, const QFileInfo &src, const QFileInfo &dst) {
+    switch (policy) {
+        case ConflictPolicy::Overwrite:
+            return true;
+        case ConflictPolicy::Skip:
+            return false;
+        case ConflictPolicy::OverwriteOlder:
+            return compareTimes(src, dst) > 0;
+    }
+    return false;
+}
+
+// The entries a copy or move goes through in a directory (as
+// copyOrMoveDirectoryRecursive does).
+static QFileInfoList dirEntries(const QString &path) {
+    return QDir(path).entryInfoList(
+        QDir::Files | QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot | QDir::System, QDir::Name);
+}
+
+namespace {
+
+// Files (and symbolic links) whose target exists already, found before
+// copying or moving.
+struct ConflictScan {
+    quint64 entries = 0;    // checked, for the progress
+    quint64 conflicts = 0;
+    quint64 newer = 0;      // of them, the source newer than the target
+    QStringList examples;   // the first few target paths
+};
+
+} // namespace
+
+// Goes through `src` against its target `dst`; only directories that exist
+// at the destination are entered, the rest cannot conflict. Mismatches (a
+// file over a directory, a directory over a file) are reported when copying
+// and are not conflicts. False when keepGoing() stops it.
+static bool scanConflicts(const QFileInfo &src, const QString &dst, bool sameFs, SearchIgnore *ignore,
+                          ConflictScan &scan, const std::function<bool(const ConflictScan&)> &keepGoing) {
+    if (ignore && ignore->isIgnored(src))
+        return true;
+    if (++scan.entries % 200 == 0 && !keepGoing(scan))
+        return false;
+    const QFileInfo dstInfo(dst);
+    if (!targetExists(dstInfo))
+        return true;
+    if (src.isSymLink() && !sameFs)
+        return true;  // not copied across filesystems
+    if (isRealDir(src)) {
+        if (!isRealDir(dstInfo))
+            return true;
+        for (const QFileInfo &child : dirEntries(src.absoluteFilePath())) {
+            if (!scanConflicts(child, QDir(dst).filePath(child.fileName()), sameFs, ignore, scan, keepGoing))
+                return false;
+        }
+        return true;
+    }
+    if (isRealDir(dstInfo))
+        return true;
+    scan.conflicts++;
+    if (compareTimes(src, dstInfo) > 0)
+        scan.newer++;
+    if (scan.examples.size() < 5)
+        scan.examples << dst;
+    return true;
+}
+
+static QString describeFile(const QFileInfo &info) {
+    return QObject::tr("%1, %2")
+        .arg(QLocale().formattedDataSize(info.size()),
+             info.lastModified().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")));
+}
+
+// One file whose target exists: Overwrite or Cancel, saying whether the file
+// copied over it is newer, older or of the same time.
+static bool askOverwriteOneFile(QWidget *parent, const QFileInfo &src, const QFileInfo &dst) {
+    const int cmp = compareTimes(src, dst);
+    const QString question = cmp > 0 ? QObject::tr("Overwrite with a newer file?")
+                           : cmp < 0 ? QObject::tr("Overwrite with an older file?")
+                                     : QObject::tr("Overwrite with a file of the same time?");
+    QMessageBox box(QMessageBox::Question, QObject::tr("Overwrite"),
+                    QObject::tr("'%1' already exists.\n%2").arg(dst.absoluteFilePath(), question),
+                    QMessageBox::NoButton, parent);
+    box.setInformativeText(QObject::tr("Source: %1\nTarget: %2").arg(describeFile(src), describeFile(dst)));
+    QPushButton *overwrite = box.addButton(QObject::tr("&Overwrite"), QMessageBox::AcceptRole);
+    QPushButton *cancel = box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(cmp > 0 ? overwrite : cancel);
+    box.setEscapeButton(cancel);
+    box.exec();
+    return box.clickedButton() == overwrite;
+}
+
+// Several conflicts: one choice for all of them; nullopt cancels the command.
+static std::optional<ConflictPolicy> askConflictPolicy(QWidget *parent, const ConflictScan &scan, bool move) {
+    QString text = QObject::tr("%n conflict(s): already at the destination", nullptr, int(scan.conflicts));
+    text += QLatin1Char('\n');
+    for (const QString &path : scan.examples)
+        text += QLatin1Char('\n') + path;
+    if (scan.conflicts > quint64(scan.examples.size()))
+        text += QStringLiteral("\n…");
+    QMessageBox box(QMessageBox::Question, QObject::tr("Conflicts"), text, QMessageBox::NoButton, parent);
+    QString info = QObject::tr("%n of them newer than the target.", nullptr, int(scan.newer));
+    if (move)
+        info += QLatin1Char('\n') + QObject::tr("Files not overwritten stay in the source.");
+    box.setInformativeText(info);
+    QPushButton *skip = box.addButton(QObject::tr("&Skip"), QMessageBox::AcceptRole);
+    QPushButton *all = box.addButton(QObject::tr("Overwrite &All"), QMessageBox::AcceptRole);
+    QPushButton *newer = box.addButton(QObject::tr("Overwrite with &Newer"), QMessageBox::AcceptRole);
+    QPushButton *cancel = box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(skip);
+    box.setEscapeButton(cancel);
+    box.exec();
+    if (box.clickedButton() == skip)
+        return ConflictPolicy::Skip;
+    if (box.clickedButton() == all)
+        return ConflictPolicy::Overwrite;
+    if (box.clickedButton() == newer)
+        return ConflictPolicy::OverwriteOlder;
+    return std::nullopt;
 }
 
 #ifdef Q_OS_LINUX
@@ -601,60 +733,45 @@ bool copySymlink(const QString &srcPath, const QString &dstPath) {
     return true;
 }
 
-QMessageBox::Button copyFileAskOverwrite(const QString &srcPath, const QString &dstPath, bool multi,
-                                         QMessageBox::Button askPolice, QWidget *parent,
-                                         FileOperationProgressDialog* progress, DestSync* sync) {
-    QFileInfo dstInfo(dstPath);
-    QMessageBox::Button result = QMessageBox::Yes;
-    if (dstInfo.exists()) {
-        // Never offer to overwrite a directory with a same-named file:
-        // wiping a whole target tree to drop a single file is too dangerous.
-        if (dstInfo.isDir()) {
+namespace {
+enum class FileResult { Done, Skipped, Failed };
+}
+
+// Copies (or moves, by copying and removing the source) one file; an existing
+// target is overwritten as `policy` says.
+static FileResult copyOrMoveFile(const QString &srcPath, const QString &dstPath, bool move,
+                                 ConflictPolicy policy, QWidget *parent,
+                                 FileOperationProgressDialog* progress, DestSync* sync) {
+    const QFileInfo dstInfo(dstPath);
+    if (targetExists(dstInfo)) {
+        // Never overwrite a directory with a same-named file: wiping a whole
+        // target tree to drop a single file is too dangerous.
+        if (isRealDir(dstInfo)) {
             if (progress) progress->pauseClock();
             QMessageBox::warning(parent, QObject::tr("Error"),
                 QObject::tr("Cannot copy '%1': a directory with the same name "
                             "already exists at the destination.").arg(dstInfo.fileName()));
             if (progress) progress->resumeClock();
-            return QMessageBox::No;
+            return FileResult::Failed;
         }
-        QMessageBox::Button reply;
-        switch (askPolice) {
-            case QMessageBox::Yes:
-            case QMessageBox::No:
-                // Exclude the time spent waiting on the prompt from speed/ETA.
-                if (progress) progress->pauseClock();
-                if (multi)
-                    reply = askOverwriteMulti(parent, dstPath);
-                else
-                    reply = askOverwriteSingle(parent, dstPath);
-                if (progress) progress->resumeClock();
-                break;
-            default:
-                reply = askPolice;
-        }
-        if (reply == QMessageBox::Abort)
-            return QMessageBox::Abort;
-        if (reply == QMessageBox::No)
-            return QMessageBox::No;
-        if (reply == QMessageBox::NoToAll)
-            return QMessageBox::NoToAll;
-        if (reply == QMessageBox::YesToAll)
-            result = QMessageBox::YesToAll;
+        if (!overwriteAllowed(policy, QFileInfo(srcPath), dstInfo))
+            return FileResult::Skipped;
         QFile::remove(dstPath);
     }
     if (!copyFile(srcPath, dstPath, progress, sync))
-        return QMessageBox::No;
-    return result;
+        return FileResult::Failed;
+    if (move)
+        QFile::remove(srcPath);
+    return FileResult::Done;
 }
 
-QMessageBox::Button copyOrMoveFileAskOverwrite(const QString &srcPath, const QString &dstPath, bool move, bool multi,
-                                               QMessageBox::Button askPolice, QWidget *parent,
-                                               FileOperationProgressDialog* progress, DestSync* sync) {
-    auto reply = copyFileAskOverwrite(srcPath, dstPath, multi, askPolice, parent, progress, sync);
-    if (move)
-        if (reply == QMessageBox::Yes || reply == QMessageBox::YesToAll)
-            QFile::remove(srcPath);
-    return reply;
+// Copies a symbolic link itself (same filesystem); an existing target is
+// replaced as `policy` says. True when copied.
+static bool copySymlinkWithPolicy(const QFileInfo &src, const QString &dstPath, ConflictPolicy policy) {
+    const QFileInfo dstInfo(dstPath);
+    if (targetExists(dstInfo) && (isRealDir(dstInfo) || !overwriteAllowed(policy, src, dstInfo)))
+        return false;
+    return copySymlink(src.absoluteFilePath(), dstPath);
 }
 
 void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *cancelFlag,
@@ -699,34 +816,25 @@ void collectCopyStats(const QString &srcPath, CopyStats &stats, bool &ok, bool *
     }
 }
 
-QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, bool move,
-                                                 bool sameFs, QMessageBox::Button askPolice, CopyStats &stats,
-                                                 FileOperationProgressDialog &progress, DestSync &sync,
-                                                 SearchIgnore *ignore) {
-    if (askPolice == QMessageBox::Abort)
-        return QMessageBox::Abort;
-
+bool copyOrMoveDirectoryRecursive(const QString &srcRoot, const QString &dstRoot, bool move,
+                                  bool sameFs, ConflictPolicy policy, CopyStats &stats,
+                                  FileOperationProgressDialog &progress, DestSync &sync,
+                                  SearchIgnore *ignore) {
     QFileInfo srcInfo(srcRoot);
     if (!srcInfo.exists() || !srcInfo.isDir())
-        return askPolice;
+        return true;
 
     QDir dstDir;
     if (!dstDir.mkpath(dstRoot)) {
         QMessageBox::warning(nullptr, QObject::tr("Error"),
                              QObject::tr("Failed to create directory:\n%1").arg(dstRoot));
-        return askPolice;
+        return true;
     }
 
-    QDir dir(srcRoot);
-
-    // Get all entries including symlinks (System flag includes symlinks on Unix)
-    const QFileInfoList entries = dir.entryInfoList(
-        QDir::Files | QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot | QDir::System,
-        QDir::Name);
-
-    for (const QFileInfo &fi: entries) {
+    // All entries including symlinks (System flag includes symlinks on Unix)
+    for (const QFileInfo &fi: dirEntries(srcRoot)) {
         if (progress.wasCanceled())
-            return QMessageBox::Abort;
+            return false;
         if (ignore && ignore->isIgnored(fi))
             continue;
 
@@ -737,10 +845,8 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
         if (fi.isSymLink()) {
             if (sameFs) {
                 // Same FS: copy the symlink itself (don't follow)
-                copySymlink(srcPath, dstPath);
-                if (move) {
+                if (copySymlinkWithPolicy(fi, dstPath, policy) && move)
                     QFile::remove(srcPath);
-                }
             } else {
                 // Cross-FS: skip symlinks
                 stats.symlinks++;
@@ -751,24 +857,56 @@ QMessageBox::Button copyOrMoveDirectoryRecursive(const QString &srcRoot, const Q
         // Handle regular files
         if (fi.isFile()) {
             progress.beginFile(fi.fileName(), fi.size());
-            askPolice = copyOrMoveFileAskOverwrite(srcPath, dstPath, move, true, askPolice, &progress, &progress, &sync);
+            copyOrMoveFile(srcPath, dstPath, move, policy, &progress, &progress, &sync);
             progress.endFile();
-
-            if (askPolice == QMessageBox::Abort)
-                return QMessageBox::Abort;
         }
         // Handle directories (recursive)
         else if (fi.isDir()) {
-            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, askPolice, stats, progress, sync,
-                                                     ignore);
-
-            if (askPolice == QMessageBox::Abort)
-                return QMessageBox::Abort;
+            if (!copyOrMoveDirectoryRecursive(srcPath, dstPath, move, sameFs, policy, stats, progress, sync,
+                                              ignore))
+                return false;
             // Carry source directory metadata (times, permissions) to the copy.
             finalizeCopiedFile(srcPath, dstPath);
+            // Moved: gone unless something stayed (skipped, failed).
+            if (move)
+                QDir().rmdir(srcPath);
         }
     }
-    return askPolice;
+    return true;
+}
+
+// Same-filesystem move of `src` into the existing directory `dst`: entries
+// missing there are renamed into it, directories on both sides are merged
+// the same way, and files on both sides follow `policy`. The source
+// directories left empty are removed.
+static void moveMergeByRename(const QString &src, const QString &dst, ConflictPolicy policy, QWidget *parent) {
+    for (const QFileInfo &fi : dirEntries(src)) {
+        const QString srcPath = fi.absoluteFilePath();
+        const QString dstPath = QDir(dst).filePath(fi.fileName());
+        const QFileInfo dstInfo(dstPath);
+        if (targetExists(dstInfo)) {
+            if (isRealDir(fi) && isRealDir(dstInfo)) {
+                moveMergeByRename(srcPath, dstPath, policy, parent);
+                continue;
+            }
+            if (isRealDir(fi) || isRealDir(dstInfo)) {
+                QMessageBox::warning(parent, QObject::tr("Error"),
+                    QObject::tr("Cannot move '%1': a file and a directory have the same name.")
+                        .arg(srcPath));
+                continue;
+            }
+            if (!overwriteAllowed(policy, fi, dstInfo))
+                continue;
+            QFile::remove(dstPath);
+            qce::spell::removeSpellingData(dstPath);
+        }
+        if (QFile::rename(srcPath, dstPath))
+            qce::spell::moveSpellingData(srcPath, dstPath);
+        else
+            QMessageBox::warning(parent, QObject::tr("Error"),
+                                 QObject::tr("Failed to move '%1'").arg(srcPath));
+    }
+    QDir().rmdir(src);
 }
 
 bool isInvalidCopyMoveTarget(const QString &srcPath, const QString &dstPath) {
@@ -848,15 +986,6 @@ void ensureParentDirExists(const QString &filePath) {
         parentDir.mkpath(".");
 }
 
-// Remove existing file or directory
-void removeExisting(const QString &path) {
-    QFileInfo info(path);
-    if (info.isDir())
-        QDir(path).removeRecursively();
-    else
-        QFile::remove(path);
-}
-
 // The words ignored by the editor's spell check in the file, or in the files
 // under the directory, follow it to its copy or new place. An overwritten
 // file's own words are dropped first; a directory copied into an existing one
@@ -908,6 +1037,41 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
 
     FileOperationProgressDialog progressDlg(move ? QObject::tr("Move") : QObject::tr("Copy"), parent);
 
+    // Existing targets are settled before anything is copied, with one
+    // question: for a single file whether to overwrite it, otherwise one
+    // choice for all conflicts found by a quick scan.
+    ConflictPolicy policy = ConflictPolicy::Overwrite;
+    const QFileInfo firstInfo(srcDir.absoluteFilePath(names.first()));
+    if (names.size() == 1 && !isRealDir(firstInfo)) {
+        const QString dstFilePath = destIsDir ? QDir(dstPath).filePath(names.first()) : dstPath;
+        const QFileInfo dstInfo(dstFilePath);
+        if (targetExists(dstInfo) && !isRealDir(dstInfo)
+            && !isInvalidCopyMoveTarget(firstInfo.absoluteFilePath(), dstFilePath)
+            && (!firstInfo.isSymLink() || sameFs)
+            && !askOverwriteOneFile(parent, firstInfo, dstInfo))
+            return {};
+    } else {
+        ConflictScan scan;
+        const auto keepGoing = [&progressDlg](const ConflictScan& s) {
+            progressDlg.updateScanning(s.entries, s.conflicts);
+            return !progressDlg.wasCanceled();
+        };
+        for (const QString &name : names) {
+            const QString srcPath = srcDir.absoluteFilePath(name);
+            const QString dstFilePath = destIsDir ? QDir(dstPath).filePath(name) : dstPath;
+            if (isInvalidCopyMoveTarget(srcPath, dstFilePath))
+                continue;
+            if (!scanConflicts(QFileInfo(srcPath), dstFilePath, sameFs, ignore, scan, keepGoing))
+                return {};
+        }
+        if (scan.conflicts > 0) {
+            const auto chosen = askConflictPolicy(parent, scan, move);
+            if (!chosen)
+                return {};
+            policy = *chosen;
+        }
+    }
+
     if (fastMove) {
         // Fast renames: nothing to weigh by bytes, drive progress by item count.
         progressDlg.setTotals(static_cast<quint64>(names.size()), 0);
@@ -933,7 +1097,6 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
     // Linux). Its destructor performs the final flush even on early return.
     DestSync destSync(dstPath);
 
-    QMessageBox::Button askPolice = QMessageBox::Yes;
     for (const QString &name: names) {
         QString srcPath = srcDir.absoluteFilePath(name);
         QString dstFilePath = destIsDir ? QDir(dstPath).filePath(name) : dstPath;
@@ -950,8 +1113,14 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
         // Handle symbolic links
         if (srcInfo.isSymLink()) {
             if (sameFs) {
+                const QFileInfo dstInfo(dstFilePath);
                 if (move) {
                     // Same FS move: rename works for symlinks
+                    if (targetExists(dstInfo)) {
+                        if (isRealDir(dstInfo) || !overwriteAllowed(policy, srcInfo, dstInfo))
+                            continue;
+                        QFile::remove(dstFilePath);
+                    }
                     QFile file(srcPath);
                     if (!file.rename(dstFilePath)) {
                         QMessageBox::warning(parent, QObject::tr("Error"),
@@ -959,7 +1128,7 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
                     }
                 } else {
                     // Same FS copy: copy the symlink itself
-                    copySymlink(srcPath, dstFilePath);
+                    copySymlinkWithPolicy(srcInfo, dstFilePath, policy);
                 }
             } else {
                 // Cross-FS: skip symlinks
@@ -972,43 +1141,29 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
             // Same filesystem move - rename (fast). Advance progress per item.
             progressDlg.beginFile(name, 0);
 
-            // QFile::rename never overwrites: if the target exists we must
-            // ask (honoring Yes/No/YesToAll/NoToAll/Abort) and remove it first,
-            // otherwise rename fails and the batch stalls on the first conflict.
-            if (QFileInfo::exists(dstFilePath)) {
-                // Never offer to overwrite a directory with a same-named file:
-                // wiping a whole target tree to drop a single file is too dangerous.
-                if (srcInfo.isFile() && QFileInfo(dstFilePath).isDir()) {
+            // QFile::rename never overwrites: an existing target is removed
+            // first when the policy says so. A directory is never removed: a
+            // directory moved onto one is merged into it, a file is not put
+            // in place of a directory, nor a directory in place of a file.
+            const QFileInfo dstInfo(dstFilePath);
+            if (targetExists(dstInfo)) {
+                if (isRealDir(srcInfo) && isRealDir(dstInfo)) {
+                    moveMergeByRename(srcPath, dstFilePath, policy, parent);
+                    progressDlg.endFile();
+                    continue;
+                }
+                if (isRealDir(srcInfo) || isRealDir(dstInfo)) {
                     QMessageBox::warning(parent, QObject::tr("Error"),
-                        QObject::tr("Cannot move '%1': a directory with the same name "
-                                    "already exists at the destination.").arg(name));
+                        QObject::tr("Cannot move '%1': a file and a directory have the same name.")
+                            .arg(name));
                     progressDlg.endFile();
                     continue;
                 }
-                QMessageBox::Button reply;
-                switch (askPolice) {
-                    case QMessageBox::Yes:
-                    case QMessageBox::No:
-                        reply = names.size() > 1 ? askOverwriteMulti(&progressDlg, dstFilePath)
-                                                 : askOverwriteSingle(&progressDlg, dstFilePath);
-                        break;
-                    default:
-                        reply = askPolice;
-                }
-                if (reply == QMessageBox::Abort)
-                    break;
-                if (reply == QMessageBox::NoToAll) {
-                    askPolice = QMessageBox::NoToAll;
+                if (!overwriteAllowed(policy, srcInfo, dstInfo)) {
                     progressDlg.endFile();
                     continue;
                 }
-                if (reply == QMessageBox::No) {
-                    progressDlg.endFile();
-                    continue;
-                }
-                if (reply == QMessageBox::YesToAll)
-                    askPolice = QMessageBox::YesToAll;
-                removeExisting(dstFilePath);
+                QFile::remove(dstFilePath);
                 qce::spell::removeSpellingData(dstFilePath);
             }
 
@@ -1026,21 +1181,21 @@ QString executeCopyOrMove(const QString &currentPath, const QStringList &names, 
 
         if (srcInfo.isFile()) {
             progressDlg.beginFile(name, srcInfo.size());
-            askPolice = copyOrMoveFileAskOverwrite(srcPath, dstFilePath,
-                              move, names.size()>1, askPolice, &progressDlg, &progressDlg, &destSync);
+            const FileResult result = copyOrMoveFile(srcPath, dstFilePath, move, policy,
+                                                     &progressDlg, &progressDlg, &destSync);
             progressDlg.endFile();
-            if (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll)
+            if (result == FileResult::Done)
                 carrySpellingData(srcPath, dstFilePath, move, true);
         }
         else if (srcInfo.isDir()) {
-            askPolice = copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
-                                             sameFs, askPolice, stats, progressDlg, destSync, ignore);
-            if (askPolice != QMessageBox::Abort) {
+            if (copyOrMoveDirectoryRecursive(srcPath, dstFilePath, move,
+                                             sameFs, policy, stats, progressDlg, destSync, ignore)) {
                 // Carry source directory metadata (times, permissions) to the copy
-                // while the source still exists, then drop the source if moving.
+                // while the source still exists, then drop the source if moving:
+                // only what was moved, the files not overwritten stay.
                 finalizeCopiedFile(srcPath, dstFilePath);
-                if (move && (askPolice == QMessageBox::Yes || askPolice == QMessageBox::YesToAll))
-                    QDir(srcPath).removeRecursively();
+                if (move)
+                    QDir().rmdir(srcPath);
             }
             // Files left behind (skipped or cancelled) keep their words, the
             // copies get them too.

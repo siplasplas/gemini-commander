@@ -43,6 +43,14 @@ struct CopyStats {
 
 enum class EnsureDirResult { Created, Exists, Cancelled, NotADir };
 
+/// What happens to a file whose target exists already; chosen once, before
+/// copying or moving (see executeCopyOrMove).
+enum class ConflictPolicy {
+    Overwrite,       ///< always
+    Skip,            ///< never; a moved file stays in the source
+    OverwriteOlder,  ///< only when the source is newer than the target
+};
+
 // Get filesystem cluster size for a path
 quint64 getClusterSize(const QString& path);
 
@@ -85,11 +93,13 @@ void countCopyWork(const QString& basePath, const QStringList& names,
 // Copy directory recursively with byte-proportional progress tracking.
 // stats.symlinks is updated if symlinks are skipped (cross-FS).
 // Entries `ignore` skips are not copied (directories not entered).
-QMessageBox::Button copyOrMoveDirectoryRecursive(const QString& srcRoot, const QString& dstRoot,
-                            bool move, bool sameFs,
-                            QMessageBox::Button askPolice, CopyStats& stats,
-                            FileOperationProgressDialog& progress, DestSync& sync,
-                            SearchIgnore* ignore = nullptr);
+// Existing targets follow `policy`; a move removes the source directories
+// left empty. False when cancelled.
+bool copyOrMoveDirectoryRecursive(const QString& srcRoot, const QString& dstRoot,
+                                  bool move, bool sameFs,
+                                  ConflictPolicy policy, CopyStats& stats,
+                                  FileOperationProgressDialog& progress, DestSync& sync,
+                                  SearchIgnore* ignore = nullptr);
 
 // Check if target is invalid (same path or subdirectory of source)
 bool isInvalidCopyMoveTarget(const QString& srcPath, const QString& dstPath);
@@ -100,6 +110,11 @@ EnsureDirResult ensureDestDirExists(const QString& dstPath, QWidget* parent);
 // Check if destination input indicates a directory
 bool isDestinationDirectory(const QString& destInput, const QString& dstPath);
 
+// Existing targets are settled first: for a single file Overwrite/Cancel
+// (saying whether it is overwritten with a newer, older or same-time file);
+// otherwise a quick scan (entering only the directories that exist at the
+// destination) counts the conflicts and one choice covers all of them:
+// Cancel, Skip, Overwrite All, Overwrite with Newer. No conflicts, no question.
 // useGitignore (copy only): skip what .gitignore files ignore, read from
 // currentPath down, exactly as Find Files does (SearchIgnore).
 // totals: the work counted beforehand (with the same useGitignore), so it is

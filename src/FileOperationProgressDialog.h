@@ -26,6 +26,8 @@ public:
 
     // Counting phase (before totals are known): show how much has been scanned.
     void updateCounting(quint64 files, quint64 bytes);
+    // Conflict scan (before counting): entries checked, conflicts found.
+    void updateScanning(quint64 entries, quint64 conflicts);
 
     // Set the totals discovered by the counting pass.
     void setTotals(quint64 totalFiles, quint64 totalBytes);
