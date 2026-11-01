@@ -262,7 +262,10 @@ ninja
 ``` 
 
 A directory (or a file, which is then selected in its directory) given on the
-command line opens in the left panel; a second one in the right panel.
+command line opens in the left panel; a second one in the right panel. A
+directory ending in `/` (as shell completion writes it, e.g. `/usr/share/`) is
+entered; without the `/` (`/usr/share`) its parent directory opens with the
+cursor on it. The same holds for paths sent over D-Bus.
 
 ### Opening a directory from another program (D-Bus)
 

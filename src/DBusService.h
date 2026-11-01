@@ -19,8 +19,9 @@ class MainWindow;
  * implements org.freedesktop.Application:
  *
  *   Open(as uris, a{sv} platform_data): the window is activated and the first
- *       file:// URI or path goes to the current panel (a directory is
- *       entered; for a file its directory is, with the file selected); with
+ *       file:// URI or path goes to the current panel (a directory ending in
+ *       '/' is entered; for a file, or a directory without the '/', its
+ *       parent directory is, with it selected); with
  *       two, the first goes to the left panel and the second to the right
  *       one - once no modal dialog is open and no operation runs.
  *   Activate(a{sv} platform_data): activates the window.

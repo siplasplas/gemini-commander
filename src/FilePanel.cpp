@@ -903,6 +903,27 @@ void FilePanel::navigateToPath(const QString& path)
     }
 }
 
+void FilePanel::openPath(const QString& path)
+{
+    const QFileInfo info(path);
+    const QString name = info.fileName();
+    const bool enter = path.endsWith('/') || name.isEmpty() || name == "." || name == "..";
+    if (!info.isDir() || enter) {
+        navigateToPath(path);
+        return;
+    }
+    // A directory without a trailing '/': its parent, with the cursor on it.
+    const QString dirPath = QDir::cleanPath(info.absoluteFilePath());
+    const QFileInfo dirInfo(dirPath);
+    if (dirInfo.isRoot()) {
+        navigateToPath(dirPath);
+        return;
+    }
+    currentPath = dirInfo.absolutePath();
+    loadDirectory();
+    selectEntryByName(dirInfo.fileName());
+}
+
 void FilePanel::trigger(const QString &name) {
     // Handle archive mode navigation
     if (insideArchive) {

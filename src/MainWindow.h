@@ -38,7 +38,8 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     void applyStartupPaths(const QStringList& paths);
     // From another program (D-Bus Open): the current panel goes to `path`, a
-    // directory, or the directory of a file with the file selected.
+    // directory ending in '/', or the parent directory of a file or of a
+    // directory without the '/', with it selected (FilePanel::openPath).
     void openInCurrentPanel(const QString& path);
     // Two paths (D-Bus Open): the left panel goes to the first, the right one
     // to the second; the current panel keeps the focus.

@@ -199,6 +199,10 @@ public:
     void selectEntryByRelPath(const QString& relPath);
     void selectFirstEntry();
     void navigateToPath(const QString& path);
+    // A path from outside (command line, D-Bus Open): a directory ending in
+    // '/' (or `/`, `.`, `..`) is entered; one without it is selected in its
+    // parent directory, as a file is.
+    void openPath(const QString& path);
     void trigger(const QString &name);
     void run(const QString &name);
     void sortEntriesApplyModel();

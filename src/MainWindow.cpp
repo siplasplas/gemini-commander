@@ -2290,13 +2290,13 @@ void MainWindow::applyStartupPaths(const QStringList& paths)
     // First argument -> left panel
     if (paths.size() >= 1) {
         if (FilePanel* panel = filePanelForSide(Side::Left))
-            panel->navigateToPath(paths.at(0));
+            panel->openPath(paths.at(0));
     }
 
     // Second argument -> right panel
     if (paths.size() >= 2) {
         if (FilePanel* panel = filePanelForSide(Side::Right))
-            panel->navigateToPath(paths.at(1));
+            panel->openPath(paths.at(1));
     }
 }
 
@@ -2305,8 +2305,8 @@ void MainWindow::openInCurrentPanel(const QString& path)
     FilePanel* panel = currentFilePanel();
     if (!panel)
         return;
-    panel->navigateToPath(path);
-    // In an inactive window navigateToPath only remembers the entry to select
+    panel->openPath(path);
+    // In an inactive window openPath only remembers the entry to select
     // (applied on focus). Set it in the view now: a reload of the directory
     // meanwhile (it changes on disk, e.g. /tmp) keeps the view's current entry
     // and would otherwise put the cursor back on [..].
@@ -2321,7 +2321,7 @@ void MainWindow::openInBothPanels(const QString& leftPath, const QString& rightP
         FilePanel* panel = filePanelForSide(side);
         if (!panel)
             continue;
-        panel->navigateToPath(path);
+        panel->openPath(path);
         // As in openInCurrentPanel: the entry in the view, not only remembered.
         panel->restoreSelectionFromMemory();
     }
