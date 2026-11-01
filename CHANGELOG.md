@@ -107,6 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The editor's search bar opened with several lines (or a long text)
   selected searches and replaces in the selection by itself, shown shaded;
   Alt+C and Alt+W toggle Match case and Whole words (qceditor 1.25)
+- The editor window with every tab closed shows a light grey area instead
+  of a white one (qceditor 1.26)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - Help > About shows the date of Gemini Commander's commit, and for the
