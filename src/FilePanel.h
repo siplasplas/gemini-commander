@@ -1,6 +1,7 @@
 #ifndef PANEL_H
 #define PANEL_H
 
+#include "ArchiveOperations.h"
 #include "Archives.h"
 #include "PanelFilter.h"
 
@@ -16,7 +17,6 @@
 #include <QProgressDialog>
 #include <QDateTime>
 #include <QSet>
-#include <QTemporaryDir>
 #include <QVector>
 
 #include <memory>
@@ -242,10 +242,9 @@ public:
     void enterArchive(const QString& archivePath);
     void exitArchive();
     void loadArchiveDirectory();
-    // F3 on a file inside the archive: the start of it (at most
-    // kArchivePreviewBytes) in a temporary file, removed when leaving the
-    // archive. Empty with `error` set when it failed.
-    static constexpr qint64 kArchivePreviewBytes = 1024 * 1024;
+    // F3 on a file inside the archive: the start of it in a temporary file
+    // (ArchiveOperations::PreviewCache), removed when leaving the archive.
+    // Empty with `error` set when it failed.
     QString archivePreviewFile(const PanelEntry& entry, QString& error);
 
 protected:
@@ -300,7 +299,7 @@ private:
     // Keeps only the marks of names still listed (after a reload).
     void pruneMarks();
     // The previews of files inside the archive (archivePreviewFile).
-    std::unique_ptr<QTemporaryDir> m_archivePreviewDir;
+    std::unique_ptr<ArchiveOperations::PreviewCache> m_archivePreviews;
 
 signals:
     void selectionChanged();

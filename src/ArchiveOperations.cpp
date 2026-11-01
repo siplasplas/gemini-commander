@@ -333,41 +333,142 @@ Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, c
     return Result::Done;
 }
 
-QString previewEntry(QWidget* parent, const QString& archivePath, const QString& entry, qint64 entrySize,
-                     const QString& dir, qint64 maxBytes, QString& error)
+struct PreviewCache::Dir {
+    QTemporaryDir dir{QDir::tempPath() + QStringLiteral("/gemini-commander-preview-XXXXXX")};
+};
+
+namespace {
+
+// Compressed as one stream (or solid): reaching a file decompresses
+// everything before it. Zip, RAR, ISO and the like are read file by file.
+bool isStreamArchive(const QString& archivePath)
 {
+    const QString name = QFileInfo(archivePath).fileName().toLower();
+    static const QStringList suffixes = {".7z", ".7z.001", ".tgz", ".tbz", ".tbz2", ".txz", ".tzst", ".taz", ".tlz"};
+    for (const QString& suffix : suffixes) {
+        if (name.endsWith(suffix))
+            return true;
+    }
+    return name.contains(QLatin1String(".tar."));
+}
+
+} // namespace
+
+PreviewCache::PreviewCache(const ArchiveContents& contents)
+    : m_archivePath(contents.archivePath)
+    , m_stream(isStreamArchive(contents.archivePath))
+    , m_dir(std::make_unique<Dir>())
+{
+    qint64 end = 0;
+    for (const ArchiveEntry& entry : contents.allEntries) {
+        if (entry.isDirectory)
+            continue;
+        end += entry.size;
+        m_order << entry.path;
+        m_ends << end;
+    }
+}
+
+QString PreviewCache::readUntil(const QString& entry) const
+{
+    const int index = m_order.indexOf(entry);
+    if (!m_stream || index < 0)
+        return entry;
+    // As far again as reaching the file took, at least kReadAhead more.
+    const qint64 reached = m_ends[index];
+    const qint64 limit = qMax(2 * reached, reached + kReadAhead);
+    int last = index;
+    while (last + 1 < m_ends.size() && m_ends[last + 1] <= limit)
+        ++last;
+    return m_order[last];
+}
+
+PreviewCache::~PreviewCache() = default;
+
+QString PreviewCache::targetPath(const QString& entry, qint64 entrySize) const
+{
+    const QString dir = m_dir->dir.path();
+    // Below the directory only, whatever the entry's path says ("..").
+    QString path = QDir::cleanPath(QDir(dir).absoluteFilePath(entry));
+    if (!path.startsWith(dir + QLatin1Char('/')))
+        return {};
+    if (entrySize > kBytes) {
+        const QString tag = QObject::tr(" (first %1)").arg(QLocale().formattedDataSize(kBytes));
+        const int slash = path.lastIndexOf(QLatin1Char('/'));
+        const int dot = path.lastIndexOf(QLatin1Char('.'));
+        path.insert(dot > slash + 1 ? dot : path.size(), tag);
+    }
+    return path;
+}
+
+QString PreviewCache::file(QWidget* parent, const QString& entry, qint64 entrySize, QString& error)
+{
+    if (const auto kept = m_files.constFind(entry); kept != m_files.constEnd())
+        return *kept;
     spp::ArchivePlugin* plugin = Plugins::instance().archive();
     if (!plugin) {
         error = QObject::tr("Viewing files inside archives needs the archive module.");
         return {};
     }
-    // Below `dir` only, whatever the entry's path says ("..").
-    QString path = QDir::cleanPath(QDir(dir).absoluteFilePath(entry));
-    if (maxBytes >= 0 && entrySize > maxBytes) {
-        const QString tag = QObject::tr(" (first %1)").arg(QLocale().formattedDataSize(maxBytes));
-        const int slash = path.lastIndexOf(QLatin1Char('/'));
-        const int dot = path.lastIndexOf(QLatin1Char('.'));
-        path.insert(dot > slash + 1 ? dot : path.size(), tag);
+    if (!m_dir->dir.isValid()) {
+        error = m_dir->dir.errorString();
+        return {};
     }
-    if (!path.startsWith(QDir(dir).absolutePath() + QLatin1Char('/'))) {
+    if (targetPath(entry, entrySize).isEmpty()) {
         error = QObject::tr("'%1' is not a file to view.").arg(entry);
         return {};
     }
-    QDir().mkpath(QFileInfo(path).absolutePath());
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        error = QObject::tr("Cannot write '%1': %2").arg(path, file.errorString());
+
+    // The file, and in a stream archive those on the way that fit.
+    const auto wanted = [this, &entry](const spp::ArchiveItem& item) {
+        return item.path == entry || (m_stream && m_bytes < kLimit && !m_files.contains(item.path));
+    };
+    QString writeError;
+    const auto start = [&](const spp::ArchiveItem& item, const QByteArray& data) {
+        const QString path = targetPath(item.path, item.size);
+        if (path.isEmpty())
+            return;
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        QFile out(path);
+        if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate) || out.write(data) != data.size()) {
+            writeError = QObject::tr("Cannot write '%1': %2").arg(path, out.errorString());
+            return;
+        }
+        m_files.insert(item.path, path);
+        m_bytes += data.size();
+    };
+
+    FileOperationProgressDialog progress(QObject::tr("View"), parent);
+    bool started = false;
+    KeyRouter::instance().setOperationInProgress(true);
+    const bool ok = plugin->readEntries(
+        m_archivePath, readUntil(entry), kBytes, wanted, start, error,
+        [&](qint64 done, qint64 total, const QString&) {
+            if (!started) {
+                progress.setTotals(1, quint64(total));
+                progress.beginFile(QFileInfo(m_archivePath).fileName(), total);
+                started = true;
+            }
+            progress.addFileBytes(done);
+            return !progress.wasCanceled();
+        },
+        passwordAsker(&progress));
+    KeyRouter::instance().setOperationInProgress(false);
+    // Cancelled while reading ahead: the file itself is there.
+    if (!ok && m_files.contains(entry)) {
+        error.clear();
+        return m_files.value(entry);
+    }
+    if (!ok) {
+        if (progress.wasCanceled())
+            error.clear();  // nothing to tell
         return {};
     }
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    const qint64 written = plugin->readEntry(archivePath, entry, &file, maxBytes, error, passwordAsker(parent));
-    QApplication::restoreOverrideCursor();
-    file.close();
-    if (written < 0) {
-        QFile::remove(path);
+    if (!m_files.contains(entry)) {
+        error = writeError.isEmpty() ? QObject::tr("'%1' could not be read.").arg(entry) : writeError;
         return {};
     }
-    return path;
+    return m_files.value(entry);
 }
 
 } // namespace ArchiveOperations

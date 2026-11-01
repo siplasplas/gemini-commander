@@ -1,8 +1,11 @@
 #ifndef ARCHIVEOPERATIONS_H
 #define ARCHIVEOPERATIONS_H
 
+#include <QHash>
 #include <QString>
 #include <QStringList>
+
+#include <memory>
 
 class QWidget;
 struct ArchiveContents;
@@ -33,14 +36,46 @@ struct PackRequest {
 Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, const QString& archivePath,
             const PackRequest& request, QString& error);
 
-// For a preview (F3): the first `maxBytes` of the file `entry` of the
-// archive, written below `dir` with the entry's path. Only that much is
-// decompressed, also of a huge entry. When `entrySize` is larger, the name
-// says so before its extension (kept for syntax colouring), e.g.
-// "app (first 1 MiB).log". Returns the file's path; empty with `error` set
-// when it failed.
-QString previewEntry(QWidget* parent, const QString& archivePath, const QString& entry, qint64 entrySize,
-                     const QString& dir, qint64 maxBytes, QString& error);
+// Previews (F3) of the files of one archive: the first kBytes of each, in a
+// temporary directory removed with the cache. Only that much of a file is
+// decompressed, also of a huge entry. In an archive compressed as one
+// stream (tar.gz and the like, solid 7z) everything before a file is
+// decompressed to reach it, so the files passed on the way are kept too
+// (up to kLimit together), and reading goes on past the file as far again
+// as it went to reach it (at least kReadAhead): a file near the start costs
+// little, one in the middle reads the whole archive, and the files around
+// it open at once later.
+class PreviewCache {
+public:
+    static constexpr qint64 kBytes = 1024 * 1024;
+    static constexpr qint64 kLimit = 512 * 1024 * 1024;
+    static constexpr qint64 kReadAhead = 16 * 1024 * 1024;
+
+    // `contents`: the archive's entries in its order, with their sizes.
+    explicit PreviewCache(const ArchiveContents& contents);
+    ~PreviewCache();
+
+    // The preview of the file `entry` (of `entrySize` bytes), extracted
+    // with a progress dialog unless kept already. A larger file's name says
+    // so before its extension (kept for syntax colouring), e.g.
+    // "app (first 1.00 MiB).log". Empty with `error` set when it failed
+    // (empty `error` when cancelled).
+    QString file(QWidget* parent, const QString& entry, qint64 entrySize, QString& error);
+
+private:
+    QString targetPath(const QString& entry, qint64 entrySize) const;
+    // In a stream archive: where to stop reading for `entry` (see above).
+    QString readUntil(const QString& entry) const;
+
+    QString m_archivePath;
+    QStringList m_order;               // files in the archive's order
+    QList<qint64> m_ends;              // bytes decompressed up to the end of each
+    bool m_stream;                     // decompressed as one stream: keep the files on the way
+    struct Dir;
+    std::unique_ptr<Dir> m_dir;        // the temporary directory
+    QHash<QString, QString> m_files;   // entry path -> preview file
+    qint64 m_bytes = 0;
+};
 
 } // namespace ArchiveOperations
 

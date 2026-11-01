@@ -1274,7 +1274,8 @@ bool MainWindow::doView(QObject *obj, QKeyEvent *keyEvent) {
         QString error;
         const QString preview = panel->archivePreviewFile(*entry, error);
         if (preview.isEmpty()) {
-            QMessageBox::warning(this, tr("View"), error);
+            if (!error.isEmpty())
+                QMessageBox::warning(this, tr("View"), error);
             return true;
         }
         openViewerForFile(preview);
