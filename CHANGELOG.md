@@ -109,6 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Alt+C and Alt+W toggle Match case and Whole words (qceditor 1.25)
 - The editor window with every tab closed shows a light grey area instead
   of a white one (qceditor 1.26)
+- Files dragged from a panel onto the editor window (Gemini Commander's or
+  QCEditor's) open in tabs, unless a dialog is up (qceditor 1.27)
 - Help > About shows the versions of qt-extra, qcodeedit and qceditor, and
   whether each is installed or built in
 - Help > About shows the date of Gemini Commander's commit, and for the
