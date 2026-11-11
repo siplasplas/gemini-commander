@@ -65,6 +65,30 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(qt-extra)
 
+# Modules (Qt plugins) from siplasplas-plugins, shared with ducat and
+# qceditor: loaded from lib/gemini-commander/plugins next to bin when
+# installed, from <build>/plugins in the build tree. The archive plugin needs
+# libarchive. The archive module and the find bar module (the bar of the
+# editor, through qceditor, and of the large-file viewer); the editor comes
+# from qceditor. Fetched before qceditor, which then takes its interface
+# from here instead of fetching it with its own choice of modules.
+include(GNUInstallDirs)
+set(GEMINI_PLUGIN_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/gemini-commander/plugins")
+set(GEMINI_PLUGIN_BUILD_DIR "${CMAKE_BINARY_DIR}/plugins")
+file(RELATIVE_PATH GEMINI_PLUGIN_DIR_FROM_BIN
+     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
+     "${CMAKE_INSTALL_PREFIX}/${GEMINI_PLUGIN_INSTALL_DIR}")
+set(SPP_PLUGIN_BUILD_DIR "${GEMINI_PLUGIN_BUILD_DIR}")
+set(SPP_PLUGIN_INSTALL_DIR "${GEMINI_PLUGIN_INSTALL_DIR}")
+set(SPP_BUILD_FINDBAR ON)
+FetchContent_Declare(
+        siplasplas_plugins
+        GIT_REPOSITORY https://github.com/siplasplas/siplasplas-plugins.git
+        GIT_TAG v0.13.0
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(siplasplas_plugins)
+
 # The editor window and the viewer of small files are qceditor's editor
 # library (github.com/siplasplas/qceditor), on qcodeedit's widgets
 # (github.com/siplasplas/qcodeedit, LGPL-3.0-or-later): Kate syntax
@@ -107,20 +131,20 @@ if(NOT TARGET qcodeedit::katedata OR NOT TARGET qcodeedit::encoding OR NOT TARGE
     )
     FetchContent_MakeAvailable(qcodeedit)
 endif()
-# An installed qceditor 1.27 or later is used (encrypted .een files, which
-# need Botan; word frequencies for spelling, reviewing and correcting it; the
-# search bar over the top lines, F3 without it; Tools > Statistics; grammar
-# menus and Review Grammar; a grey window without tabs; dropped files open);
+# An installed qceditor 1.29 or later is used (encrypted .een files, which
+# need Botan; word frequencies for spelling, reviewing and correcting it;
+# Tools > Statistics; grammar menus and Review Grammar; a grey window without
+# tabs; dropped files open; the find bar module's bar, setFindPlugin());
 # otherwise the tag below is fetched, its editor library only.
 set(QCEDITOR_BUILD_APP OFF)
-set(GEMINI_QCEDITOR_TAG v1.27.0)
+set(GEMINI_QCEDITOR_TAG v1.29.0)
 FetchContent_Declare(
         qceditor
         GIT_REPOSITORY https://github.com/siplasplas/qceditor.git
         GIT_TAG ${GEMINI_QCEDITOR_TAG}
         GIT_SHALLOW TRUE
         ${fetch_exclude}
-        FIND_PACKAGE_ARGS 1.27.0
+        FIND_PACKAGE_ARGS 1.29.0
 )
 FetchContent_MakeAvailable(qceditor)
 
@@ -412,29 +436,8 @@ target_sources(gemini-commander PRIVATE ${APP_RESOURCES})
 # Installation
 include(GNUInstallDirs)
 
-# Modules (Qt plugins) from siplasplas-plugins, shared with ducat: loaded
-# from lib/gemini-commander/plugins next to bin when installed, from
-# <build>/plugins in the build tree. The archive plugin needs libarchive
-# (without it archives are listed by lsar and handled by 7z/unar).
-set(GEMINI_PLUGIN_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/gemini-commander/plugins")
-set(GEMINI_PLUGIN_BUILD_DIR "${CMAKE_BINARY_DIR}/plugins")
-file(RELATIVE_PATH GEMINI_PLUGIN_DIR_FROM_BIN
-     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
-     "${CMAKE_INSTALL_PREFIX}/${GEMINI_PLUGIN_INSTALL_DIR}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         GEMINI_PLUGIN_DIR_FROM_BIN="${GEMINI_PLUGIN_DIR_FROM_BIN}")
-set(SPP_PLUGIN_BUILD_DIR "${GEMINI_PLUGIN_BUILD_DIR}")
-set(SPP_PLUGIN_INSTALL_DIR "${GEMINI_PLUGIN_INSTALL_DIR}")
-# The archive module and the find bar module (the large-file viewer's bar);
-# the editor comes from qceditor.
-set(SPP_BUILD_FINDBAR ON)
-FetchContent_Declare(
-        siplasplas_plugins
-        GIT_REPOSITORY https://github.com/siplasplas/siplasplas-plugins.git
-        GIT_TAG v0.13.0
-        GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(siplasplas_plugins)
 target_link_libraries(${PROJECT_NAME} PRIVATE siplasplas::plugin-api)
 
 # Install executable

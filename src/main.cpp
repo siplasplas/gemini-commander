@@ -8,6 +8,7 @@
 #include <backward.hpp>
 #include <qce/encoding/Encoding.h>
 #include <qce/kate/KatePaths.h>
+#include <qceditor/FindPlugin.h>
 #include <qxmigration.h>
 #include <toml++/toml.h>
 
@@ -26,6 +27,7 @@
 
 #include "DBusService.h"
 #include "MainWindow.h"
+#include "Plugins.h"
 #include "editor/EditorSettings.h"
 #include "git_version.h"
 
@@ -153,6 +155,8 @@ int main(int argc, char *argv[])
     // The editor (qceditor's library) keeps its settings in gemini's configuration.
     static EditorSettings editorSettings;
     qceditor::setSettings(&editorSettings);
+    // Its tabs search through the find bar module when there is one.
+    qceditor::setFindPlugin(Plugins::instance().find());
 
     // Encoding/language models load in the background, ready for the editor.
     qce::encoding::preloadDetectionData();
