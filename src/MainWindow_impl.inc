@@ -1033,6 +1033,11 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     if (refuseInsideArchive(panel))
         return true;
     if (!panel) return true;
+    if (!Plugins::instance().archive()) {
+        QMessageBox::warning(this, tr("Pack"),
+            tr("Packing needs the archive module (spp-archive), which is not loaded."));
+        return true;
+    }
 
     // 1. Determine files to pack
     QStringList markedRelPaths = panel->getMarkedRelPaths();
@@ -1070,14 +1075,14 @@ bool MainWindow::doPackFiles(QObject *obj, QKeyEvent *keyEvent) {
     request.level = dlg.compressionLevel();
     request.password = dlg.password();
     request.moveFiles = dlg.moveFiles();
-    const bool needsProgram = !Plugins::instance().archive()
-                              || (request.format == "7z"
-                                  && (!request.solidBlockSize.isEmpty() || !request.password.isEmpty()));
-    const QString executable = request.format;  // "7z" or "zip" (the tar formats need the module)
-    if (needsProgram && QStandardPaths::findExecutable(executable).isEmpty()) {
+    // The module writes a 7z with a solid block size or a password by the 7z
+    // program
+    const bool needs7z = request.format == "7z"
+                         && (!request.solidBlockSize.isEmpty() || !request.password.isEmpty());
+    const QString executable = QStringLiteral("7z");
+    if (needs7z && QStandardPaths::findExecutable(executable).isEmpty()) {
         // Show install instructions
-        QString installCmd = DistroInfo::installCommand(
-            (executable == "7z") ? "p7zip-full" : "zip");
+        QString installCmd = DistroInfo::installCommand("p7zip-full");
         QMessageBox::warning(this, tr("Packer Not Found"),
             tr("%1 not found.\n\nInstall with:\n%2")
                 .arg(executable, installCmd));

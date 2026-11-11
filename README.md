@@ -118,7 +118,7 @@ with ducat), fetched by CMake, built into `<build>/plugins` and installed to
 
 | Module | Used for | Needs | Without it |
 |--------|----------|-------|------------|
-| archive (`spp-archive`) | listing archives (Enter on an archive, and Alt+F9, with a progress dialog that can cancel it: listing tar.gz and the like decompresses all of it), viewing a file inside one (F3; only its first 1 MiB is extracted to a temporary file, removed when leaving the archive, so a huge entry opens at once — the title then says e.g. `app (first 1.00 MiB).log`; in tar.gz and the like or solid 7z, where reaching a file decompresses everything before it, with a progress dialog, the files passed on the way are kept too, up to 512 MiB, and reading goes on past the file as far again as it took to reach it, so a file near the start costs little, one in the middle reads the whole archive, and the files around it open at once later), copying files out of one (F5 inside it: the marked entries or the current one, to the directory asked, the opposite panel's by default, relative to the directory shown in the archive, with a progress bar and one question about existing files; other commands that change files, F4 included, say that they do not work inside an archive, and so do F5 and F6 to a panel inside an archive: files are not added to archives, which stay as they were packed), extracting them (Alt+F9) with passwords and one question about existing files, as copying asks, and packing (Alt+F5) zip, 7z, tar.gz, tar.xz, tar.zst, tar.bz2 or tar, with a compression level (Zstandard up to 22), a password for zip (AES-256), also in volumes | libarchive (libarchive-dev) | archives are listed by `lsar`, extracted by `7z` or `unar`, packed by `zip` or `7z` (no tar formats, no zip password) |
+| archive (`spp-archive`) | listing archives (Enter on an archive, and Alt+F9, with a progress dialog that can cancel it: listing tar.gz and the like decompresses all of it), viewing a file inside one (F3; only its first 1 MiB is extracted to a temporary file, removed when leaving the archive, so a huge entry opens at once — the title then says e.g. `app (first 1.00 MiB).log`; in tar.gz and the like or solid 7z, where reaching a file decompresses everything before it, with a progress dialog, the files passed on the way are kept too, up to 512 MiB, and reading goes on past the file as far again as it took to reach it, so a file near the start costs little, one in the middle reads the whole archive, and the files around it open at once later), copying files out of one (F5 inside it: the marked entries or the current one, to the directory asked, the opposite panel's by default, relative to the directory shown in the archive, with a progress bar and one question about existing files; other commands that change files, F4 included, say that they do not work inside an archive, and so do F5 and F6 to a panel inside an archive: files are not added to archives, which stay as they were packed), extracting them (Alt+F9) with passwords and one question about existing files, as copying asks, and packing (Alt+F5) zip, 7z, tar.gz, tar.xz, tar.zst, tar.bz2 or tar, with a compression level (Zstandard up to 22), a password for zip (AES-256), also in volumes | libarchive (libarchive-dev); `lsar`/`unar` and `7z` optionally, at run time | archives are not opened, packed or extracted: a message says that the module is missing |
 
 Old zips with file names in a DOS code page (e.g. CP852 from Polish DOS or
 Windows) show them right: names that are not valid UTF-8 are read in the DOS
@@ -128,14 +128,16 @@ An archive in volumes opens from any of them (Enter, Alt+F9): `name.001`,
 `name.002`, ...; RAR's `name.part1.rar`, `name.part2.rar`, ...; the old
 `name.rar`, `name.r00`, `name.r01`, ...
 
-Archives the module cannot read — ARJ, ACE, encrypted RAR or 7z, solid RAR
-1.5 from DOS times (which it reads only in part) — are listed by `lsar` and
-extracted by `7z` or `unar`; F3 and F5 inside them go through `7z`. A 7z archive with a solid block
-size (Pack dialog; empty means one block for the whole archive) or a password
-is packed by `7z`, which then encrypts the file names too (the password goes
-to it on its standard input, not on the command line). Extracting and packing show the progress dialog of copying either way,
-with percentages from `7z`, and can be cancelled. An existing archive is
-replaced after asking.
+What libarchive cannot read — ARJ, ACE, encrypted RAR or 7z, solid RAR 1.5
+from DOS times (which it reads only in part) — the module reads by `lsar`
+(unar), `7z` and `unar` when they are installed, through the same commands
+(Enter, F3, F5, Alt+F9). A 7z archive with a solid block size (Pack dialog;
+empty means one block for the whole archive) or a password is written by
+`7z`, which then encrypts the file names too. Passwords go to these programs
+on their command lines (visible in the process list while they run: `7z`
+reads a password it asks for only from a terminal). Extracting and packing
+show the progress dialog of copying, with `7z`'s percentages for those, and
+can be cancelled. An existing archive is replaced after asking.
 
 ### Libraries fetched by CMake
 

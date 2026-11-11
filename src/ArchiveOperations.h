@@ -10,22 +10,22 @@
 class QWidget;
 struct ArchiveContents;
 
-// Archive operations with the progress dialog of copying: through the
-// archive module (siplasplas-plugins), and by external programs (7z, unar,
-// zip) for what the module cannot do, also with a progress window.
+// Archive operations through the archive module (spp-archive from
+// siplasplas-plugins), with the progress dialog of copying. The module
+// itself goes over to lsar, 7z and unar for what libarchive cannot read;
+// without the module archives are not opened.
 namespace ArchiveOperations {
 
 enum class Result { Done, Cancelled, Failed };
 
 // Lists the archive (Enter, Alt+F9) with a progress dialog that can cancel
-// it: listing tar.gz and the like decompresses all of it. Through the
-// module; by lsar without it or for what it cannot read.
+// it: listing tar.gz and the like decompresses all of it. When only part of
+// it could be read, Done with that part and a warning in `error`.
 Result list(QWidget* parent, const QString& archivePath, ArchiveContents& contents, QString& error);
 
-// Extracts the archive listed in `contents` into `destDir`: through the
-// module when it listed it (ArchiveContents::readByPlugin), existing files
+// Extracts the archive listed in `contents` into `destDir`, existing files
 // settled first with one question as copying does, passwords asked when
-// needed; else by 7z or unar. `error` is set when it failed.
+// needed. `error` is set when it failed.
 Result extract(QWidget* parent, const ArchiveContents& contents, const QString& destDir, QString& error);
 
 // F5 inside an archive: copies `entries` (paths inside the archive, below
@@ -40,16 +40,15 @@ Result copyOut(QWidget* parent, const ArchiveContents& contents, const QString& 
 struct PackRequest {
     QString format;          // "zip", "7z", "tar", "tar.gz", "tar.xz", "tar.zst", "tar.bz2"
     QString volumeSize;      // empty, or e.g. "100m" (k, m, g: KiB, MiB, GiB)
-    QString solidBlockSize;  // 7z: empty, or e.g. "1g"; given, 7z packs (libarchive cannot)
+    QString solidBlockSize;  // 7z: empty (one block), or e.g. "1g"
     int level = -1;          // compression level, -1 the format's default
-    QString password;        // zip (AES-256, the module) or 7z (the 7z program); empty: none
+    QString password;        // zip (AES-256) or 7z (names encrypted too); empty: none
     bool moveFiles = false;  // remove the files once packed
 };
 
-// Packs `files` (relative to `baseDir`) into `archivePath`: through the
-// module, or by 7z for a solid block size or a password (libarchive cannot)
-// and without the module (zip then).
-// An existing archive is replaced after asking.
+// Packs `files` (relative to `baseDir`) into `archivePath` through the
+// module, which writes a 7z with a password or a solid block size by the 7z
+// program. An existing archive is replaced after asking.
 Result pack(QWidget* parent, const QString& baseDir, const QStringList& files, const QString& archivePath,
             const PackRequest& request, QString& error);
 
@@ -83,15 +82,11 @@ private:
     QString targetPath(const QString& entry, qint64 entrySize) const;
     // In a stream archive: where to stop reading for `entry` (see above).
     QString readUntil(const QString& entry) const;
-    // Listed by lsar (a format the module cannot read, e.g. solid RAR 1.5,
-    // or no module): the start of the file by the 7z program.
-    QString fileByProgram(QWidget* parent, const QString& entry, qint64 entrySize, QString& error);
 
     QString m_archivePath;
     QStringList m_order;               // files in the archive's order
     QList<qint64> m_ends;              // bytes decompressed up to the end of each
     bool m_stream;                     // decompressed as one stream: keep the files on the way
-    bool m_byModule;                   // listed by the module, which reads it then
     struct Dir;
     std::unique_ptr<Dir> m_dir;        // the temporary directory
     QHash<QString, QString> m_files;   // entry path -> preview file

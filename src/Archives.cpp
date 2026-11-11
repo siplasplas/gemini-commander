@@ -1,16 +1,9 @@
 #include "Archives.h"
-#include "Plugins.h"
 #include "siplasplas/plugin/ArchivePlugin.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QFile>
-#include <QTextStream>
-#include <QProcess>
-#include <QStandardPaths>
 #include <QSet>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
 
 namespace {
 
@@ -305,7 +298,6 @@ void ArchiveContents::clear()
 {
     archivePath.clear();
     allEntries.clear();
-    readByPlugin = false;
 }
 
 QList<ArchiveEntry> ArchiveContents::entriesAt(const QString& dirPath) const
@@ -376,39 +368,6 @@ bool ArchiveContents::isDirectory(const QString& path) const
     return false;
 }
 
-namespace {
-
-// Through the archive module (libarchive), when it is loaded.
-ArchiveContents readArchiveWithPlugin(const QString& archivePath)
-{
-    ArchiveContents result;
-    result.archivePath = archivePath;
-
-    spp::ArchivePlugin* plugin = Plugins::instance().archive();
-    if (!plugin)
-        return result;
-    QList<spp::ArchiveItem> items;
-    QString error;
-    result.readByPlugin = plugin->list(archivePath, items, error) && !items.isEmpty();
-    appendArchiveItems(result, items);
-    return result;
-}
-
-ArchiveContents readArchiveWithUnar(const QString& archivePath)
-{
-    // Use lsar (list archive) with JSON output
-    QProcess proc;
-    proc.start("lsar", {"-j", archivePath});
-    if (!proc.waitForFinished(30000) || proc.exitCode() != 0) {
-        ArchiveContents result;
-        result.archivePath = archivePath;
-        return result;
-    }
-    return contentsFromLsar(archivePath, proc.readAllStandardOutput());
-}
-
-} // anonymous namespace
-
 void appendArchiveItems(ArchiveContents& contents, const QList<spp::ArchiveItem>& items)
 {
     for (const spp::ArchiveItem& item : items) {
@@ -421,60 +380,6 @@ void appendArchiveItems(ArchiveContents& contents, const QList<spp::ArchiveItem>
         if (!e.name.isEmpty())
             contents.allEntries.append(e);
     }
-}
-
-ArchiveContents contentsFromLsar(const QString& archivePath, const QByteArray& output)
-{
-    ArchiveContents result;
-    result.archivePath = archivePath;
-
-    QJsonDocument doc = QJsonDocument::fromJson(output);
-    if (!doc.isObject())
-        return result;
-
-    QJsonObject root = doc.object();
-    QJsonArray contents = root["lsarContents"].toArray();
-
-    for (const QJsonValue& val : contents) {
-        QJsonObject obj = val.toObject();
-
-        ArchiveEntry e;
-        e.path = obj["XADFileName"].toString();
-
-        // Remove trailing slash from directories
-        while (e.path.endsWith('/'))
-            e.path.chop(1);
-
-        e.name = QFileInfo(e.path).fileName();
-        // A number (1) in lsar's output, not a JSON boolean.
-        e.isDirectory = obj["XADIsDirectory"].toVariant().toBool();
-        e.size = obj["XADFileSize"].toVariant().toLongLong();
-
-        // Parse date if available
-        QString dateStr = obj["XADLastModificationDate"].toString();
-        if (!dateStr.isEmpty()) {
-            e.modTime = QDateTime::fromString(dateStr, Qt::ISODate);
-        }
-
-        if (!e.path.isEmpty() && !e.name.isEmpty()) {
-            result.allEntries.append(e);
-        }
-    }
-
-    return result;
-}
-
-ArchiveContents readArchive(const QString& archivePath)
-{
-    // The archive module (libarchive) first
-    ArchiveContents result = readArchiveWithPlugin(archivePath);
-
-    // Without the module, or a format it cannot read: lsar (unar)
-    if (result.allEntries.isEmpty()) {
-        result = readArchiveWithUnar(archivePath);
-    }
-
-    return result;
 }
 
 bool archiveHasSingleRoot(const ArchiveContents& contents)

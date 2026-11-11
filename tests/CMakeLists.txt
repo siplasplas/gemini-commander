@@ -32,18 +32,15 @@ target_link_libraries(copy_conflicts_tests
 
 gtest_discover_tests(copy_conflicts_tests)
 
-# Archives without the archive module or windows: preview rules, the lsar
-# listing, directories of an archive.
+# Archives without the archive module or windows: preview rules, the
+# module's items as entries, directories of an archive.
 add_executable(archives_tests
         test_archives.cpp
         ${CMAKE_SOURCE_DIR}/src/ArchiveUtils.cpp
         ${CMAKE_SOURCE_DIR}/src/Archives.cpp
-        ${CMAKE_SOURCE_DIR}/src/Plugins.cpp
 )
 
 target_include_directories(archives_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
-# Archives.cpp asks Plugins for the module; none is loaded here.
-target_compile_definitions(archives_tests PRIVATE GEMINI_PLUGIN_DIR_FROM_BIN="none")
 
 target_link_libraries(archives_tests
         PRIVATE

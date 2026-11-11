@@ -1,6 +1,5 @@
 #include "PackDialog.h"
 
-#include "Plugins.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -12,23 +11,22 @@
 
 namespace {
 
-// Packers: the archive module writes them all; without it zip and 7z are
-// packed by the zip and 7z programs.
+// Packers: the archive module writes them all (a 7z with a password or a
+// solid block size by the 7z program).
 struct Packer {
     const char* id;
     const char* extension;
     int maxLevel;      // 0: no compression level (plain tar)
-    bool needsModule;
 };
 
 const Packer kPackers[] = {
-    {"zip", ".zip", 9, false},
-    {"7z", ".7z", 9, false},
-    {"tar.gz", ".tar.gz", 9, true},
-    {"tar.xz", ".tar.xz", 9, true},
-    {"tar.zst", ".tar.zst", 22, true},
-    {"tar.bz2", ".tar.bz2", 9, true},
-    {"tar", ".tar", 0, true},
+    {"zip", ".zip", 9},
+    {"7z", ".7z", 9},
+    {"tar.gz", ".tar.gz", 9},
+    {"tar.xz", ".tar.xz", 9},
+    {"tar.zst", ".tar.zst", 22},
+    {"tar.bz2", ".tar.bz2", 9},
+    {"tar", ".tar", 0},
 };
 
 const Packer& packerOf(const QString& id)
@@ -88,12 +86,9 @@ void PackDialog::setupUi()
     formLayout->addRow(tr("Destination:"), destLayout);
 
     // Packer type combo
-    const bool module = Plugins::instance().archive() != nullptr;
     m_packerCombo = new QComboBox(this);
-    for (const Packer& packer : kPackers) {
-        if (module || !packer.needsModule)
-            m_packerCombo->addItem(QString::fromLatin1(packer.id));
-    }
+    for (const Packer& packer : kPackers)
+        m_packerCombo->addItem(QString::fromLatin1(packer.id));
     connect(m_packerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &PackDialog::onPackerChanged);
     formLayout->addRow(tr("Packer:"), m_packerCombo);
@@ -106,8 +101,8 @@ void PackDialog::setupUi()
     m_levelSpin->setToolTip(tr("0: fastest, 9: smallest (Zstandard: up to 22)"));
     formLayout->addRow(tr("Compression level:"), m_levelSpin);
 
-    // Password: zip through the archive module (AES-256), 7z by the 7z
-    // program (names encrypted too)
+    // Password: zip (AES-256), 7z (written by the 7z program, names
+    // encrypted too)
     m_passwordEdit = new QLineEdit(this);
     m_passwordEdit->setEchoMode(QLineEdit::Password);
     m_passwordEdit->setPlaceholderText(tr("empty = none"));
@@ -188,9 +183,8 @@ void PackDialog::onPackerChanged(int index)
     m_7zOptionsWidget->setVisible(type == "7z");
     m_levelSpin->setEnabled(packer.maxLevel > 0);
     m_levelSpin->setMaximum(qMax(packer.maxLevel, 0));
-    // zip: AES-256 through the module (without it the zip program's weak
-    // encryption is not offered); 7z: the 7z program.
-    const bool encrypts = type == "7z" || (type == "zip" && Plugins::instance().archive());
+    // zip: AES-256; 7z: written by the 7z program.
+    const bool encrypts = type == "7z" || type == "zip";
     m_passwordEdit->setEnabled(encrypts);
     m_passwordEdit->setToolTip(type == "7z" ? tr("Packed by the 7z program; file names are encrypted too.")
                                : encrypts   ? tr("AES-256 encryption.")

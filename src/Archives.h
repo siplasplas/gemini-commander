@@ -62,7 +62,6 @@ struct ArchiveEntry {
 struct ArchiveContents {
     QString archivePath;                    // Path to archive file
     QList<ArchiveEntry> allEntries;         // Flat list of all entries
-    bool readByPlugin = false;              // listed by the archive module, which then extracts it
 
     // Get entries for a specific directory path inside archive
     // Returns only direct children (not recursive)
@@ -75,15 +74,9 @@ struct ArchiveContents {
     void clear();
 };
 
-// Read archive contents using libarchive, fallback to unar. Without
-// progress: ArchiveOperations::list shows it and can be cancelled.
-ArchiveContents readArchive(const QString& archivePath);
-
-// The entries the archive module listed, added to `contents`.
+// The entries the archive module listed, added to `contents`. Archives are
+// read by ArchiveOperations::list (through the module, with progress).
 void appendArchiveItems(ArchiveContents& contents, const QList<spp::ArchiveItem>& items);
-
-// The entries of `lsar -j` output (JSON).
-ArchiveContents contentsFromLsar(const QString& archivePath, const QByteArray& output);
 
 // Check if archive has single root entry (file or directory)
 // Returns true if single root, false if multiple roots

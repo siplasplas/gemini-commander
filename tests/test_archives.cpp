@@ -1,11 +1,13 @@
 // Archives without the archive module or windows: the rules of previews
-// (ArchiveUtils), the listing of lsar, and the directories of an archive.
+// (ArchiveUtils), the module's items as entries, the directories of an archive.
 #include <gtest/gtest.h>
 
 #include "ArchiveUtils.h"
 #include "Archives.h"
+#include "siplasplas/plugin/ArchivePlugin.h"
 
 #include <QLocale>
+#include <QTimeZone>
 
 using namespace ArchiveUtils;
 
@@ -107,35 +109,26 @@ TEST(ArchivesTest, PreviewPaths)
     EXPECT_EQ(previewPath(dir, "d/../ok", 1, MiB), "/tmp/preview/ok");
 }
 
-TEST(ArchivesTest, ReadsTheListingOfLsar)
+TEST(ArchivesTest, TakesTheModulesItems)
 {
-    const QByteArray json = R"({
-        "lsarFormatName": "Zip",
-        "lsarContents": [
-            {"XADFileName": "dir/", "XADIsDirectory": true},
-            {"XADFileName": "Fen", "XADIsDirectory": 1, "XADFileSize": 0},
-            {"XADFileName": "dir/a.txt", "XADFileSize": 11,
-             "XADLastModificationDate": "2024-05-06T07:08:09Z"},
-            {"XADFileName": "b.bin", "XADFileSize": 5000000000},
-            {"XADFileName": ""}
-        ]
-    })";
-    const ArchiveContents contents = contentsFromLsar("/x/a.zip", json);
-    EXPECT_EQ(contents.archivePath, "/x/a.zip");
-    EXPECT_FALSE(contents.readByPlugin);
-    ASSERT_EQ(contents.allEntries.size(), 4);
-    EXPECT_EQ(contents.allEntries[0].path, "dir");  // no trailing '/'
+    // The module's items (by libarchive or, for lsar's formats, parsed by
+    // the module itself) as the panel's entries.
+    QList<spp::ArchiveItem> items(3);
+    items[0].path = "Fen";
+    items[0].isDirectory = true;
+    items[1].path = "Fen/a.fen";
+    items[1].size = 44;
+    items[1].modTime = QDateTime(QDate(1999, 8, 13), QTime(15, 12, 26), QTimeZone::UTC);
+    // items[2]: no path, left out
+    ArchiveContents contents;
+    appendArchiveItems(contents, items);
+    ASSERT_EQ(contents.allEntries.size(), 2);
+    EXPECT_EQ(contents.allEntries[0].name, "Fen");
     EXPECT_TRUE(contents.allEntries[0].isDirectory);
-    // lsar writes 1 for a directory (RAR), not true.
-    EXPECT_EQ(contents.allEntries[1].path, "Fen");
-    EXPECT_TRUE(contents.allEntries[1].isDirectory);
-    EXPECT_EQ(contents.allEntries[2].name, "a.txt");
-    EXPECT_FALSE(contents.allEntries[2].isDirectory);
-    EXPECT_EQ(contents.allEntries[2].size, 11);
-    EXPECT_EQ(contents.allEntries[2].modTime.toUTC().toString(Qt::ISODate), "2024-05-06T07:08:09Z");
-    EXPECT_EQ(contents.allEntries[3].size, 5000000000LL);
-
-    EXPECT_TRUE(contentsFromLsar("/x/a.zip", "not json").allEntries.isEmpty());
+    EXPECT_EQ(contents.allEntries[1].name, "a.fen");
+    EXPECT_EQ(contents.allEntries[1].size, 44);
+    EXPECT_EQ(contents.allEntries[1].modTime.toUTC().toString(Qt::ISODate), "1999-08-13T15:12:26Z");
+    EXPECT_EQ(contents.entriesAt("Fen").size(), 1);
 }
 
 TEST(ArchivesTest, DirectoriesOfAnArchive)
