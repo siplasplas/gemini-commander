@@ -16,6 +16,10 @@ namespace wid {
 class TextViewer;
 class FindBar;
 }
+namespace spp {
+class FindBar;
+}
+class ViewerFindTarget;
 namespace qce {
 class RulesHighlighter;
 class RuleBasedFoldingProvider;
@@ -70,10 +74,13 @@ private:
 
     std::unique_ptr<QFile> m_file;
     QByteArray m_virtualFileContent;  // For virtual files read via readAll()
-    // The large-file viewer with its search bar above it, in m_textBox.
+    // The large-file viewer with its search bar, in m_textBox: the find bar
+    // module's below it, or without the module textviewers' own above it.
     QWidget* m_textBox = nullptr;
     wid::TextViewer* m_textViewer = nullptr;
     wid::FindBar* m_findBar = nullptr;
+    spp::FindBar* m_pluginFindBar = nullptr;
+    std::unique_ptr<ViewerFindTarget> m_findTarget;
     std::unique_ptr<qce::RulesHighlighter> m_highlighter;
     std::unique_ptr<qce::RuleBasedFoldingProvider> m_folding;
     qceditor::EditorTab* m_codeView = nullptr;

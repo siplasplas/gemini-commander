@@ -21,6 +21,9 @@
 #include <qceditor/SyntaxData.h>
 #include "wid/TextViewer.h"
 #include "wid/FindBar.h"
+#include "ViewerFindTarget.h"
+#include "../Plugins.h"
+#include "siplasplas/plugin/FindPlugin.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -150,12 +153,14 @@ void ViewerWidget::setViewMode(ViewMode mode)
 
 bool ViewerWidget::canSearch() const
 {
-    return m_findBar || m_codeView;
+    return m_findBar || m_pluginFindBar || m_codeView;
 }
 
 void ViewerWidget::showSearch()
 {
-    if (m_findBar)
+    if (m_pluginFindBar)
+        m_pluginFindBar->showFind();
+    else if (m_findBar)
         m_findBar->showSearch();
     else if (m_codeView)
         m_codeView->showSearch();
@@ -163,7 +168,12 @@ void ViewerWidget::showSearch()
 
 void ViewerWidget::findNext(bool backwards)
 {
-    if (m_findBar)
+    if (m_pluginFindBar) {
+        if (backwards)
+            m_pluginFindBar->findPrevious();
+        else
+            m_pluginFindBar->findNext();
+    } else if (m_findBar)
         m_findBar->findNext(backwards);
     else if (m_codeView)
         m_codeView->findNext(backwards);
@@ -303,10 +313,23 @@ void ViewerWidget::createTextViewer(uchar* data, qint64 size)
     boxLayout->setContentsMargins(0, 0, 0, 0);
     boxLayout->setSpacing(0);
     m_textViewer = new wid::TextViewer(reinterpret_cast<char*>(data), size, m_textBox);
-    // Ctrl+F, F3 and Shift+F3 as in the code view, while the focus is in the box.
-    m_findBar = new wid::FindBar(m_textViewer, m_textBox);
-    boxLayout->addWidget(m_findBar);
-    boxLayout->addWidget(m_textViewer, 1);
+    if (spp::FindPlugin* plugin = Plugins::instance().find()) {
+        // The find bar module's bar below the text, which never moves; the
+        // viewer seeks itself (a huge target). Ctrl+F, F3 and Shift+F3 come
+        // from the viewer's actions (showSearch(), findNext()).
+        m_findTarget = std::make_unique<ViewerFindTarget>(m_textViewer);
+        m_pluginFindBar = plugin->createFindBar(m_textBox);
+        m_pluginFindBar->setTarget(m_findTarget.get());
+        boxLayout->addWidget(m_textViewer, 1);
+        boxLayout->addWidget(m_pluginFindBar->widget());
+    } else {
+        // Without the module, textviewers' own bar above the text, with
+        // Ctrl+F, F3 and Shift+F3 as in the code view, while the focus is in
+        // the box.
+        m_findBar = new wid::FindBar(m_textViewer, m_textBox);
+        boxLayout->addWidget(m_findBar);
+        boxLayout->addWidget(m_textViewer, 1);
+    }
     applyHighlighter(m_currentFile);
     // Install event filter on TextViewer and all its children (including PaintArea)
     m_textViewer->installEventFilter(this);
@@ -385,12 +408,17 @@ void ViewerWidget::createHexViewer(uchar* data, qint64 size)
 void ViewerWidget::clearViewer()
 {
     if (m_textBox) {
-        // Before the file is unmapped: the find bar stops its search here.
+        // The module's bar lets go of the viewer before either goes.
+        if (m_pluginFindBar)
+            m_pluginFindBar->setTarget(nullptr);
+        // Before the file is unmapped: the viewer stops its search here.
         m_layout->removeWidget(m_textBox);
         delete m_textBox;
         m_textBox = nullptr;
         m_textViewer = nullptr;
         m_findBar = nullptr;
+        m_pluginFindBar = nullptr;
+        m_findTarget.reset();
     }
     m_folding.reset();
     m_highlighter.reset();

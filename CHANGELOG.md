@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The viewer of large files searches through the find bar module
+  (`spp-findbar`, siplasplas-plugins 0.13.0), below the text, which never
+  moves; F3 and Shift+F3 go on without opening the bar. Without the module,
+  textviewers' own bar is used, as before
 - Encrypted `*.een` files in the editor (qceditor 1.2): the password is asked
   when the file is opened; the formats of EdiQ and the older Editas are read,
   and saving writes EdiQ's. The viewer shows such files as they are on disk,

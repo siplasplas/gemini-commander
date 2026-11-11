@@ -5,6 +5,7 @@
 
 namespace spp {
 class ArchivePlugin;
+class FindPlugin;
 }
 
 // The modules of Gemini Commander (Qt plugins from siplasplas-plugins),
@@ -17,6 +18,8 @@ public:
 
     // The archive module, or null when none was loaded.
     spp::ArchivePlugin* archive() const { return m_archive; }
+    // The find bar module, or null when none was loaded.
+    spp::FindPlugin* find() const { return m_find; }
 
     // What was found: one line per plugin file or problem.
     const QStringList& report() const { return m_report; }
@@ -28,6 +31,7 @@ private:
     Plugins();
 
     spp::ArchivePlugin* m_archive = nullptr;
+    spp::FindPlugin* m_find = nullptr;
     QStringList m_report;
 };
 

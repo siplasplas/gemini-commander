@@ -146,7 +146,7 @@ target_include_directories(toml_headers INTERFACE
 FetchContent_Declare(
         textviewers
         GIT_REPOSITORY https://github.com/ideorg/textviewers.git
-        GIT_TAG v1.4
+        GIT_TAG v1.5
         GIT_SHALLOW TRUE
         GIT_SUBMODULES ""
         SOURCE_SUBDIR none
@@ -268,6 +268,8 @@ add_executable(${PROJECT_NAME}
         src/editor/ViewerFrame.h
         src/editor/ViewerWidget.cpp
         src/editor/ViewerWidget.h
+        src/editor/ViewerFindTarget.cpp
+        src/editor/ViewerFindTarget.h
         src/editor/HexViewWidget.cpp
         src/editor/HexViewWidget.h
         ${TEXTVIEWERS_DIR}/wid/TextViewer.cpp
@@ -423,10 +425,13 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         GEMINI_PLUGIN_DIR_FROM_BIN="${GEMINI_PLUGIN_DIR_FROM_BIN}")
 set(SPP_PLUGIN_BUILD_DIR "${GEMINI_PLUGIN_BUILD_DIR}")
 set(SPP_PLUGIN_INSTALL_DIR "${GEMINI_PLUGIN_INSTALL_DIR}")
+# The archive module and the find bar module (the large-file viewer's bar);
+# the editor comes from qceditor.
+set(SPP_BUILD_FINDBAR ON)
 FetchContent_Declare(
         siplasplas_plugins
         GIT_REPOSITORY https://github.com/siplasplas/siplasplas-plugins.git
-        GIT_TAG v0.4.0
+        GIT_TAG v0.13.0
         GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(siplasplas_plugins)

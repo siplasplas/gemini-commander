@@ -1,6 +1,7 @@
 #include "Plugins.h"
 
 #include "siplasplas/plugin/ArchivePlugin.h"
+#include "siplasplas/plugin/FindPlugin.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -51,6 +52,15 @@ Plugins::Plugins()
                 } else {
                     m_archive = archive;
                     m_report << QStringLiteral("%1: archives %2").arg(file, archive->name());
+                }
+                continue;
+            }
+            if (auto* find = qobject_cast<spp::FindPlugin*>(plugin)) {
+                if (m_find) {
+                    m_report << QStringLiteral("%1: find bar %2, not used: one is loaded").arg(file, find->name());
+                } else {
+                    m_find = find;
+                    m_report << QStringLiteral("%1: find bar %2").arg(file, find->name());
                 }
                 continue;
             }
