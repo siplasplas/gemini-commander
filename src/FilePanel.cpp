@@ -936,14 +936,17 @@ void FilePanel::trigger(const QString &name) {
                 // At archive root - exit archive
                 exitArchive();
             } else {
-                // Go to parent dir in archive
+                // Go to parent dir in archive, the cursor on the directory
+                // left (as outside archives)
                 int lastSlash = archiveCurrentDir.lastIndexOf('/');
+                const QString left = archiveCurrentDir.mid(lastSlash + 1);
                 if (lastSlash >= 0) {
                     archiveCurrentDir = archiveCurrentDir.left(lastSlash);
                 } else {
                     archiveCurrentDir.clear();
                 }
                 loadArchiveDirectory();
+                selectEntryByName(left);
             }
         } else {
             // Find entry by name and check if it's a directory
